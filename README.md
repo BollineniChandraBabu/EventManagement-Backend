@@ -28,6 +28,10 @@ gradle clean bootJar
 - `MAIL_PASSWORD`
 - `DB_URL`, `DB_USER`, `DB_PASS` for production profile
 
+## Database reference
+- Primary PostgreSQL database is hosted on Neon.
+- Neon project console: https://console.neon.tech/
+
 ## API Docs
 - Swagger UI: `http://localhost:8080/swagger-ui.html`
 - OpenAPI JSON: `http://localhost:8080/v3/api-docs`
