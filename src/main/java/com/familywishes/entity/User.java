@@ -22,8 +22,10 @@ public class User {
     @Column(nullable = false)
     private Role role;
     @Column(nullable = false)
+    @Builder.Default
     private boolean active = true;
     @Column(nullable = false)
+    @Builder.Default
     private boolean deleted = false;
     @Column(nullable = false)
     private LocalDateTime createdAt;

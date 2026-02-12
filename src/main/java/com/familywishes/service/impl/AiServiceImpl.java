@@ -18,8 +18,11 @@ import java.util.Map;
 public class AiServiceImpl implements AiService {
     private final RestTemplate restTemplate;
 
-    @Value("${app.gemini.api-key}")
+    @Value("${app.gemini.api.key}")
     private String apiKey;
+
+    @Value("${app.gemini.api.url}")
+    private String apiURL;
 
     @Override
     public AiWishResponse generate(AiWishRequest request) {
@@ -31,7 +34,7 @@ public class AiServiceImpl implements AiService {
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
         ResponseEntity<Map> response = restTemplate.exchange(
-                "https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=" + apiKey,
+                apiURL + apiKey,
                 HttpMethod.POST,
                 new HttpEntity<>(body, headers),
                 Map.class

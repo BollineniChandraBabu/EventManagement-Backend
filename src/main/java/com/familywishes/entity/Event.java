@@ -26,5 +26,6 @@ public class Event {
     @JoinColumn(name = "user_id", nullable = false)
     private User user;
     @Column(nullable = false)
+    @Builder.Default
     private boolean active = true;
 }
