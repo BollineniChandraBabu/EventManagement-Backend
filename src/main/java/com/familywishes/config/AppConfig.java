@@ -16,7 +16,16 @@ public class AppConfig {
         return new WebMvcConfigurer() {
             @Override
             public void addCorsMappings(CorsRegistry registry) {
-                registry.addMapping("/**").allowedOrigins("https://*.firebaseapp.com", "https://*.web.app").allowedMethods("*");
+                registry.addMapping("/**")
+                        .allowedOriginPatterns(
+                                "http://localhost:4200",
+                                "http://127.0.0.1:4200",
+                                "https://*.firebaseapp.com",
+                                "https://*.web.app"
+                        )
+                        .allowedMethods("*")
+                        .allowedHeaders("*")
+                        .allowCredentials(true);
             }
         };
     }
