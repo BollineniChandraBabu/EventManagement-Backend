@@ -1,5 +1,6 @@
 package com.familywishes.service.impl;
 
+import com.familywishes.dto.EmailDtos.EmailStatusResponse;
 import com.familywishes.entity.EmailLog;
 import com.familywishes.entity.enums.EmailStatus;
 import com.familywishes.repository.EmailLogRepository;
@@ -51,5 +52,13 @@ public class EmailServiceImpl implements EmailService {
     public void retryFailed() {
         logRepository.findByStatusAndRetryCountLessThan(EmailStatus.FAILED, 3)
                 .forEach(log -> sendHtmlEmail(log.getRecipientEmail(), log.getSubject(), "Retry delivery", log.getId()));
+    }
+
+    @Override
+    public EmailStatusResponse getStatus() {
+        long pending = logRepository.countByStatus(EmailStatus.PENDING);
+        long sent = logRepository.countByStatus(EmailStatus.SENT);
+        long failed = logRepository.countByStatus(EmailStatus.FAILED);
+        return new EmailStatusResponse(pending + sent + failed, pending, sent, failed);
     }
 }
