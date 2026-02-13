@@ -13,6 +13,8 @@ import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 
 @Service
 @RequiredArgsConstructor
@@ -32,11 +34,13 @@ public class EmailServiceImpl implements EmailService {
             helper.setSubject(subject);
             helper.setText(html, true);
             mailSender.send(message);
+            logEntry.setBody(html);
             logEntry.setStatus(EmailStatus.SENT);
             logEntry.setSentAt(LocalDateTime.now());
         } catch (Exception e) {
             log.error("mail send failed", e);
             logEntry.setStatus(EmailStatus.FAILED);
+            logEntry.setBody(html);
             logEntry.setRetryCount(logEntry.getRetryCount() + 1);
             logEntry.setErrorMessage(e.getMessage());
         }
@@ -55,10 +59,17 @@ public class EmailServiceImpl implements EmailService {
     }
 
     @Override
-    public EmailStatusResponse getStatus() {
-        long pending = logRepository.countByStatus(EmailStatus.PENDING);
-        long sent = logRepository.countByStatus(EmailStatus.SENT);
-        long failed = logRepository.countByStatus(EmailStatus.FAILED);
-        return new EmailStatusResponse(pending + sent + failed, pending, sent, failed);
+    public List<EmailStatusResponse> getStatus() {
+        List<EmailStatusResponse> emailStatusResponses = new ArrayList<>();
+       List<EmailLog> emailLogList = logRepository.findAll();
+
+//        long pending = logRepository.countByStatus(EmailStatus.PENDING);
+//        long sent = logRepository.countByStatus(EmailStatus.SENT);
+//        long failed = logRepository.countByStatus(EmailStatus.FAILED);
+        emailLogList.forEach(emailLog -> {
+            EmailStatusResponse emailStatusResponse = new EmailStatusResponse(emailLog.getId(), emailLog.getRecipientEmail(), emailLog.getSubject(), emailLog.getStatus().name(), emailLog.getSentAt());
+            emailStatusResponses.add(emailStatusResponse);
+        });
+        return emailStatusResponses;
     }
 }

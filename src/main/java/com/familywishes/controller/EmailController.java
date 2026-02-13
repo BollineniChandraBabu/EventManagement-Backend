@@ -9,6 +9,8 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.List;
+
 @RestController
 @RequestMapping({"/api/email", "/api/emails"})
 @RequiredArgsConstructor
@@ -19,5 +21,5 @@ public class EmailController {
     public void test(Authentication authentication) { emailService.sendTestEmail(authentication.getName()); }
 
     @GetMapping("/status")
-    public EmailStatusResponse status() { return emailService.getStatus(); }
+    public List<EmailStatusResponse> status() { return emailService.getStatus(); }
 }
