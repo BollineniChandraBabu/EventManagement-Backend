@@ -39,7 +39,7 @@ public class AuthServiceImpl implements AuthService {
         String access = jwtService.generateAccessToken(user);
         String refresh = jwtService.generateRefreshToken(user);
         refreshTokenRepository.save(RefreshToken.builder().token(refresh).user(user).expiresAt(LocalDateTime.now().plusDays(7)).revoked(false).build());
-        return new AuthResponse(access, refresh, "Bearer");
+        return new AuthResponse(access, refresh, "Bearer", user.getRole().name(), jwtService.getAccessTokenTtlSeconds());
     }
 
     @Override
@@ -47,7 +47,7 @@ public class AuthServiceImpl implements AuthService {
         var rt = refreshTokenRepository.findByTokenAndRevokedFalse(request.refreshToken()).orElseThrow(() -> new BadRequestException("Invalid refresh token"));
         if (rt.getExpiresAt().isBefore(LocalDateTime.now())) throw new BadRequestException("Refresh token expired");
         String access = jwtService.generateAccessToken(rt.getUser());
-        return new AuthResponse(access, rt.getToken(), "Bearer");
+        return new AuthResponse(access, rt.getToken(), "Bearer", rt.getUser().getRole().name(), jwtService.getAccessTokenTtlSeconds());
     }
 
     @Override
@@ -69,7 +69,7 @@ public class AuthServiceImpl implements AuthService {
         String access = jwtService.generateAccessToken(user);
         String refresh = jwtService.generateRefreshToken(user);
         refreshTokenRepository.save(RefreshToken.builder().token(refresh).user(user).expiresAt(LocalDateTime.now().plusDays(7)).revoked(false).build());
-        return new AuthResponse(access, refresh, "Bearer");
+        return new AuthResponse(access, refresh, "Bearer", user.getRole().name(), jwtService.getAccessTokenTtlSeconds());
     }
 
     @Override

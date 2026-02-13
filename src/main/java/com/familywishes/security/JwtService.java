@@ -14,15 +14,22 @@ import java.util.Date;
 
 @Service
 public class JwtService {
+    private static final long ACCESS_TOKEN_TTL_SECONDS = 15 * 60;
+    private static final long REFRESH_TOKEN_TTL_SECONDS = 7 * 24 * 60 * 60;
+
     @Value("${app.jwt.secret}")
     private String secret;
 
     public String generateAccessToken(User user) {
-        return generate(user.getEmail(), user.getRole().name(), 15 * 60);
+        return generate(user.getEmail(), user.getRole().name(), ACCESS_TOKEN_TTL_SECONDS);
     }
 
     public String generateRefreshToken(User user) {
-        return generate(user.getEmail(), "REFRESH", 7 * 24 * 60 * 60);
+        return generate(user.getEmail(), "REFRESH", REFRESH_TOKEN_TTL_SECONDS);
+    }
+
+    public long getAccessTokenTtlSeconds() {
+        return ACCESS_TOKEN_TTL_SECONDS;
     }
 
     private String generate(String subject, String scope, long ttlSec) {
