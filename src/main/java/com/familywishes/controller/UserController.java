@@ -23,6 +23,9 @@ public class UserController {
     @PreAuthorize("hasRole('ADMIN')")
     public List<UserResponse> list() { return userService.list(); }
 
+    @GetMapping("/me")
+    public UserResponse me() { return userService.getCurrentUser(); }
+
     @PostMapping("/{id}/deactivate")
     @PreAuthorize("hasRole('ADMIN')")
     public void deactivate(@PathVariable Long id) { userService.deactivate(id); }
