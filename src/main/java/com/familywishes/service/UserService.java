@@ -7,5 +7,6 @@ import java.util.List;
 public interface UserService {
     UserResponse create(UserRequest request);
     List<UserResponse> list();
+    UserResponse getCurrentUser();
     void deactivate(Long id);
 }

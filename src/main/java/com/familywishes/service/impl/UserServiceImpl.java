@@ -6,6 +6,8 @@ import com.familywishes.exception.NotFoundException;
 import com.familywishes.repository.UserRepository;
 import com.familywishes.service.UserService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
@@ -29,6 +31,20 @@ public class UserServiceImpl implements UserService {
     public List<UserResponse> list() {
         return userRepository.findAll().stream().filter(u -> !u.isDeleted())
                 .map(u -> new UserResponse(u.getId(), u.getName(), u.getEmail(), u.getRole(), u.isActive())).toList();
+    }
+
+    @Override
+    public UserResponse getCurrentUser() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication == null || !authentication.isAuthenticated()) {
+            throw new NotFoundException("Authenticated user not found");
+        }
+
+        String email = authentication.getName();
+        User user = userRepository.findByEmailAndDeletedFalse(email)
+                .orElseThrow(() -> new NotFoundException("User not found"));
+
+        return new UserResponse(user.getId(), user.getName(), user.getEmail(), user.getRole(), user.isActive());
     }
 
     @Override
