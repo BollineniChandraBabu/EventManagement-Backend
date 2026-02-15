@@ -22,6 +22,8 @@ public class EmailLog {
     @Column(nullable = false)
     private int retryCount;
     @Column(columnDefinition = "TEXT")
+    private String body;
+    @Column(columnDefinition = "TEXT")
     private String errorMessage;
     private LocalDateTime sentAt;
 }
