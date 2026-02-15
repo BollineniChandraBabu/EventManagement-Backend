@@ -9,4 +9,5 @@ public interface EmailService {
     void sendTestEmail(String to);
     void retryFailed();
     List<EmailStatusResponse> getStatus();
+    void sendFailureAlert(long count);
 }
