@@ -2,6 +2,7 @@ package com.familywishes.config;
 
 import com.familywishes.entity.EmailTemplate;
 import com.familywishes.entity.User;
+import com.familywishes.entity.enums.RelationShip;
 import com.familywishes.entity.enums.Role;
 import com.familywishes.repository.EmailTemplateRepository;
 import com.familywishes.repository.UserRepository;
@@ -23,7 +24,7 @@ public class DataInitializer implements CommandLineRunner {
     public void run(String... args) {
         userRepository.findByEmailAndDeletedFalse("chandrababubollineni416@gmail.com").orElseGet(() ->
                 userRepository.save(User.builder().name("Default Admin").email("chandrababubollineni416@gmail.com")
-                        .password(encoder.encode("Chandu")).role(Role.ROLE_ADMIN).active(true).deleted(false).build()));
+                        .password(encoder.encode("Chandu")).role(Role.ROLE_ADMIN).active(true).deleted(false).relationShip(RelationShip.ADMIN).build()));
 
         List<String> festivals = List.of("Diwali", "Pongal", "Sankranti", "Christmas", "New Year");
         for (String f : festivals) {

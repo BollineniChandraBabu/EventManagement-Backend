@@ -20,14 +20,14 @@ public class EventServiceImpl implements EventService {
     @Override
     public EventResponse create(EventRequest request) {
         var user = userRepository.findById(request.userId()).orElseThrow(() -> new NotFoundException("User not found"));
-        Event event = Event.builder().title(request.title()).eventType(request.eventType()).festivalName(request.festivalName())
+        Event event = Event.builder().subject(request.subject()).body(request.body()).eventType(request.eventType()).festivalName(request.festivalName())
                 .eventDate(request.eventDate()).recurring(request.recurring()).user(user).active(true).build();
         event = eventRepository.save(event);
-        return new EventResponse(event.getId(), event.getTitle(), event.getEventType(), event.getFestivalName(), event.getEventDate(), event.isRecurring(), event.getUser().getId(), event.isActive());
+        return new EventResponse(event.getId(), event.getSubject(), event.getBody(), event.getEventType(), event.getFestivalName(), event.getEventDate(), event.isRecurring(), event.getUser().getId(), event.isActive());
     }
 
     @Override
     public List<EventResponse> list() {
-        return eventRepository.findAll().stream().map(e -> new EventResponse(e.getId(), e.getTitle(), e.getEventType(), e.getFestivalName(), e.getEventDate(), e.isRecurring(), e.getUser().getId(), e.isActive())).toList();
+        return eventRepository.findAll().stream().map(e -> new EventResponse(e.getId(), e.getSubject(), e.getBody(), e.getEventType(), e.getFestivalName(), e.getEventDate(), e.isRecurring(), e.getUser().getId(), e.isActive())).toList();
     }
 }

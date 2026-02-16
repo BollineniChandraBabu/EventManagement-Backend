@@ -1,11 +1,14 @@
 package com.familywishes.scheduler;
 
 import com.familywishes.dto.AiWishRequest;
+import com.familywishes.dto.AiWishResponse;
+import com.familywishes.entity.enums.EventType;
 import com.familywishes.repository.EmailTemplateRepository;
 import com.familywishes.repository.EventRepository;
 import com.familywishes.service.AiService;
 import com.familywishes.service.EmailService;
 import com.familywishes.util.TemplateRenderer;
+import com.fasterxml.jackson.core.JsonProcessingException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.quartz.*;
@@ -14,6 +17,7 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.stereotype.Component;
 
 import java.time.LocalDate;
+import java.util.List;
 import java.util.Map;
 
 @Configuration
@@ -26,7 +30,7 @@ public class DailyWishScheduler {
     @Bean
     Trigger wishesTrigger(JobDetail wishesJobDetail) {
         return TriggerBuilder.newTrigger().forJob(wishesJobDetail).withIdentity("dailyWishTrigger")
-                .withSchedule(CronScheduleBuilder.dailyAtHourAndMinute(8, 0)).build();
+                .withSchedule(CronScheduleBuilder.dailyAtHourAndMinute(6, 26)).build();
     }
 
     @Component
@@ -51,14 +55,32 @@ public class DailyWishScheduler {
                     subject = tpl != null ? renderer.render(tpl.getSubject(), vars) : "Happy " + event.getFestivalName();
                     html = tpl != null ? renderer.render(tpl.getHtmlContent(), vars) : "<p>Best wishes</p>";
                 } else {
-                    var ai = aiService.generate(new AiWishRequest(event.getUser().getName(), "Family", event.getEventType().name(), event.getFestivalName(), "Emotional", "EN"));
+                    AiWishResponse ai = null;
+                    try {
+                        ai = aiService.generate(new AiWishRequest(event.getUser().getName(), "Family", event.getEventType().name(), event.getFestivalName(), "Emotional", "EN"));
+                    } catch (JsonProcessingException e) {
+                        throw new RuntimeException(e);
+                    }
                     subject = ai.subject();
                     html = ai.htmlMessage();
                 }
                 emailService.sendHtmlEmail(event.getUser().getEmail(), subject, html, null);
             });
             emailService.retryFailed();
+            sendDailyWishes();
             log.info("Daily wish job completed");
+        }
+
+        private void sendDailyWishes(){
+            eventRepository.findByEventTypeInAndActiveTrue(List.of(EventType.GOODMORNING, EventType.GOODNIGHT)).forEach(event -> {
+                AiWishResponse ai = null;
+                try {
+                    ai = aiService.generate(new AiWishRequest(event.getUser().getName(), event.getUser().getRelationShip().name(), event.getEventType().name(), event.getFestivalName(), "Emotional", "EN"));
+                } catch (JsonProcessingException e) {
+                    throw new RuntimeException(e);
+                }
+                emailService.sendHtmlEmail(event.getUser().getEmail(), ai.subject(), ai.htmlMessage(), null);
+            });
         }
     }
 }

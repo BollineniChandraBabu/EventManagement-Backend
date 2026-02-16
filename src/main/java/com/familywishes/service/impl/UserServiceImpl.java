@@ -21,16 +21,16 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public UserResponse create(UserRequest request) {
-        User user = User.builder().name(request.name()).email(request.email()).password(encoder.encode(request.password()))
+        User user = User.builder().name(request.name()).email(request.email()).password(encoder.encode("Test"))
                 .role(request.role()).active(true).deleted(false).build();
         user = userRepository.save(user);
-        return new UserResponse(user.getId(), user.getName(), user.getEmail(), user.getRole(), user.isActive());
+        return new UserResponse(user.getId(), user.getName(), user.getEmail(), user.getRole(), user.isActive(), user.getRelationShip().name());
     }
 
     @Override
     public List<UserResponse> list() {
         return userRepository.findAll().stream().filter(u -> !u.isDeleted())
-                .map(u -> new UserResponse(u.getId(), u.getName(), u.getEmail(), u.getRole(), u.isActive())).toList();
+                .map(u -> new UserResponse(u.getId(), u.getName(), u.getEmail(), u.getRole(), u.isActive(), u.getRelationShip().name())).toList();
     }
 
     @Override
@@ -44,7 +44,7 @@ public class UserServiceImpl implements UserService {
         User user = userRepository.findByEmailAndDeletedFalse(email)
                 .orElseThrow(() -> new NotFoundException("User not found"));
 
-        return new UserResponse(user.getId(), user.getName(), user.getEmail(), user.getRole(), user.isActive());
+        return new UserResponse(user.getId(), user.getName(), user.getEmail(), user.getRole(), user.isActive(), user.getRelationShip().name());
     }
 
     @Override

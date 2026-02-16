@@ -13,16 +13,18 @@ public class Event {
     @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
     @Column(nullable = false)
-    private String title;
+    private String subject;
+    @Column(columnDefinition = "TEXT", nullable = false)
+    private String body;
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private EventType eventType;
     private String festivalName;
-    @Column(nullable = false)
+    @Column
     private LocalDate eventDate;
     @Column(nullable = false)
     private boolean recurring;
-    @ManyToOne(fetch = FetchType.LAZY)
+    @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "user_id", nullable = false)
     private User user;
     @Column(nullable = false)

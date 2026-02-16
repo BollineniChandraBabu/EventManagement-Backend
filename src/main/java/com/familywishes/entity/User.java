@@ -1,5 +1,7 @@
 package com.familywishes.entity;
 
+import com.familywishes.entity.enums.EventType;
+import com.familywishes.entity.enums.RelationShip;
 import com.familywishes.entity.enums.Role;
 import jakarta.persistence.*;
 import lombok.*;
@@ -29,6 +31,13 @@ public class User {
     private boolean deleted = false;
     @Column(nullable = false)
     private LocalDateTime createdAt;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private RelationShip relationShip;
+
+    @OneToOne(mappedBy = "user", cascade = CascadeType.ALL)
+    private UserWishSettings wishSettings;
 
     @PrePersist
     void init() { if (createdAt == null) createdAt = LocalDateTime.now(); }

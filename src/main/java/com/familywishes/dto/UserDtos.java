@@ -5,6 +5,6 @@ import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 
 public class UserDtos {
-    public record UserRequest(@NotBlank String name, @Email String email, @NotBlank String password, Role role) {}
-    public record UserResponse(Long id, String name, String email, Role role, boolean active) {}
+    public record UserRequest(@NotBlank String name, @Email String email, Role role) {}
+    public record UserResponse(Long id, String name, String email, Role role, boolean active, String relationShip) {}
 }
