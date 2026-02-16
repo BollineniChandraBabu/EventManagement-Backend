@@ -19,6 +19,10 @@ public class UserController {
     @PreAuthorize("hasRole('ADMIN')")
     public UserResponse create(@Valid @RequestBody UserRequest request) { return userService.create(request); }
 
+    @PutMapping
+    @PreAuthorize("hasRole('ADMIN')")
+    public UserResponse update(@Valid @RequestBody UserRequest request) { return userService.update(request); }
+
     @GetMapping
     @PreAuthorize("hasRole('ADMIN')")
     public List<UserResponse> list() { return userService.list(); }

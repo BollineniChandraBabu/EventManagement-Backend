@@ -9,6 +9,7 @@ import jakarta.mail.internet.MimeMessage;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.env.Environment;
+import org.springframework.core.io.ByteArrayResource;
 import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
@@ -17,6 +18,7 @@ import org.springframework.stereotype.Service;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 
 @Service
 @RequiredArgsConstructor
@@ -28,7 +30,7 @@ public class EmailServiceImpl implements EmailService {
     private final Environment env;
 
     @Override
-    public void sendHtmlEmail(String to, String subject, String html, Long logId) {
+    public void sendHtmlEmail(String to, String subject, String html, Long logId, byte[] image) {
         EmailLog logEntry = logId == null ? logRepository.save(EmailLog.builder().recipientEmail(to).subject(subject).status(EmailStatus.PENDING).retryCount(0).build())
                 : logRepository.findById(logId).orElseThrow();
         try {
@@ -37,6 +39,11 @@ public class EmailServiceImpl implements EmailService {
             helper.setTo(to);
             helper.setSubject(subject);
             helper.setText(html, true);
+            if(Objects.nonNull(image)) {
+                helper.addInline("birthdayImage",
+                        new ByteArrayResource(image),
+                        "image/png");
+            }
             mailSender.send(message);
             logEntry.setBody(html);
             logEntry.setStatus(EmailStatus.SENT);
@@ -53,13 +60,13 @@ public class EmailServiceImpl implements EmailService {
 
     @Override
     public void sendTestEmail(String to) {
-        sendHtmlEmail(to, "Test Email", "<h3>Family Wishes test email</h3>", null);
+        sendHtmlEmail(to, "Test Email", "<h3>Family Wishes test email</h3>", null, null);
     }
 
     @Override
     public void retryFailed() {
         logRepository.findByStatusAndRetryCountLessThan(EmailStatus.FAILED, 3)
-                .forEach(log -> sendHtmlEmail(log.getRecipientEmail(), log.getSubject(), "Retry delivery", log.getId()));
+                .forEach(log -> sendHtmlEmail(log.getRecipientEmail(), log.getSubject(), "Retry delivery", log.getId(),null));
     }
 
     @Override

@@ -2,6 +2,7 @@ package com.familywishes.service.impl;
 
 import com.familywishes.dto.UserDtos.*;
 import com.familywishes.entity.User;
+import com.familywishes.entity.UserWishSettings;
 import com.familywishes.exception.NotFoundException;
 import com.familywishes.repository.UserRepository;
 import com.familywishes.service.UserService;
@@ -23,14 +24,26 @@ public class UserServiceImpl implements UserService {
     public UserResponse create(UserRequest request) {
         User user = User.builder().name(request.name()).email(request.email()).password(encoder.encode("Test"))
                 .role(request.role()).active(true).deleted(false).build();
+        UserWishSettings userWishSettings = UserWishSettings.builder().user(user).goodMorningEnabled(request.isGoodMorningEnabled()).goodNightEnabled(request.isGoodNightEnabled()).build();
+        user.setWishSettings(userWishSettings);
         user = userRepository.save(user);
-        return new UserResponse(user.getId(), user.getName(), user.getEmail(), user.getRole(), user.isActive(), user.getRelationShip().name());
+        return new UserResponse(user.getId(), user.getName(), user.getEmail(), user.getRole(), user.isActive(), user.getRelationShip().name(), user.getWishSettings().isGoodMorningEnabled(), user.getWishSettings().isGoodNightEnabled());
+    }
+
+    @Override
+    public UserResponse update(UserRequest request) {
+        User user = userRepository.findByEmail(request.email()).orElse(null);
+        user.setName(request.name());
+        user.setRole(request.role());
+        user.setRelationShip(request.relationShip());
+        user = userRepository.save(user);
+        return new UserResponse(user.getId(), user.getName(), user.getEmail(), user.getRole(), user.isActive(), user.getRelationShip().name(), user.getWishSettings().isGoodMorningEnabled(), user.getWishSettings().isGoodNightEnabled());
     }
 
     @Override
     public List<UserResponse> list() {
         return userRepository.findAll().stream().filter(u -> !u.isDeleted())
-                .map(u -> new UserResponse(u.getId(), u.getName(), u.getEmail(), u.getRole(), u.isActive(), u.getRelationShip().name())).toList();
+                .map(u -> new UserResponse(u.getId(), u.getName(), u.getEmail(), u.getRole(), u.isActive(), u.getRelationShip().name(),u.getWishSettings().isGoodMorningEnabled(),u.getWishSettings().isGoodNightEnabled())).toList();
     }
 
     @Override
@@ -43,8 +56,7 @@ public class UserServiceImpl implements UserService {
         String email = authentication.getName();
         User user = userRepository.findByEmailAndDeletedFalse(email)
                 .orElseThrow(() -> new NotFoundException("User not found"));
-
-        return new UserResponse(user.getId(), user.getName(), user.getEmail(), user.getRole(), user.isActive(), user.getRelationShip().name());
+        return new UserResponse(user.getId(), user.getName(), user.getEmail(), user.getRole(), user.isActive(), user.getRelationShip().name(), user.getWishSettings().isGoodMorningEnabled(),user.getWishSettings().isGoodNightEnabled());
     }
 
     @Override

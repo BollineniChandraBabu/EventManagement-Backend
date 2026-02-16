@@ -5,6 +5,7 @@ import com.familywishes.dto.AiWishResponse;
 import com.familywishes.exception.BadRequestException;
 import com.familywishes.service.AiService;
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
@@ -12,6 +13,8 @@ import org.springframework.http.*;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
+import java.util.Base64;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -26,9 +29,15 @@ public class AiServiceImpl implements AiService {
     @Value("${app.gemini.api.url}")
     private String apiURL;
 
+    @Value("${app.huggingface.image.url}")
+    private String imageURL;
+
+    @Value("${app.huggingface.image.key}")
+    private String imageKey;
+
     @Override
     public AiWishResponse generate(AiWishRequest request) throws JsonProcessingException {
-        String prompt = getPrompt(request);
+        String prompt = getWishPrompt(request);
 
         Map<String, Object> body = Map.of("contents", List.of(Map.of("parts", List.of(Map.of("text", prompt)))));
         HttpHeaders headers = new HttpHeaders();
@@ -54,7 +63,38 @@ public class AiServiceImpl implements AiService {
         );
     }
 
-    private static String getPrompt(AiWishRequest request) {
+    public byte[] callGeminiImage(AiWishRequest request) throws JsonProcessingException {
+
+        RestTemplate restTemplate = new RestTemplate();
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.set("Authorization", "Bearer "+imageKey);
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        headers.set("Accept", "image/png");
+
+        // Correct JSON
+        Map<String, Object> body = new HashMap<>();
+        body.put("inputs", getImagePrompt(request));
+
+        ObjectMapper mapper = new ObjectMapper();
+
+        String json = mapper.writeValueAsString(body);
+
+        HttpEntity<String> entity =
+                new HttpEntity<>(json, headers);
+
+        ResponseEntity<byte[]> response =
+                restTemplate.exchange(
+                        imageURL,
+                        HttpMethod.POST,
+                        entity,
+                        byte[].class
+                );
+
+        return response.getBody();
+        }
+
+    private static String getWishPrompt(AiWishRequest request) {
 //        String prompt = "Generate JSON with keys subject and htmlMessage for a personalized wish: " +
 //                "name=" + request.name() + ", relation=" + request.relation() + ", event=" + request.event() +
 //                ", festival=" + request.festival() + ", tone=" + request.tone() + ", language=" + request.language();
@@ -96,74 +136,56 @@ public class AiServiceImpl implements AiService {
         return prompt;
     }
 
-    private String generateClosing(AiWishRequest request) {
+    private String getImagePrompt(AiWishRequest request){
+                return String.format("""
+                        Professional ultra HD greeting card, 4k resolution, landscape orientation.
+                        
+                        Occasion: %s
+                        
+                        Create a realistic, elegant, emotional greeting card.
+                        
+                        Include clearly readable text:
+                        
+                        Main message:
+                        Happy %s %s
+                        
+                        Greeting message:
+                        A warm and heartfelt %s wish for you.
+                        
+                        Signature at bottom:
+                        Regards, Chandra
+                        
+                        Design requirements:
+                        
+                        Recipient name must appear clearly: %s
+                        
+                        Visual elements based on occasion:
+                        Birthday: cake, candles, balloons, confetti
+                        Anniversary: roses, romantic flowers, candles
+                        Good Morning: sunrise, flowers, warm sunlight
+                        Good Night: moon, stars, night sky
+                        Festival: cultural decorations, lamps, festive lights
+                        
+                        Style:
+                        photorealistic,
+                        professional design,
+                        ultra detailed,
+                        sharp focus,
+                        clear typography,
+                        clean layout,
+                        soft white background,
+                        beautiful color harmony,
+                        no blur,
+                        no distortion,
+                        no watermark
+                        """,
 
-        String senderName = "Chandra";
-
-        String relation = request.relation() == null
-                ? ""
-                : request.relation().toLowerCase();
-
-        String tone = request.tone() == null
-                ? "formal"
-                : request.tone().toLowerCase();
-
-        String closing;
-
-        // 2️⃣ Relation-based logic
-        switch (relation) {
-
-            case "father":
-            case "mother":
-            case "parents":
-                closing = "With love and gratitude";
-                break;
-
-            case "brother":
-            case "sister":
-            case "sibling":
-                closing = "With lots of love";
-                break;
-
-            case "friend":
-            case "best friend":
-                closing = "Cheers buddy";
-                break;
-
-            case "wife":
-            case "husband":
-            case "girlfriend":
-            case "boyfriend":
-                closing = "With all my love";
-                break;
-
-            case "colleague":
-            case "manager":
-            case "boss":
-                closing = "Warm regards";
-                break;
-
-            case "client":
-            case "customer":
-                closing = "Sincerely";
-                break;
-
-            case "teacher":
-            case "mentor":
-                closing = "With respect";
-                break;
-
-            default:
-                // 3️⃣ Fallback to tone
-                closing = switch (tone) {
-                    case "casual" -> "Cheers";
-                    case "romantic" -> "Forever yours";
-                    case "friendly" -> "Best wishes";
-                    default -> "Best regards";
-                };
-        }
-
-        return "\n\n\n" +closing + "\n" + senderName;
+                        request.event(),
+                        request.event(),
+                        request.name(),
+                        request.tone(),
+                        request.name()
+                );
     }
 
 }

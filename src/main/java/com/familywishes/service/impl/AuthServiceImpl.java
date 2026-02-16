@@ -54,7 +54,7 @@ public class AuthServiceImpl implements AuthService {
     public void sendOtp(OtpSendRequest request) {
         String otp = String.format("%06d", new SecureRandom().nextInt(1_000_000));
         otpCodeRepository.save(OtpCode.builder().email(request.email()).code(otp).expiresAt(LocalDateTime.now().plusMinutes(5)).used(false).build());
-        emailService.sendHtmlEmail(request.email(), "Your OTP", "<p>Your OTP is <b>" + otp + "</b>. Valid for 5 minutes.</p>", null);
+        emailService.sendHtmlEmail(request.email(), "Your OTP", "<p>Your OTP is <b>" + otp + "</b>. Valid for 5 minutes.</p>", null,null);
     }
 
     @Override
@@ -77,7 +77,7 @@ public class AuthServiceImpl implements AuthService {
         User user = userRepository.findByEmailAndDeletedFalse(request.email()).orElseThrow(() -> new NotFoundException("User not found"));
         String token = UUID.randomUUID().toString();
         resetTokenRepository.save(PasswordResetToken.builder().token(token).user(user).expiresAt(LocalDateTime.now().plusMinutes(30)).used(false).build());
-        emailService.sendHtmlEmail(user.getEmail(), "Reset your password", "<a href='https://family-wishes/reset?token=" + token + "'>Reset Password</a>", null);
+        emailService.sendHtmlEmail(user.getEmail(), "Reset your password", "<a href='https://family-wishes/reset?token=" + token + "'>Reset Password</a>", null, null);
     }
 
     @Override
