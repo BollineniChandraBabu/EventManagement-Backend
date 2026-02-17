@@ -2,11 +2,8 @@ package com.familywishes.scheduler;
 
 import com.familywishes.dto.AiWishRequest;
 import com.familywishes.dto.AiWishResponse;
-import com.familywishes.entity.UserWishSettings;
-import com.familywishes.entity.enums.EventType;
 import com.familywishes.repository.EmailTemplateRepository;
 import com.familywishes.repository.EventRepository;
-import com.familywishes.repository.UserRepository;
 import com.familywishes.repository.UserWishSettingsRepository;
 import com.familywishes.service.AiService;
 import com.familywishes.service.EmailService;
@@ -14,33 +11,17 @@ import com.familywishes.util.TemplateRenderer;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.quartz.*;
-import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Configuration;
-import org.springframework.scheduling.annotation.Scheduled;
+import org.quartz.Job;
+import org.quartz.JobExecutionContext;
 import org.springframework.stereotype.Component;
 
 import java.time.LocalDate;
-import java.util.List;
 import java.util.Map;
 
-@Configuration
-public class DailyWishScheduler {
-    @Bean
-    JobDetail wishesJobDetail() {
-        return JobBuilder.newJob(WishesJob.class).withIdentity("dailyWishJob").storeDurably().build();
-    }
-
-    @Bean
-    Trigger wishesTrigger(JobDetail wishesJobDetail) {
-        return TriggerBuilder.newTrigger().forJob(wishesJobDetail).withIdentity("dailyWishTrigger")
-                .withSchedule(CronScheduleBuilder.dailyAtHourAndMinute(6, 26)).build();
-    }
-
-    @Component
-    @RequiredArgsConstructor
-    @Slf4j
-    public static class WishesJob implements Job {
+@Component
+@RequiredArgsConstructor
+@Slf4j
+public class WishesScheduler implements Job {
         private final EventRepository eventRepository;
         private final UserWishSettingsRepository userWishSettingsRepository;
         private final EmailTemplateRepository templateRepository;
@@ -75,35 +56,4 @@ public class DailyWishScheduler {
             log.info("Daily wish job completed");
         }
 
-        @Scheduled(cron = "0 0 6 * * *", zone = "Asia/Kolkata")
-//        @Scheduled(cron = "* * * * * *")
-        public void sendDailyGoodMorningWishes(){
-
-            userWishSettingsRepository.findByGoodMorningEnabledTrue().forEach(event -> {
-                triggerMessages(event, "Good Morning");
-            });
-        }
-
-        @Scheduled(cron = "0 0 22 * * *", zone = "Asia/Kolkata")
-//        @Scheduled(cron = "* * * * * *")
-        public void sendDailyGoodNightWishes(){
-
-            userWishSettingsRepository.findByGoodNightEnabledTrue().forEach(event -> {
-                triggerMessages(event, "Good Night");
-            });
-        }
-
-        private void triggerMessages(UserWishSettings event, String eventName) {
-            AiWishResponse ai;
-            byte[] image;
-            try {
-                AiWishRequest aiWishRequest =new AiWishRequest(event.getUser().getName(), event.getUser().getRelationShip().name(), eventName, "", "Emotional", "EN");
-                ai = aiService.generate(aiWishRequest);
-                image= aiService.callGeminiImage(aiWishRequest);
-            } catch (JsonProcessingException e) {
-                throw new RuntimeException(e);
-            }
-            emailService.sendHtmlEmail(event.getUser().getEmail(), ai.subject(), ai.htmlMessage(), null, image);
-        }
-    }
 }

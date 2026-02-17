@@ -20,6 +20,8 @@ public class UserWishSettings {
 
     private boolean goodNightEnabled;
 
+    private boolean birthdayEnabled;
+
     @OneToOne
     @JoinColumn(name = "user_id")
     private User user;

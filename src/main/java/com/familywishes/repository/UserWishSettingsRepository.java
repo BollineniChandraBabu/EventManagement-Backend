@@ -10,4 +10,5 @@ import java.util.Optional;
 public interface UserWishSettingsRepository extends JpaRepository<UserWishSettings, Long> {
     List<UserWishSettings> findByGoodMorningEnabledTrue();
     List<UserWishSettings> findByGoodNightEnabledTrue();
+    List<UserWishSettings> findByBirthdayEnabledTrue();
 }

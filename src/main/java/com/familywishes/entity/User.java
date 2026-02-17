@@ -6,6 +6,7 @@ import com.familywishes.entity.enums.Role;
 import jakarta.persistence.*;
 import lombok.*;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 @Entity
@@ -35,6 +36,12 @@ public class User {
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private RelationShip relationShip;
+
+    @Column(name = "birthday")
+    private LocalDate birthday;
+
+    @Column
+    private LocalDate lastBirthdayWishSent;
 
     @OneToOne(mappedBy = "user", cascade = CascadeType.ALL)
     private UserWishSettings wishSettings;
