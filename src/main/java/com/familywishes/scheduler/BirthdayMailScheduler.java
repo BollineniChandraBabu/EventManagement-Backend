@@ -50,6 +50,10 @@ public class BirthdayMailScheduler implements Job {
                 );
         log.info("Birthday users found: {}", users.size());
         for (User user : users) {
+            if (today.equals(user.getLastBirthdayWishSent())) {
+                log.info("Already sent birthday wish to {}", user.getEmail());
+                return;
+            }
             try {
                 sendBirthdayWish(user);
             } catch (Exception e) {

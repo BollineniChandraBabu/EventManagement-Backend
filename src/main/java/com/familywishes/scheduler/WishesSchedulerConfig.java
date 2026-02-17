@@ -85,7 +85,7 @@ public class WishesSchedulerConfig {
                 .withIdentity("birthdayTrigger")
                 .withSchedule(
                         CronScheduleBuilder
-                                .cronSchedule("0 10 6 * * ?")
+                                .cronSchedule("0 30 6 * * ?")
                                 .inTimeZone(
                                         TimeZone.getTimeZone("Asia/Kolkata")
                                 )
