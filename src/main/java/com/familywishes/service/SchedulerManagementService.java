@@ -1,0 +1,179 @@
+package com.familywishes.service;
+
+import com.familywishes.dto.SchedulerDtos.SchedulerStatusResponse;
+import com.familywishes.dto.SchedulerDtos.SchedulerTriggerResponse;
+import com.familywishes.exception.NotFoundException;
+import com.familywishes.scheduler.BirthdayScheduler;
+import com.familywishes.scheduler.EmailAlertScheduler;
+import com.familywishes.scheduler.FestivalScheduler;
+import com.familywishes.scheduler.RetryScheduler;
+import lombok.RequiredArgsConstructor;
+import org.quartz.JobKey;
+import org.quartz.Scheduler;
+import org.quartz.SchedulerException;
+import org.quartz.Trigger;
+import org.quartz.impl.matchers.GroupMatcher;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.scheduling.support.CronExpression;
+import org.springframework.stereotype.Service;
+
+import java.time.Instant;
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+
+@Service
+@RequiredArgsConstructor
+public class SchedulerManagementService {
+
+    private final Scheduler quartzScheduler;
+    private final SchedulerTrackingService trackingService;
+    private final BirthdayScheduler birthdayScheduler;
+    private final FestivalScheduler festivalScheduler;
+    private final RetryScheduler retryScheduler;
+    private final EmailAlertScheduler emailAlertScheduler;
+
+    @Value("${scheduler.time-zone:Asia/Kolkata}")
+    private String schedulerTimeZone;
+
+    private record ManualSchedulerDefinition(Runnable action, String cron, ZoneId zoneId) {
+    }
+
+    private Map<String, ManualSchedulerDefinition> manualJobs() {
+        ZoneId schedulerZone = ZoneId.of(schedulerTimeZone);
+
+        Map<String, ManualSchedulerDefinition> jobs = new LinkedHashMap<>();
+        jobs.put("instagramBirthdayScheduler", new ManualSchedulerDefinition(
+                birthdayScheduler::sendBirthdayWishes,
+                "0 0 7 * * ?",
+                schedulerZone
+        ));
+        jobs.put("instagramFestivalScheduler", new ManualSchedulerDefinition(
+                festivalScheduler::sendFestivalWishes,
+                "0 30 7 * * ?",
+                schedulerZone
+        ));
+        jobs.put("instagramRetryScheduler", new ManualSchedulerDefinition(
+                retryScheduler::retryFailed,
+                "0 */15 * * * ?",
+                schedulerZone
+        ));
+        jobs.put("instagramEmailAlertScheduler", new ManualSchedulerDefinition(
+                emailAlertScheduler::checkFailures,
+                "0 */30 * * * ?",
+                schedulerZone
+        ));
+        return jobs;
+    }
+
+    public List<SchedulerStatusResponse> getAllStatuses() {
+        List<SchedulerStatusResponse> statuses = new ArrayList<>();
+
+        try {
+            for (JobKey jobKey : quartzScheduler.getJobKeys(GroupMatcher.anyGroup())) {
+                statuses.add(buildQuartzStatus(jobKey));
+            }
+        } catch (SchedulerException e) {
+            throw new RuntimeException("Failed to load quartz jobs", e);
+        }
+
+        manualJobs().forEach((jobName, definition) ->
+                statuses.add(buildManualStatus(jobName, definition))
+        );
+
+        statuses.sort(Comparator.comparing(SchedulerStatusResponse::name));
+        return statuses;
+    }
+
+    public SchedulerTriggerResponse trigger(String jobName) {
+        Map<String, ManualSchedulerDefinition> manualJobs = manualJobs();
+
+        if (manualJobs.containsKey(jobName)) {
+            manualJobs.get(jobName).action().run();
+            return new SchedulerTriggerResponse(jobName, "Manual scheduler triggered", Instant.now());
+        }
+
+        try {
+            JobKey key = resolveQuartzJobKey(jobName);
+            quartzScheduler.triggerJob(key);
+            return new SchedulerTriggerResponse(jobName, "Quartz scheduler triggered", Instant.now());
+        } catch (SchedulerException e) {
+            throw new RuntimeException("Failed to trigger scheduler: " + jobName, e);
+        }
+    }
+
+    private JobKey resolveQuartzJobKey(String jobName) throws SchedulerException {
+        for (JobKey key : quartzScheduler.getJobKeys(GroupMatcher.anyGroup())) {
+            if (key.getName().equals(jobName)) {
+                return key;
+            }
+        }
+        throw new NotFoundException("Scheduler not found: " + jobName);
+    }
+
+    private SchedulerStatusResponse buildQuartzStatus(JobKey key) {
+        SchedulerTrackingService.SchedulerExecutionStats stats = trackingService.getStats(key.getName());
+        Instant nextFire = null;
+        Instant previousFire = null;
+
+        try {
+            List<? extends Trigger> triggers = quartzScheduler.getTriggersOfJob(key);
+            if (!triggers.isEmpty()) {
+                Trigger trigger = triggers.get(0);
+                if (trigger.getNextFireTime() != null) {
+                    nextFire = trigger.getNextFireTime().toInstant();
+                }
+                if (trigger.getPreviousFireTime() != null) {
+                    previousFire = trigger.getPreviousFireTime().toInstant();
+                }
+            }
+        } catch (SchedulerException e) {
+            throw new RuntimeException("Failed to read trigger for scheduler: " + key.getName(), e);
+        }
+
+        return fromStats(key.getName(), "QUARTZ", stats, nextFire, previousFire);
+    }
+
+    private SchedulerStatusResponse buildManualStatus(String jobName, ManualSchedulerDefinition definition) {
+        SchedulerTrackingService.SchedulerExecutionStats stats = trackingService.getStats(jobName);
+        Instant previousFire = stats != null ? stats.getLastStartedAt() : null;
+        Instant nextFire = calculateNextFireTime(definition.cron(), definition.zoneId());
+
+        return fromStats(jobName, "SPRING_SCHEDULED", stats, nextFire, previousFire);
+    }
+
+    private Instant calculateNextFireTime(String cron, ZoneId zoneId) {
+        CronExpression cronExpression = CronExpression.parse(cron);
+        ZonedDateTime now = ZonedDateTime.now(zoneId);
+        ZonedDateTime next = cronExpression.next(now);
+        return next != null ? next.toInstant() : null;
+    }
+
+    private SchedulerStatusResponse fromStats(
+            String name,
+            String type,
+            SchedulerTrackingService.SchedulerExecutionStats stats,
+            Instant nextFire,
+            Instant previousFire
+    ) {
+        return new SchedulerStatusResponse(
+                name,
+                type,
+                stats != null && stats.isRunning(),
+                stats != null ? stats.getTotalRuns().get() : 0,
+                stats != null ? stats.getSuccessRuns().get() : 0,
+                stats != null ? stats.getFailedRuns().get() : 0,
+                stats != null ? stats.getLastStartedAt() : null,
+                stats != null ? stats.getLastCompletedAt() : null,
+                stats != null ? stats.getLastDurationMs() : null,
+                stats != null ? stats.getLastStatus() : null,
+                stats != null ? stats.getLastError() : null,
+                nextFire,
+                previousFire
+        );
+    }
+}
