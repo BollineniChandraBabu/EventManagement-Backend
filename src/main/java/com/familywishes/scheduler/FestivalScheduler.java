@@ -9,6 +9,7 @@ import com.familywishes.repository.InstagramUserRepository;
 import com.familywishes.repository.SpecialEventRepository;
 import com.familywishes.service.impl.MessageDispatcher;
 import com.familywishes.util.TimeUtil;
+import com.familywishes.service.SchedulerTrackingService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
@@ -26,9 +27,11 @@ public class FestivalScheduler {
     private final IGMessageLogRepository logRepo;
     private final MessageDispatcher dispatcher;
     private final TimeUtil timeUtil;
+    private final SchedulerTrackingService schedulerTrackingService;
 
     @Scheduled(cron = "0 30 7 * * ?", zone = "${scheduler.time-zone}")
     public void sendFestivalWishes() {
+        schedulerTrackingService.track("instagramFestivalScheduler", () -> {
 
         LocalDate today = LocalDate.now();
 
@@ -59,5 +62,6 @@ public class FestivalScheduler {
                 }
             }
         }
+        });
     }
 }

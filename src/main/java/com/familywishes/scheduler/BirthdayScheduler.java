@@ -8,6 +8,7 @@ import com.familywishes.repository.IGMessageLogRepository;
 import com.familywishes.repository.InstagramUserRepository;
 import com.familywishes.service.impl.MessageDispatcher;
 import com.familywishes.util.TimeUtil;
+import com.familywishes.service.SchedulerTrackingService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
@@ -24,9 +25,11 @@ public class BirthdayScheduler {
     private final IGMessageLogRepository logRepo;
     private final MessageDispatcher dispatcher;
     private final TimeUtil timeUtil;
+    private final SchedulerTrackingService schedulerTrackingService;
 
     @Scheduled(cron = "0 0 7 * * ?", zone = "${scheduler.time-zone}")
     public void sendBirthdayWishes() {
+        schedulerTrackingService.track("instagramBirthdayScheduler", () -> {
 
         LocalDate today = LocalDate.now();
 
@@ -50,5 +53,6 @@ public class BirthdayScheduler {
                 dispatcher.sendAsync(log);
             }
         }
+        });
     }
 }
