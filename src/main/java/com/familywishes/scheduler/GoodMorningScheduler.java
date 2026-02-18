@@ -13,6 +13,8 @@ import org.quartz.JobExecutionContext;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
+import java.util.Date;
+
 @Component
 @RequiredArgsConstructor
 @Slf4j
@@ -27,11 +29,13 @@ public class GoodMorningScheduler implements Job {
 
     @Override
     public void execute(JobExecutionContext context) {
-
+        System.out.println("GOOD MORNING JOB TRIGGERED: " + new Date());
+        log.info("GOOD MORNING JOB TRIGGERED: " + new Date());
         userWishSettingsRepository
                 .findByGoodMorningEnabledTrue()
                 .forEach(this::triggerMessages);
-
+        System.out.println("GOOD MORNING JOB COMPLETED: " + new Date());
+        log.info("GOOD MORNING JOB COMPLETED: " + new Date());
     }
 
     private void triggerMessages(UserWishSettings event) {

@@ -13,6 +13,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.Objects;
 
 @Service
 @RequiredArgsConstructor
@@ -24,10 +25,20 @@ public class UserServiceImpl implements UserService {
     public UserResponse create(UserRequest request) {
         User user = User.builder().name(request.name()).email(request.email()).password(encoder.encode("Test"))
                 .role(request.role()).active(true).deleted(false).build();
-        UserWishSettings userWishSettings = UserWishSettings.builder().user(user).goodMorningEnabled(request.isGoodMorningEnabled()).goodNightEnabled(request.isGoodNightEnabled()).build();
-        user.setWishSettings(userWishSettings);
+        if(request.isBirthdayEnabled() || request.isGoodNightEnabled() || request.isGoodMorningEnabled()){
+            UserWishSettings userWishSettings = UserWishSettings.builder().user(user).goodMorningEnabled(request.isGoodMorningEnabled()).goodNightEnabled(request.isGoodNightEnabled()).build();
+            user.setWishSettings(userWishSettings);
+        }
         user = userRepository.save(user);
-        return new UserResponse(user.getId(), user.getName(), user.getEmail(), user.getRole(), user.isActive(), user.getRelationShip().name(), user.getWishSettings().isGoodMorningEnabled(), user.getWishSettings().isGoodNightEnabled());
+        return getUserResponse(user);
+    }
+
+    private static UserResponse getUserResponse(User user) {
+        if(Objects.nonNull(user.getWishSettings())) {
+            return new UserResponse(user.getId(), user.getName(), user.getEmail(), user.getRole(), user.isActive(), user.getRelationShip().name(), user.getWishSettings().isGoodMorningEnabled(), user.getWishSettings().isGoodNightEnabled(), user.getWishSettings().isBirthdayEnabled());
+        }else {
+            return new UserResponse(user.getId(), user.getName(), user.getEmail(), user.getRole(), user.isActive(), user.getRelationShip().name(), false, false, false);
+        }
     }
 
     @Override
@@ -36,14 +47,18 @@ public class UserServiceImpl implements UserService {
         user.setName(request.name());
         user.setRole(request.role());
         user.setRelationShip(request.relationShip());
+        if(request.isBirthdayEnabled() || request.isGoodNightEnabled() || request.isGoodMorningEnabled()){
+            UserWishSettings userWishSettings = UserWishSettings.builder().user(user).goodMorningEnabled(request.isGoodMorningEnabled()).goodNightEnabled(request.isGoodNightEnabled()).build();
+            user.setWishSettings(userWishSettings);
+        }
         user = userRepository.save(user);
-        return new UserResponse(user.getId(), user.getName(), user.getEmail(), user.getRole(), user.isActive(), user.getRelationShip().name(), user.getWishSettings().isGoodMorningEnabled(), user.getWishSettings().isGoodNightEnabled());
+        return getUserResponse(user);
     }
 
     @Override
     public List<UserResponse> list() {
         return userRepository.findAll().stream().filter(u -> !u.isDeleted())
-                .map(u -> new UserResponse(u.getId(), u.getName(), u.getEmail(), u.getRole(), u.isActive(), u.getRelationShip().name(),u.getWishSettings().isGoodMorningEnabled(),u.getWishSettings().isGoodNightEnabled())).toList();
+                .map(UserServiceImpl::getUserResponse).toList();
     }
 
     @Override
@@ -56,7 +71,7 @@ public class UserServiceImpl implements UserService {
         String email = authentication.getName();
         User user = userRepository.findByEmailAndDeletedFalse(email)
                 .orElseThrow(() -> new NotFoundException("User not found"));
-        return new UserResponse(user.getId(), user.getName(), user.getEmail(), user.getRole(), user.isActive(), user.getRelationShip().name(), user.getWishSettings().isGoodMorningEnabled(),user.getWishSettings().isGoodNightEnabled());
+        return getUserResponse(user);
     }
 
     @Override

@@ -11,7 +11,10 @@ import lombok.extern.slf4j.Slf4j;
 import org.quartz.Job;
 import org.quartz.JobExecutionContext;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
+
+import java.util.Date;
 
 @Component
 @RequiredArgsConstructor
@@ -27,11 +30,13 @@ public class GoodNightScheduler implements Job {
 
     @Override
     public void execute(JobExecutionContext context) {
-
+        System.out.println("GOOD NIGHT JOB TRIGGERED: " + new Date());
+        log.info("GOOD NIGHT JOB TRIGGERED: " + new Date());
         userWishSettingsRepository
                 .findByGoodNightEnabledTrue()
                 .forEach(this::triggerMessages);
-
+        System.out.println("GOOD NIGHT JOB COMPLETED: " + new Date());
+        log.info("GOOD NIGHT JOB COMPLETED: " + new Date());
     }
 
     private void triggerMessages(UserWishSettings event) {

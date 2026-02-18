@@ -19,6 +19,7 @@ import org.springframework.stereotype.Component;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
+import java.util.Date;
 import java.util.List;
 
 @Component
@@ -36,9 +37,13 @@ public class BirthdayMailScheduler implements Job {
 
     @Override
     public void execute(JobExecutionContext context) {
+        System.out.println("BIRTHDAY JOB TRIGGERED: " + new Date());
+        log.info("BIRTHDAY JOB TRIGGERED: " + new Date());
         userWishSettingsRepository
                 .findByBirthdayEnabledTrue()
                 .forEach(this::triggerMessages);
+        System.out.println("BIRTHDAY JOB COMPLETED: " + new Date());
+        log.info("BIRTHDAY JOB COMPLETED: " + new Date());
     }
 
     private void triggerMessages(UserWishSettings event) {
