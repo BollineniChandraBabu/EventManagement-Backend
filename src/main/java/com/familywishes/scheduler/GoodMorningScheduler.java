@@ -5,7 +5,7 @@ import com.familywishes.dto.AiWishResponse;
 import com.familywishes.entity.UserWishSettings;
 import com.familywishes.repository.UserWishSettingsRepository;
 import com.familywishes.service.AiService;
-import com.familywishes.service.EmailService;
+import com.familywishes.service.BrevoEmailService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.quartz.Job;
@@ -22,7 +22,7 @@ public class GoodMorningScheduler implements Job {
 
     private final UserWishSettingsRepository userWishSettingsRepository;
     private final AiService aiService;
-    private final EmailService emailService;
+    private final BrevoEmailService emailService;
 
     @Value("${alert.email.to}")
     private String alertEmail;
@@ -56,7 +56,7 @@ public class GoodMorningScheduler implements Job {
 
             byte[] image = aiService.callGeminiImage(request);
 
-            emailService.sendHtmlEmail(
+            emailService.sendEmailWithAttachments(
                     event.getUser().getEmail(),
                     ai.subject(),
                     ai.htmlMessage(),
@@ -78,7 +78,7 @@ public class GoodMorningScheduler implements Job {
                 "<h3>Error in Good Morning Job</h3>" +
                         "<p>" + e.getMessage() + "</p>";
 
-        emailService.sendHtmlEmail(
+        emailService.sendEmailWithAttachments(
                 alertEmail,
                 subject,
                 body,

@@ -7,7 +7,7 @@ import com.familywishes.entity.UserWishSettings;
 import com.familywishes.repository.UserRepository;
 import com.familywishes.repository.UserWishSettingsRepository;
 import com.familywishes.service.AiService;
-import com.familywishes.service.EmailService;
+import com.familywishes.service.BrevoEmailService;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -17,7 +17,6 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.Date;
 import java.util.List;
@@ -30,7 +29,7 @@ public class BirthdayMailScheduler implements Job {
     private final UserWishSettingsRepository userWishSettingsRepository;
     private final UserRepository userRepository;
     private final AiService aiService;
-    private final EmailService emailService;
+    private final BrevoEmailService emailService;
 
     @Value("${alert.email.to}")
     private String alertEmail;
@@ -79,7 +78,7 @@ public class BirthdayMailScheduler implements Job {
                 );
         AiWishResponse ai = aiService.generate(request);
         byte[] image = aiService.callGeminiImage(request);
-        emailService.sendHtmlEmail(
+        emailService.sendEmailWithAttachments(
                 user.getEmail(),
                 ai.subject(),
                 ai.htmlMessage(),
@@ -92,7 +91,7 @@ public class BirthdayMailScheduler implements Job {
     }
 
     private void sendErrorEmail(User user, Exception e) {
-        emailService.sendHtmlEmail(
+        emailService.sendEmailWithAttachments(
                 alertEmail,
                 "Birthday Job Failed",
                 "Failed for user: " + user.getEmail()

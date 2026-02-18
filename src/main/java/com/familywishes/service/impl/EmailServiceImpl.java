@@ -59,30 +59,12 @@ public class EmailServiceImpl implements EmailService {
     }
 
     @Override
-    public void sendTestEmail(String to) {
-        sendHtmlEmail(to, "Test Email", "<h3>Family Wishes test email</h3>", null, null);
-    }
-
-    @Override
     public void retryFailed() {
         logRepository.findByStatusAndRetryCountLessThan(EmailStatus.FAILED, 3)
                 .forEach(log -> sendHtmlEmail(log.getRecipientEmail(), log.getSubject(), "Retry delivery", log.getId(),null));
     }
 
-    @Override
-    public List<EmailStatusResponse> getStatus() {
-        List<EmailStatusResponse> emailStatusResponses = new ArrayList<>();
-       List<EmailLog> emailLogList = logRepository.findAll();
 
-//        long pending = logRepository.countByStatus(EmailStatus.PENDING);
-//        long sent = logRepository.countByStatus(EmailStatus.SENT);
-//        long failed = logRepository.countByStatus(EmailStatus.FAILED);
-        emailLogList.forEach(emailLog -> {
-            EmailStatusResponse emailStatusResponse = new EmailStatusResponse(emailLog.getId(), emailLog.getRecipientEmail(), emailLog.getSubject(), emailLog.getStatus().name(), emailLog.getSentAt());
-            emailStatusResponses.add(emailStatusResponse);
-        });
-        return emailStatusResponses;
-    }
 
     public void sendFailureAlert(long failedCount) {
         SimpleMailMessage msg = new SimpleMailMessage();

@@ -5,13 +5,12 @@ import com.familywishes.dto.AiWishResponse;
 import com.familywishes.entity.UserWishSettings;
 import com.familywishes.repository.UserWishSettingsRepository;
 import com.familywishes.service.AiService;
-import com.familywishes.service.EmailService;
+import com.familywishes.service.BrevoEmailService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.quartz.Job;
 import org.quartz.JobExecutionContext;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
 import java.util.Date;
@@ -23,7 +22,7 @@ public class GoodNightScheduler implements Job {
 
     private final UserWishSettingsRepository userWishSettingsRepository;
     private final AiService aiService;
-    private final EmailService emailService;
+    private final BrevoEmailService emailService;
 
     @Value("${alert.email.to}")
     private String alertEmail;
@@ -57,7 +56,7 @@ public class GoodNightScheduler implements Job {
 
             byte[] image = aiService.callGeminiImage(request);
 
-            emailService.sendHtmlEmail(
+            emailService.sendEmailWithAttachments(
                     event.getUser().getEmail(),
                     ai.subject(),
                     ai.htmlMessage(),
@@ -79,7 +78,7 @@ public class GoodNightScheduler implements Job {
                 "<h3>Error in Good Night Job</h3>" +
                         "<p>" + e.getMessage() + "</p>";
 
-        emailService.sendHtmlEmail(
+        emailService.sendEmailWithAttachments(
                 alertEmail,
                 subject,
                 body,

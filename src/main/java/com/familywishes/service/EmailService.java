@@ -6,8 +6,6 @@ import java.util.List;
 
 public interface EmailService {
     void sendHtmlEmail(String to, String subject, String html, Long logId, byte[] image);
-    void sendTestEmail(String to);
     void retryFailed();
-    List<EmailStatusResponse> getStatus();
     void sendFailureAlert(long count);
 }
