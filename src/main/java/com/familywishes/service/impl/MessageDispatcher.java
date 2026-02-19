@@ -7,6 +7,7 @@ import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 
 @Service
 public class MessageDispatcher {
@@ -25,7 +26,7 @@ public class MessageDispatcher {
 
         try {
             log.setStatus(MessageStatus.RETRYING);
-            log.setLastAttemptTime(LocalDateTime.now());
+            log.setLastAttemptTime(LocalDateTime.now(ZoneId.of("Asia/Kolkata")));
             repo.save(log);
 
             instagramService.sendMessage(

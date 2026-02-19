@@ -16,6 +16,7 @@ import org.springframework.stereotype.Component;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.List;
 
 @Component
@@ -55,7 +56,7 @@ public class FestivalScheduler {
                     log.setInstagramUserId(user.getInstagramUserId());
                     log.setMessage(event.getMessage());
                     log.setStatus(MessageStatus.PENDING);
-                    log.setCreatedAt(LocalDateTime.now());
+                    log.setCreatedAt(LocalDateTime.now(ZoneId.of("Asia/Kolkata")));
 
                     logRepo.save(log);
                     dispatcher.sendAsync(log);

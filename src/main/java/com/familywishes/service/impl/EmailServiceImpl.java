@@ -16,6 +16,7 @@ import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
@@ -47,7 +48,7 @@ public class EmailServiceImpl implements EmailService {
             mailSender.send(message);
             logEntry.setBody(html);
             logEntry.setStatus(EmailStatus.SENT);
-            logEntry.setSentAt(LocalDateTime.now());
+            logEntry.setSentAt(LocalDateTime.now(ZoneId.of("Asia/Kolkata")));
         } catch (Exception e) {
             log.error("mail send failed", e);
             logEntry.setStatus(EmailStatus.FAILED);

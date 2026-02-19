@@ -8,6 +8,7 @@ import lombok.*;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 
 @Entity
 @Table(name = "users")
@@ -47,5 +48,5 @@ public class User {
     private UserWishSettings wishSettings;
 
     @PrePersist
-    void init() { if (createdAt == null) createdAt = LocalDateTime.now(); }
+    void init() { if (createdAt == null) createdAt = LocalDateTime.now(ZoneId.of("Asia/Kolkata")); }
 }

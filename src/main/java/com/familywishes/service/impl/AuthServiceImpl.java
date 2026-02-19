@@ -19,6 +19,7 @@ import org.springframework.stereotype.Service;
 
 import java.security.SecureRandom;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.UUID;
 
 @Service
@@ -39,14 +40,14 @@ public class AuthServiceImpl implements AuthService {
         User user = userRepository.findByEmailAndDeletedFalse(request.email()).orElseThrow(() -> new NotFoundException("User not found"));
         String access = jwtService.generateAccessToken(user);
         String refresh = jwtService.generateRefreshToken(user);
-        refreshTokenRepository.save(RefreshToken.builder().token(refresh).user(user).expiresAt(LocalDateTime.now().plusDays(7)).revoked(false).build());
+        refreshTokenRepository.save(RefreshToken.builder().token(refresh).user(user).expiresAt(LocalDateTime.now(ZoneId.of("Asia/Kolkata")).plusDays(7)).revoked(false).build());
         return new AuthResponse(access, refresh, "Bearer", user.getRole().name(), jwtService.getAccessTokenTtlSeconds());
     }
 
     @Override
     public AuthResponse refresh(RefreshRequest request) {
         RefreshToken rt = refreshTokenRepository.findByTokenAndRevokedFalse(request.refreshToken()).orElseThrow(() -> new BadRequestException("Invalid refresh token"));
-        if (rt.getExpiresAt().isBefore(LocalDateTime.now())) throw new BadRequestException("Refresh token expired");
+        if (rt.getExpiresAt().isBefore(LocalDateTime.now(ZoneId.of("Asia/Kolkata")))) throw new BadRequestException("Refresh token expired");
         String access = jwtService.generateAccessToken(rt.getUser());
         return new AuthResponse(access, rt.getToken(), "Bearer", rt.getUser().getRole().name(), jwtService.getAccessTokenTtlSeconds());
     }
@@ -54,14 +55,14 @@ public class AuthServiceImpl implements AuthService {
     @Override
     public void sendOtp(OtpSendRequest request) {
         String otp = String.format("%06d", new SecureRandom().nextInt(1_000_000));
-        otpCodeRepository.save(OtpCode.builder().email(request.email()).code(otp).expiresAt(LocalDateTime.now().plusMinutes(5)).used(false).build());
+        otpCodeRepository.save(OtpCode.builder().email(request.email()).code(otp).expiresAt(LocalDateTime.now(ZoneId.of("Asia/Kolkata")).plusMinutes(5)).used(false).build());
         emailService.sendEmailWithAttachments(request.email(), "Your OTP", "<p>Your OTP is <b>" + otp + "</b>. Valid for 5 minutes.</p>", null,null);
     }
 
     @Override
     public AuthResponse verifyOtp(OtpVerifyRequest request) {
         var otp = otpCodeRepository.findTopByEmailOrderByIdDesc(request.email()).orElseThrow(() -> new BadRequestException("OTP not found"));
-        if (otp.isUsed() || otp.getExpiresAt().isBefore(LocalDateTime.now()) || !otp.getCode().equals(request.otp())) {
+        if (otp.isUsed() || otp.getExpiresAt().isBefore(LocalDateTime.now(ZoneId.of("Asia/Kolkata"))) || !otp.getCode().equals(request.otp())) {
             throw new BadRequestException("Invalid or expired OTP");
         }
         otp.setUsed(true);
@@ -69,7 +70,7 @@ public class AuthServiceImpl implements AuthService {
         User user = userRepository.findByEmailAndDeletedFalse(request.email()).orElseThrow(() -> new NotFoundException("User not found"));
         String access = jwtService.generateAccessToken(user);
         String refresh = jwtService.generateRefreshToken(user);
-        refreshTokenRepository.save(RefreshToken.builder().token(refresh).user(user).expiresAt(LocalDateTime.now().plusDays(7)).revoked(false).build());
+        refreshTokenRepository.save(RefreshToken.builder().token(refresh).user(user).expiresAt(LocalDateTime.now(ZoneId.of("Asia/Kolkata")).plusDays(7)).revoked(false).build());
         return new AuthResponse(access, refresh, "Bearer", user.getRole().name(), jwtService.getAccessTokenTtlSeconds());
     }
 
@@ -77,14 +78,14 @@ public class AuthServiceImpl implements AuthService {
     public void forgotPassword(ForgotPasswordRequest request) {
         User user = userRepository.findByEmailAndDeletedFalse(request.email()).orElseThrow(() -> new NotFoundException("User not found"));
         String token = UUID.randomUUID().toString();
-        resetTokenRepository.save(PasswordResetToken.builder().token(token).user(user).expiresAt(LocalDateTime.now().plusMinutes(30)).used(false).build());
+        resetTokenRepository.save(PasswordResetToken.builder().token(token).user(user).expiresAt(LocalDateTime.now(ZoneId.of("Asia/Kolkata")).plusMinutes(30)).used(false).build());
         emailService.sendEmailWithAttachments(user.getEmail(), "Reset your password", "<a href='https://family-wishes/reset?token=" + token + "'>Reset Password</a>", null, null);
     }
 
     @Override
     public void resetPassword(ResetPasswordRequest request) {
         var token = resetTokenRepository.findByToken(request.token()).orElseThrow(() -> new BadRequestException("Invalid token"));
-        if (token.isUsed() || token.getExpiresAt().isBefore(LocalDateTime.now())) throw new BadRequestException("Expired token");
+        if (token.isUsed() || token.getExpiresAt().isBefore(LocalDateTime.now(ZoneId.of("Asia/Kolkata")))) throw new BadRequestException("Expired token");
         token.setUsed(true);
         User user = token.getUser();
         user.setPassword(passwordEncoder.encode(request.newPassword()));

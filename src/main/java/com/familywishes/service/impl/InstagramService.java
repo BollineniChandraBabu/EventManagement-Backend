@@ -12,6 +12,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 
 @Service
 @RequiredArgsConstructor
@@ -33,7 +34,7 @@ public class InstagramService {
     @Async
     public void sendMessage(MessageLog messageLog) {
 
-        messageLog.setLastAttemptTime(LocalDateTime.now());
+        messageLog.setLastAttemptTime(LocalDateTime.now(ZoneId.of("Asia/Kolkata")));
         messageLog.setStatus(MessageStatus.PENDING);
         messageLogRepository.save(messageLog);
 

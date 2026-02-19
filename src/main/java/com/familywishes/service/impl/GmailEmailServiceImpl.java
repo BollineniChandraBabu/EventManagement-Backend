@@ -5,6 +5,7 @@ import com.familywishes.entity.EmailLog;
 import com.familywishes.entity.enums.EmailStatus;
 import com.familywishes.repository.EmailLogRepository;
 import com.familywishes.service.GmailEmailService;
+import com.familywishes.util.TimeUtil;
 import com.google.api.services.gmail.Gmail;
 import com.google.api.services.gmail.model.Message;
 import jakarta.mail.Session;
@@ -20,6 +21,7 @@ import org.springframework.stereotype.Service;
 
 import java.io.ByteArrayOutputStream;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.Base64;
 import java.util.List;
@@ -88,7 +90,7 @@ public class GmailEmailServiceImpl implements GmailEmailService {
             logEntry.setImageData(image);
             logEntry.setStatus(EmailStatus.SENT);
 
-            logEntry.setSentAt(LocalDateTime.now());
+            logEntry.setSentAt(LocalDateTime.now(ZoneId.of("Asia/Kolkata")));
 
             log.info("Email sent successfully to {}", to);
 
@@ -232,7 +234,7 @@ public class GmailEmailServiceImpl implements GmailEmailService {
 
                                         log.getStatus().name(),
 
-                                        log.getSentAt()
+                                        TimeUtil.toIST(log.getSentAt())
 
                                 )
 

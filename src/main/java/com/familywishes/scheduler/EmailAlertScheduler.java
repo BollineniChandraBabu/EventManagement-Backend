@@ -9,6 +9,7 @@ import org.springframework.stereotype.Component;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 
 @Component
 public class EmailAlertScheduler {
@@ -34,7 +35,7 @@ public class EmailAlertScheduler {
                 repo.countByStatusAndCreatedAtBetween(
                         MessageStatus.FAILED,
                         start,
-                        LocalDateTime.now()
+                        LocalDateTime.now(ZoneId.of("Asia/Kolkata"))
                 );
 
         if (failed > 5) {

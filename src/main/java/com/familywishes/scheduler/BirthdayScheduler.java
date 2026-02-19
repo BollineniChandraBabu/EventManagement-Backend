@@ -15,6 +15,7 @@ import org.springframework.stereotype.Component;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.List;
 
 @Component
@@ -47,7 +48,7 @@ public class BirthdayScheduler {
                 log.setInstagramUserId(user.getInstagramUserId());
                 log.setMessage("🎂 Happy Birthday " + user.getName());
                 log.setStatus(MessageStatus.PENDING);
-                log.setCreatedAt(LocalDateTime.now());
+                log.setCreatedAt(LocalDateTime.now(ZoneId.of("Asia/Kolkata")));
                 log.setMessageType(MessageType.BIRTHDAY);
                 logRepo.save(log);
                 dispatcher.sendAsync(log);

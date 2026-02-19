@@ -7,6 +7,7 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.Map;
 
 @RestControllerAdvice
@@ -32,6 +33,6 @@ public class GlobalExceptionHandler {
     }
 
     private ResponseEntity<?> build(HttpStatus status, String message) {
-        return ResponseEntity.status(status).body(Map.of("timestamp", LocalDateTime.now(), "status", status.value(), "message", message));
+        return ResponseEntity.status(status).body(Map.of("timestamp", LocalDateTime.now(ZoneId.of("Asia/Kolkata")), "status", status.value(), "message", message));
     }
 }

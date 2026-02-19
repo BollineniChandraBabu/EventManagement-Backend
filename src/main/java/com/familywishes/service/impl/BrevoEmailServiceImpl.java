@@ -16,6 +16,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.*;
 
 @Service
@@ -108,7 +109,7 @@ public class BrevoEmailServiceImpl implements BrevoEmailService {
             // SUCCESS
             logEntry.setBody(html);
             logEntry.setStatus(EmailStatus.SENT);
-            logEntry.setSentAt(LocalDateTime.now());
+            logEntry.setSentAt(LocalDateTime.now(ZoneId.of("Asia/Kolkata")));
             log.info("Email sent: {}", response.getBody());
         } catch (Exception e) {
             log.error("mail send failed", e);
