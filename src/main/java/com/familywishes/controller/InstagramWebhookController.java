@@ -7,7 +7,7 @@ import org.springframework.web.bind.annotation.*;
 @RequestMapping("/webhook")
 public class InstagramWebhookController {
 
-    private static final String VERIFY_TOKEN = "chandoo_verify_token";
+    private static final String VERIFY_TOKEN = "familywish_verify_token";
 
     @GetMapping
     public ResponseEntity<String> verifyWebhook(
