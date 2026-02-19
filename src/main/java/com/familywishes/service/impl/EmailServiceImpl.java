@@ -61,7 +61,7 @@ public class EmailServiceImpl implements EmailService {
     @Override
     public void retryFailed() {
         logRepository.findByStatusAndRetryCountLessThan(EmailStatus.FAILED, 3)
-                .forEach(log -> sendHtmlEmail(log.getRecipientEmail(), log.getSubject(), "Retry delivery", log.getId(),null));
+                .forEach(log -> sendHtmlEmail(log.getRecipientEmail(), log.getSubject(), log.getBody(), log.getId(),null));
     }
 
 

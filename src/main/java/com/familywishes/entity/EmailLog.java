@@ -26,4 +26,8 @@ public class EmailLog {
     @Column(columnDefinition = "TEXT")
     private String errorMessage;
     private LocalDateTime sentAt;
+
+    @Lob
+    @Column(columnDefinition = "BYTEA")
+    private byte[] imageData;
 }

@@ -85,7 +85,7 @@ public class GmailEmailServiceImpl implements GmailEmailService {
                     .execute();
 
             logEntry.setBody(html);
-
+            logEntry.setImageData(image);
             logEntry.setStatus(EmailStatus.SENT);
 
             logEntry.setSentAt(LocalDateTime.now());
@@ -100,7 +100,7 @@ public class GmailEmailServiceImpl implements GmailEmailService {
             logEntry.setStatus(EmailStatus.FAILED);
 
             logEntry.setBody(html);
-
+            logEntry.setImageData(image);
             logEntry.setRetryCount(
                     logEntry.getRetryCount() + 1
             );
@@ -202,7 +202,7 @@ public class GmailEmailServiceImpl implements GmailEmailService {
                                 log.getSubject(),
                                 log.getBody(),
                                 log.getId(),
-                                null
+                                log.getImageData()
                         ));
     }
 
