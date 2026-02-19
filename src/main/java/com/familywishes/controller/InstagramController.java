@@ -1,15 +1,17 @@
 package com.familywishes.controller;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
-@RequestMapping("/webhook")
-public class InstagramWebhookController {
+@RequestMapping("/instagram")
+public class InstagramController {
 
-    private static final String VERIFY_TOKEN = "familywish_verify_token";
+    @Value("${instagram.verify.token}")
+    private String VERIFY_TOKEN;
 
-    @GetMapping
+    @GetMapping("/webhook")
     public ResponseEntity<String> verifyWebhook(
             @RequestParam("hub.mode") String mode,
             @RequestParam("hub.challenge") String challenge,
@@ -23,12 +25,19 @@ public class InstagramWebhookController {
         return ResponseEntity.status(403).body("Verification failed");
     }
 
-    @PostMapping
+    @PostMapping("/webhook")
     public ResponseEntity<String> receiveWebhook(@RequestBody String payload) {
 
         System.out.println("Instagram Webhook Event:");
         System.out.println(payload);
 
         return ResponseEntity.ok("EVENT_RECEIVED");
+    }
+
+    @GetMapping("/callback")
+    public ResponseEntity<String> instagramCallback(
+            @RequestParam("code") String code) {
+        System.out.println("Authorization Code: " + code);
+        return ResponseEntity.ok("Instagram login successful. Code: " + code);
     }
 }
