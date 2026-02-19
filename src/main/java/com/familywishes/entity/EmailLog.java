@@ -3,6 +3,7 @@ package com.familywishes.entity;
 import com.familywishes.entity.enums.EmailStatus;
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.JdbcTypeCode;
 
 import java.time.LocalDateTime;
 
@@ -27,7 +28,7 @@ public class EmailLog {
     private String errorMessage;
     private LocalDateTime sentAt;
 
-    @Lob
-    @Column(columnDefinition = "BYTEA")
+    @JdbcTypeCode(java.sql.Types.VARBINARY)
+    @Column(name = "image_data")
     private byte[] imageData;
 }
