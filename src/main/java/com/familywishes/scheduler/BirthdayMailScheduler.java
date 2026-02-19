@@ -7,7 +7,7 @@ import com.familywishes.entity.UserWishSettings;
 import com.familywishes.repository.UserRepository;
 import com.familywishes.repository.UserWishSettingsRepository;
 import com.familywishes.service.AiService;
-import com.familywishes.service.BrevoEmailService;
+import com.familywishes.service.GmailEmailService;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -29,7 +29,7 @@ public class BirthdayMailScheduler implements Job {
     private final UserWishSettingsRepository userWishSettingsRepository;
     private final UserRepository userRepository;
     private final AiService aiService;
-    private final BrevoEmailService emailService;
+    private final GmailEmailService emailService;
 
     @Value("${alert.email.to}")
     private String alertEmail;

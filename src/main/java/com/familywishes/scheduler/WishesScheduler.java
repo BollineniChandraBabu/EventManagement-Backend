@@ -6,7 +6,7 @@ import com.familywishes.repository.EmailTemplateRepository;
 import com.familywishes.repository.EventRepository;
 import com.familywishes.repository.UserWishSettingsRepository;
 import com.familywishes.service.AiService;
-import com.familywishes.service.BrevoEmailService;
+import com.familywishes.service.GmailEmailService;
 import com.familywishes.util.TemplateRenderer;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import lombok.RequiredArgsConstructor;
@@ -25,7 +25,7 @@ public class WishesScheduler implements Job {
         private final EventRepository eventRepository;
         private final UserWishSettingsRepository userWishSettingsRepository;
         private final EmailTemplateRepository templateRepository;
-        private final BrevoEmailService emailService;
+        private final GmailEmailService emailService;
         private final AiService aiService;
         private final TemplateRenderer renderer;
 

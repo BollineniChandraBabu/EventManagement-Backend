@@ -41,6 +41,11 @@ dependencies {
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
     testImplementation 'org.springframework.security:spring-security-test'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+
+    implementation 'com.google.apis:google-api-services-gmail:v1-rev20240520-2.0.0'
+    implementation 'com.google.auth:google-auth-library-oauth2-http:1.23.0'
+    implementation 'com.sun.mail:jakarta.mail:2.0.1'
+    implementation 'com.google.http-client:google-http-client-jackson2:1.43.3'
 }
 
 tasks.named('test') {

@@ -5,7 +5,7 @@ import com.familywishes.dto.AiWishResponse;
 import com.familywishes.entity.UserWishSettings;
 import com.familywishes.repository.UserWishSettingsRepository;
 import com.familywishes.service.AiService;
-import com.familywishes.service.BrevoEmailService;
+import com.familywishes.service.GmailEmailService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.quartz.Job;
@@ -22,7 +22,7 @@ public class GoodMorningScheduler implements Job {
 
     private final UserWishSettingsRepository userWishSettingsRepository;
     private final AiService aiService;
-    private final BrevoEmailService emailService;
+    private final GmailEmailService emailService;
 
     @Value("${alert.email.to}")
     private String alertEmail;

@@ -1,7 +1,7 @@
 package com.familywishes.controller;
 
 import com.familywishes.dto.EmailDtos.EmailStatusResponse;
-import com.familywishes.service.BrevoEmailService;
+import com.familywishes.service.GmailEmailService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -15,7 +15,7 @@ import java.util.List;
 @RequestMapping({"/api/email", "/api/emails"})
 @RequiredArgsConstructor
 public class EmailController {
-    private final BrevoEmailService emailService;
+    private final GmailEmailService emailService;
 
     @PostMapping("/test")
     public void test(Authentication authentication) { emailService.sendTestEmail(authentication.getName()); }

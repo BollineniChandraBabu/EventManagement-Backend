@@ -10,7 +10,7 @@ import com.familywishes.exception.NotFoundException;
 import com.familywishes.repository.*;
 import com.familywishes.security.JwtService;
 import com.familywishes.service.AuthService;
-import com.familywishes.service.BrevoEmailService;
+import com.familywishes.service.GmailEmailService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -31,7 +31,7 @@ public class AuthServiceImpl implements AuthService {
     private final OtpCodeRepository otpCodeRepository;
     private final PasswordResetTokenRepository resetTokenRepository;
     private final PasswordEncoder passwordEncoder;
-    private final BrevoEmailService emailService;
+    private final GmailEmailService emailService;
 
     @Override
     public AuthResponse login(LoginRequest request) {
@@ -45,7 +45,7 @@ public class AuthServiceImpl implements AuthService {
 
     @Override
     public AuthResponse refresh(RefreshRequest request) {
-        var rt = refreshTokenRepository.findByTokenAndRevokedFalse(request.refreshToken()).orElseThrow(() -> new BadRequestException("Invalid refresh token"));
+        RefreshToken rt = refreshTokenRepository.findByTokenAndRevokedFalse(request.refreshToken()).orElseThrow(() -> new BadRequestException("Invalid refresh token"));
         if (rt.getExpiresAt().isBefore(LocalDateTime.now())) throw new BadRequestException("Refresh token expired");
         String access = jwtService.generateAccessToken(rt.getUser());
         return new AuthResponse(access, rt.getToken(), "Bearer", rt.getUser().getRole().name(), jwtService.getAccessTokenTtlSeconds());
