@@ -95,4 +95,27 @@ public class WishesSchedulerConfig {
                 .build();
 
     }
+
+    @Bean
+    public JobDetail refreshTokenCleanupJobDetail() {
+        return JobBuilder.newJob(RefreshTokenCleanupScheduler.class)
+                .withIdentity("refreshTokenCleanupJob")
+                .storeDurably()
+                .build();
+    }
+
+    @Bean
+    public Trigger refreshTokenCleanupTrigger() {
+        return TriggerBuilder.newTrigger()
+                .forJob(refreshTokenCleanupJobDetail())
+                .withIdentity("refreshTokenCleanupTrigger")
+                .withSchedule(
+                        CronScheduleBuilder
+                                .cronSchedule("0 0 0 * * ?")
+                                .inTimeZone(TimeZone.getTimeZone("Asia/Kolkata"))
+                                .withMisfireHandlingInstructionFireAndProceed()
+                )
+                .build();
+    }
+
 }
