@@ -59,7 +59,6 @@ public class BrevoEmailServiceImpl implements BrevoEmailService {
                               String html,
                               Long logId,
                               byte[] image) {
-
         EmailLog logEntry = logId == null
                 ? logRepository.save(
                 EmailLog.builder()
@@ -134,7 +133,7 @@ public class BrevoEmailServiceImpl implements BrevoEmailService {
         List<EmailDtos.EmailStatusResponse> emailStatusResponses = new ArrayList<>();
         List<EmailLog> emailLogList = logRepository.findAll();
         emailLogList.forEach(emailLog -> {
-            EmailDtos.EmailStatusResponse emailStatusResponse = new EmailDtos.EmailStatusResponse(emailLog.getId(), emailLog.getRecipientEmail(), emailLog.getSubject(), emailLog.getStatus().name(), emailLog.getSentAt());
+            EmailDtos.EmailStatusResponse emailStatusResponse = new EmailDtos.EmailStatusResponse(emailLog.getId(), emailLog.getRecipientEmail(), emailLog.getSubject(),emailLog.getBody(),emailLog.getImageData(), emailLog.getStatus().name(), emailLog.getSentAt());
             emailStatusResponses.add(emailStatusResponse);
         });
         return emailStatusResponses;

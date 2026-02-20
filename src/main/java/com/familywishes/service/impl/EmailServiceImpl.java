@@ -1,6 +1,5 @@
 package com.familywishes.service.impl;
 
-import com.familywishes.dto.EmailDtos.EmailStatusResponse;
 import com.familywishes.entity.EmailLog;
 import com.familywishes.entity.enums.EmailStatus;
 import com.familywishes.repository.EmailLogRepository;
@@ -17,8 +16,6 @@ import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
 import java.time.ZoneId;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Objects;
 
 @Service

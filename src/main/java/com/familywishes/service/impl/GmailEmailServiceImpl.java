@@ -215,54 +215,32 @@ public class GmailEmailServiceImpl implements GmailEmailService {
 
     @Override
     public List<EmailDtos.EmailStatusResponse> getStatus() {
-
-        List<EmailDtos.EmailStatusResponse> list =
-                new ArrayList<>();
-
-        logRepository.findAll()
-                .forEach(log ->
-
+        List<EmailDtos.EmailStatusResponse> list = new ArrayList<>();
+        logRepository.findAll().forEach(log ->
                         list.add(
-
                                 new EmailDtos.EmailStatusResponse(
-
                                         log.getId(),
-
                                         log.getRecipientEmail(),
-
                                         log.getSubject(),
-
+                                        log.getBody(),
+                                        log.getImageData(),
                                         log.getStatus().name(),
-
                                         log.getSentAt()
 
                                 )
 
                         ));
-
         return list;
     }
 
-
-    // ==========================
-    // TEST EMAIL
-    // ==========================
-
     @Override
     public void sendTestEmail(String to) {
-
         sendEmailWithAttachments(
-
                 to,
-
                 "Test Email",
-
                 "<h3>Family Wishes Gmail API test</h3>",
-
                 null,
-
                 null
-
         );
     }
 }
