@@ -1,18 +1,21 @@
 package com.familywishes.service.impl;
 
 import com.familywishes.dto.UserDtos.*;
+import com.familywishes.dto.CommonDtos.PagedResponse;
 import com.familywishes.entity.User;
 import com.familywishes.entity.UserWishSettings;
 import com.familywishes.exception.NotFoundException;
 import com.familywishes.repository.UserRepository;
 import com.familywishes.service.UserService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
-import java.util.List;
 import java.util.Objects;
 
 @Service
@@ -56,9 +59,21 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    public List<UserResponse> list() {
-        return userRepository.findAll().stream().filter(u -> !u.isDeleted())
-                .map(UserServiceImpl::getUserResponse).toList();
+    public PagedResponse<UserResponse> list(int page, int size, String searchKey) {
+        Page<User> userPage = userRepository.findAllActiveUsers(
+                searchKey == null ? "" : searchKey.trim(),
+                PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"))
+        );
+
+        return new PagedResponse<>(
+                userPage.getContent().stream().map(UserServiceImpl::getUserResponse).toList(),
+                userPage.getNumber(),
+                userPage.getSize(),
+                userPage.getTotalElements(),
+                userPage.getTotalPages(),
+                userPage.hasNext(),
+                userPage.hasPrevious()
+        );
     }
 
     @Override

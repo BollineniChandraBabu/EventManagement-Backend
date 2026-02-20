@@ -1,13 +1,12 @@
 package com.familywishes.service;
 
 import com.familywishes.dto.UserDtos.*;
-
-import java.util.List;
+import com.familywishes.dto.CommonDtos.PagedResponse;
 
 public interface UserService {
     UserResponse create(UserRequest request);
     UserResponse update(UserRequest request);
-    List<UserResponse> list();
+    PagedResponse<UserResponse> list(int page, int size, String searchKey);
     UserResponse getCurrentUser();
     void deactivate(Long id);
 }

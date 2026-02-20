@@ -1,10 +1,9 @@
 package com.familywishes.service;
 
 import com.familywishes.dto.EventDtos.*;
-
-import java.util.List;
+import com.familywishes.dto.CommonDtos.PagedResponse;
 
 public interface EventService {
     EventResponse create(EventRequest request);
-    List<EventResponse> list();
+    PagedResponse<EventResponse> list(int page, int size, String searchKey);
 }

@@ -1,15 +1,17 @@
 package com.familywishes.service.impl;
 
 import com.familywishes.dto.TemplateDtos.*;
+import com.familywishes.dto.CommonDtos.PagedResponse;
 import com.familywishes.entity.EmailTemplate;
 import com.familywishes.exception.NotFoundException;
 import com.familywishes.repository.EmailTemplateRepository;
 import com.familywishes.service.TemplateService;
 import com.familywishes.util.TemplateRenderer;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
-
-import java.util.List;
 
 @Service
 @RequiredArgsConstructor
@@ -25,9 +27,23 @@ public class TemplateServiceImpl implements TemplateService {
     }
 
     @Override
-    public List<TemplateResponse> versions(Long id) {
+    public PagedResponse<TemplateResponse> versions(Long id, int page, int size, String searchKey) {
         EmailTemplate template = repository.findById(id).orElseThrow(() -> new NotFoundException("Template not found"));
-        return repository.findByNameOrderByVersionDesc(template.getName()).stream().map(t -> new TemplateResponse(t.getId(), t.getName(), t.getSubject(), t.getHtmlContent(), t.getVersion())).toList();
+        Page<EmailTemplate> versions = repository.findVersionsByNameAndSearchKey(
+                template.getName(),
+                searchKey == null ? "" : searchKey.trim(),
+                PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "version"))
+        );
+
+        return new PagedResponse<>(
+                versions.getContent().stream().map(t -> new TemplateResponse(t.getId(), t.getName(), t.getSubject(), t.getHtmlContent(), t.getVersion())).toList(),
+                versions.getNumber(),
+                versions.getSize(),
+                versions.getTotalElements(),
+                versions.getTotalPages(),
+                versions.hasNext(),
+                versions.hasPrevious()
+        );
     }
 
     @Override

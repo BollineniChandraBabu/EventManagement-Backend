@@ -1,6 +1,7 @@
 package com.familywishes.service.impl;
 
 import com.familywishes.dto.EmailDtos;
+import com.familywishes.dto.CommonDtos.PagedResponse;
 import com.familywishes.entity.EmailLog;
 import com.familywishes.entity.enums.EmailStatus;
 import com.familywishes.repository.EmailLogRepository;
@@ -16,15 +17,16 @@ import jakarta.mail.internet.MimeMultipart;
 import jakarta.mail.util.ByteArrayDataSource;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.io.ByteArrayOutputStream;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
-import java.util.ArrayList;
 import java.util.Base64;
-import java.util.List;
 import java.util.Properties;
 
 @Service
@@ -214,23 +216,29 @@ public class GmailEmailServiceImpl implements GmailEmailService {
     // ==========================
 
     @Override
-    public List<EmailDtos.EmailStatusResponse> getStatus() {
-        List<EmailDtos.EmailStatusResponse> list = new ArrayList<>();
-        logRepository.findAll().forEach(log ->
-                        list.add(
-                                new EmailDtos.EmailStatusResponse(
-                                        log.getId(),
-                                        log.getRecipientEmail(),
-                                        log.getSubject(),
-                                        log.getBody(),
-                                        log.getImageData(),
-                                        log.getStatus().name(),
-                                        log.getSentAt()
+    public PagedResponse<EmailDtos.EmailStatusResponse> getStatus(int page, int size, String searchKey) {
+        Page<EmailLog> logs = logRepository.findAllBySearchKey(
+                searchKey == null ? "" : searchKey.trim(),
+                PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "id"))
+        );
 
-                                )
-
-                        ));
-        return list;
+        return new PagedResponse<>(
+                logs.getContent().stream().map(log -> new EmailDtos.EmailStatusResponse(
+                        log.getId(),
+                        log.getRecipientEmail(),
+                        log.getSubject(),
+                        log.getBody(),
+                        log.getImageData(),
+                        log.getStatus().name(),
+                        log.getSentAt()
+                )).toList(),
+                logs.getNumber(),
+                logs.getSize(),
+                logs.getTotalElements(),
+                logs.getTotalPages(),
+                logs.hasNext(),
+                logs.hasPrevious()
+        );
     }
 
     @Override

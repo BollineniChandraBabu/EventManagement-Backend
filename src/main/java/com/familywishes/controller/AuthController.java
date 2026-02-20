@@ -27,6 +27,12 @@ public class AuthController {
     @PostMapping("/forgot-password")
     public void forgotPassword(@Valid @RequestBody ForgotPasswordRequest request) { authService.forgotPassword(request); }
 
+    @PostMapping("/password-reset/token")
+    public void generatePasswordResetToken(@Valid @RequestBody ForgotPasswordRequest request) { authService.forgotPassword(request); }
+
     @PostMapping("/reset-password")
     public void resetPassword(@Valid @RequestBody ResetPasswordRequest request) { authService.resetPassword(request); }
+
+    @PostMapping("/password-reset/confirm")
+    public void resetPasswordWithEmail(@Valid @RequestBody ResetPasswordWithEmailRequest request) { authService.resetPasswordWithEmail(request); }
 }

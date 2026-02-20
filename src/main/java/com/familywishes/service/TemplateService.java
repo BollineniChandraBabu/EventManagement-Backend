@@ -1,12 +1,11 @@
 package com.familywishes.service;
 
 import com.familywishes.dto.TemplateDtos.*;
-
-import java.util.List;
+import com.familywishes.dto.CommonDtos.PagedResponse;
 
 public interface TemplateService {
     TemplateResponse create(TemplateRequest request);
-    List<TemplateResponse> versions(Long id);
+    PagedResponse<TemplateResponse> versions(Long id, int page, int size, String searchKey);
     String preview(PreviewRequest request);
     TemplateResponse restore(Long id, Long versionId);
 }

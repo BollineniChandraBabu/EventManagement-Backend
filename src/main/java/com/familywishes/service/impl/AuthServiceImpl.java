@@ -12,10 +12,12 @@ import com.familywishes.security.JwtService;
 import com.familywishes.service.AuthService;
 import com.familywishes.service.GmailEmailService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.security.SecureRandom;
 import java.time.LocalDateTime;
@@ -33,6 +35,12 @@ public class AuthServiceImpl implements AuthService {
     private final PasswordResetTokenRepository resetTokenRepository;
     private final PasswordEncoder passwordEncoder;
     private final GmailEmailService emailService;
+
+    @Value("${app.password-reset.base-url:https://family-wishes/reset}")
+    private String passwordResetBaseUrl;
+
+    @Value("${app.password-reset.ttl-minutes:30}")
+    private int passwordResetTtlMinutes;
 
     @Override
     public AuthResponse login(LoginRequest request) {
@@ -75,21 +83,61 @@ public class AuthServiceImpl implements AuthService {
     }
 
     @Override
+    @Transactional
     public void forgotPassword(ForgotPasswordRequest request) {
         User user = userRepository.findByEmailAndDeletedFalse(request.email()).orElseThrow(() -> new NotFoundException("User not found"));
         String token = UUID.randomUUID().toString();
-        resetTokenRepository.save(PasswordResetToken.builder().token(token).user(user).expiresAt(LocalDateTime.now(ZoneId.of("Asia/Kolkata")).plusMinutes(30)).used(false).build());
-        emailService.sendEmailWithAttachments(user.getEmail(), "Reset your password", "<a href='https://family-wishes/reset?token=" + token + "'>Reset Password</a>", null, null);
+        resetTokenRepository.invalidateAllByUserId(user.getId());
+        resetTokenRepository.save(PasswordResetToken.builder()
+                .token(token)
+                .user(user)
+                .expiresAt(LocalDateTime.now(ZoneId.of("Asia/Kolkata")).plusMinutes(passwordResetTtlMinutes))
+                .used(false)
+                .build());
+
+        String resetUrl = passwordResetBaseUrl + "?token=" + token + "&email=" + user.getEmail();
+        String body = """
+                <div style='font-family:Arial,sans-serif;line-height:1.5'>
+                  <h3>Password Reset Request</h3>
+                  <p>Hi %s,</p>
+                  <p>We received a request to reset your Family Wishes password.</p>
+                  <p><a href='%s'>Click here to reset your password</a></p>
+                  <p>If the button doesn't work, use this token in the reset API:</p>
+                  <p><b>%s</b></p>
+                  <p>This link/token expires in %d minutes.</p>
+                  <p>If you did not request this, you can safely ignore this email.</p>
+                </div>
+                """.formatted(user.getName(), resetUrl, token, passwordResetTtlMinutes);
+
+        emailService.sendEmailWithAttachments(user.getEmail(), "Reset your Family Wishes password", body, null, null);
     }
 
     @Override
+    @Transactional
     public void resetPassword(ResetPasswordRequest request) {
         var token = resetTokenRepository.findByToken(request.token()).orElseThrow(() -> new BadRequestException("Invalid token"));
         if (token.isUsed() || token.getExpiresAt().isBefore(LocalDateTime.now(ZoneId.of("Asia/Kolkata")))) throw new BadRequestException("Expired token");
-        token.setUsed(true);
         User user = token.getUser();
         user.setPassword(passwordEncoder.encode(request.newPassword()));
         userRepository.save(user);
-        resetTokenRepository.save(token);
+        resetTokenRepository.invalidateAllByUserId(user.getId());
+    }
+
+    @Override
+    @Transactional
+    public void resetPasswordWithEmail(ResetPasswordWithEmailRequest request) {
+        PasswordResetToken resetToken = resetTokenRepository
+                .findByTokenAndUserEmailAndUsedFalse(request.token(), request.email())
+                .orElseThrow(() -> new BadRequestException("Invalid token"));
+
+        if (resetToken.getExpiresAt().isBefore(LocalDateTime.now(ZoneId.of("Asia/Kolkata")))) {
+            throw new BadRequestException("Expired token");
+        }
+
+        User user = resetToken.getUser();
+        user.setPassword(passwordEncoder.encode(request.newPassword()));
+        userRepository.save(user);
+
+        resetTokenRepository.invalidateAllByUserId(user.getId());
     }
 }

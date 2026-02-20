@@ -1,12 +1,11 @@
 package com.familywishes.controller;
 
 import com.familywishes.dto.TemplateDtos.*;
+import com.familywishes.dto.CommonDtos.PagedResponse;
 import com.familywishes.service.TemplateService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
-
-import java.util.List;
 
 @RestController
 @RequestMapping("/api/templates")
@@ -18,7 +17,12 @@ public class TemplateController {
     public TemplateResponse create(@Valid @RequestBody TemplateRequest request) { return service.create(request); }
 
     @GetMapping("/{id}/versions")
-    public List<TemplateResponse> versions(@PathVariable Long id) { return service.versions(id); }
+    public PagedResponse<TemplateResponse> versions(
+            @PathVariable Long id,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(defaultValue = "") String searchKey
+    ) { return service.versions(id, page, size, searchKey); }
 
     @PostMapping("/preview")
     public String preview(@Valid @RequestBody PreviewRequest request) { return service.preview(request); }

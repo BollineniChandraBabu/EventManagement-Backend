@@ -1,15 +1,15 @@
 package com.familywishes.controller;
 
 import com.familywishes.dto.EmailDtos.EmailStatusResponse;
+import com.familywishes.dto.CommonDtos.PagedResponse;
 import com.familywishes.service.GmailEmailService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
-
-import java.util.List;
 
 @RestController
 @RequestMapping({"/api/email", "/api/emails"})
@@ -21,5 +21,9 @@ public class EmailController {
     public void test(Authentication authentication) { emailService.sendTestEmail(authentication.getName()); }
 
     @GetMapping("/status")
-    public List<EmailStatusResponse> status() { return emailService.getStatus(); }
+    public PagedResponse<EmailStatusResponse> status(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(defaultValue = "") String searchKey
+    ) { return emailService.getStatus(page, size, searchKey); }
 }
