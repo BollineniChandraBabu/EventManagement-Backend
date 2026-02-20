@@ -9,4 +9,5 @@ public interface AuthService {
     AuthResponse verifyOtp(OtpVerifyRequest request);
     void forgotPassword(ForgotPasswordRequest request);
     void resetPassword(ResetPasswordRequest request);
+    void resetPasswordWithEmail(ResetPasswordWithEmailRequest request);
 }

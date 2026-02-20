@@ -1,12 +1,11 @@
 package com.familywishes.controller;
 
 import com.familywishes.dto.EventDtos.*;
+import com.familywishes.dto.CommonDtos.PagedResponse;
 import com.familywishes.service.EventService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
-
-import java.util.List;
 
 @RestController
 @RequestMapping("/api/events")
@@ -18,5 +17,9 @@ public class EventController {
     public EventResponse create(@Valid @RequestBody EventRequest request) { return eventService.create(request); }
 
     @GetMapping
-    public List<EventResponse> list() { return eventService.list(); }
+    public PagedResponse<EventResponse> list(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(defaultValue = "") String searchKey
+    ) { return eventService.list(page, size, searchKey); }
 }

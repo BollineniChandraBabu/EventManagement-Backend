@@ -1,12 +1,11 @@
 package com.familywishes.service;
 
 import com.familywishes.dto.EmailDtos;
-
-import java.util.List;
+import com.familywishes.dto.CommonDtos.PagedResponse;
 
 public interface GmailEmailService {
     void sendEmailWithAttachments(String to, String subject, String html, Long logId, byte[] image);
     void retryFailed();
-    List<EmailDtos.EmailStatusResponse> getStatus();
+    PagedResponse<EmailDtos.EmailStatusResponse> getStatus(int page, int size, String searchKey);
     void sendTestEmail(String to);
 }

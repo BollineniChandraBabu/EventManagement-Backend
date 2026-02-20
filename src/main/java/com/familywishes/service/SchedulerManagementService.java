@@ -2,6 +2,7 @@ package com.familywishes.service;
 
 import com.familywishes.dto.SchedulerDtos.SchedulerStatusResponse;
 import com.familywishes.dto.SchedulerDtos.SchedulerTriggerResponse;
+import com.familywishes.dto.CommonDtos.PagedResponse;
 import com.familywishes.exception.NotFoundException;
 import com.familywishes.scheduler.BirthdayScheduler;
 import com.familywishes.scheduler.EmailAlertScheduler;
@@ -25,6 +26,7 @@ import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Locale;
 
 @Service
 @RequiredArgsConstructor
@@ -70,7 +72,7 @@ public class SchedulerManagementService {
         return jobs;
     }
 
-    public List<SchedulerStatusResponse> getAllStatuses() {
+    public PagedResponse<SchedulerStatusResponse> getAllStatuses(int page, int size, String searchKey) {
         List<SchedulerStatusResponse> statuses = new ArrayList<>();
 
         try {
@@ -86,7 +88,30 @@ public class SchedulerManagementService {
         );
 
         statuses.sort(Comparator.comparing(SchedulerStatusResponse::name));
-        return statuses;
+
+        String normalizedSearchKey = searchKey == null ? "" : searchKey.trim().toLowerCase(Locale.ROOT);
+        List<SchedulerStatusResponse> filteredStatuses = statuses.stream()
+                .filter(status -> normalizedSearchKey.isEmpty()
+                        || status.name().toLowerCase(Locale.ROOT).contains(normalizedSearchKey)
+                        || status.type().toLowerCase(Locale.ROOT).contains(normalizedSearchKey))
+                .toList();
+
+        int safePage = Math.max(page, 0);
+        int safeSize = Math.max(size, 1);
+        int fromIndex = Math.min(safePage * safeSize, filteredStatuses.size());
+        int toIndex = Math.min(fromIndex + safeSize, filteredStatuses.size());
+        List<SchedulerStatusResponse> content = filteredStatuses.subList(fromIndex, toIndex);
+        int totalPages = filteredStatuses.isEmpty() ? 0 : (int) Math.ceil((double) filteredStatuses.size() / safeSize);
+
+        return new PagedResponse<>(
+                content,
+                safePage,
+                safeSize,
+                filteredStatuses.size(),
+                totalPages,
+                safePage + 1 < totalPages,
+                safePage > 0
+        );
     }
 
     public SchedulerTriggerResponse trigger(String jobName) {

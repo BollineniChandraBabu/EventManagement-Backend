@@ -11,4 +11,5 @@ public class AuthDtos {
     public record OtpVerifyRequest(@Email String email, @NotBlank String otp) {}
     public record ForgotPasswordRequest(@Email String email) {}
     public record ResetPasswordRequest(@NotBlank String token, @NotBlank String newPassword) {}
+    public record ResetPasswordWithEmailRequest(@Email String email, @NotBlank String token, @NotBlank String newPassword) {}
 }

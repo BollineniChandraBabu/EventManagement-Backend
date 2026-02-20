@@ -1,13 +1,12 @@
 package com.familywishes.controller;
 
 import com.familywishes.dto.UserDtos.*;
+import com.familywishes.dto.CommonDtos.PagedResponse;
 import com.familywishes.service.UserService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
-
-import java.util.List;
 
 @RestController
 @RequestMapping("/api/users")
@@ -25,7 +24,11 @@ public class UserController {
 
     @GetMapping
     @PreAuthorize("hasRole('ADMIN')")
-    public List<UserResponse> list() { return userService.list(); }
+    public PagedResponse<UserResponse> list(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(defaultValue = "") String searchKey
+    ) { return userService.list(page, size, searchKey); }
 
     @GetMapping("/me")
     public UserResponse me() { return userService.getCurrentUser(); }
