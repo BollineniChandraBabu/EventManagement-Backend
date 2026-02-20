@@ -86,7 +86,7 @@ public class BirthdayMailScheduler implements Job {
                 image
         );
         log.info("Birthday wish sent to {}", user.getEmail());
-        user.setLastBirthdayWishSent(LocalDate.now());
+        user.setLastBirthdayWishSent(LocalDate.now(ZoneId.of("Asia/Kolkata")));
         userRepository.save(user);
     }
 

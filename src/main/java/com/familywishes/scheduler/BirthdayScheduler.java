@@ -32,7 +32,7 @@ public class BirthdayScheduler {
     public void sendBirthdayWishes() {
         schedulerTrackingService.track("instagramBirthdayScheduler", () -> {
 
-        LocalDate today = LocalDate.now();
+        LocalDate today = LocalDate.now(ZoneId.of("Asia/Kolkata"));
 
         List<InstagramUser> users =
                 userRepo.findTodaysBirthdays(

@@ -29,7 +29,7 @@ public class EmailAlertScheduler {
         schedulerTrackingService.track("instagramEmailAlertScheduler", () -> {
 
         LocalDateTime start =
-                LocalDate.now().atStartOfDay();
+                LocalDate.now(ZoneId.of("Asia/Kolkata")).atStartOfDay();
 
         long failed =
                 repo.countByStatusAndCreatedAtBetween(

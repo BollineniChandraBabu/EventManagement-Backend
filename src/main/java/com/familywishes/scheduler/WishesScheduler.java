@@ -16,6 +16,7 @@ import org.quartz.JobExecutionContext;
 import org.springframework.stereotype.Component;
 
 import java.time.LocalDate;
+import java.time.ZoneId;
 import java.util.Map;
 
 @Component
@@ -31,7 +32,7 @@ public class WishesScheduler implements Job {
 
         @Override
         public void execute(JobExecutionContext context) {
-            eventRepository.findByEventDateAndActiveTrue(LocalDate.now()).forEach(event -> {
+            eventRepository.findByEventDateAndActiveTrue(LocalDate.now(ZoneId.of("Asia/Kolkata"))).forEach(event -> {
                 var vars = Map.of("name", event.getUser().getName(), "relation", "Family", "eventDate", event.getEventDate().toString(),
                         "festival", event.getFestivalName() == null ? "" : event.getFestivalName());
                 String subject;

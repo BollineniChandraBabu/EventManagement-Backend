@@ -34,7 +34,7 @@ public class FestivalScheduler {
     public void sendFestivalWishes() {
         schedulerTrackingService.track("instagramFestivalScheduler", () -> {
 
-        LocalDate today = LocalDate.now();
+        LocalDate today = LocalDate.now(ZoneId.of("Asia/Kolkata"));
 
         List<SpecialEvent> events =
                 eventRepo.findByDayAndMonthAndActiveTrue(

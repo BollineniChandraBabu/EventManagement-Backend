@@ -234,7 +234,7 @@ public class GmailEmailServiceImpl implements GmailEmailService {
 
                                         log.getStatus().name(),
 
-                                        TimeUtil.toIST(log.getSentAt())
+                                        log.getSentAt()
 
                                 )
 

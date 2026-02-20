@@ -14,6 +14,7 @@ import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -29,9 +30,9 @@ public class DashboardServiceImpl implements DashboardService {
     @Override
     public DashboardResponse getDashboard() {
         long totalUsers = userRepository.countByDeletedFalse();
-        long upcomingEvents = eventRepository.countByEventDateGreaterThanEqualAndActiveTrue(LocalDate.now());
+        long upcomingEvents = eventRepository.countByEventDateGreaterThanEqualAndActiveTrue(LocalDate.now(ZoneId.of("Asia/Kolkata")));
 
-        LocalDate today = LocalDate.now();
+        LocalDate today = LocalDate.now(ZoneId.of("Asia/Kolkata"));
         LocalDateTime startOfDay = today.atStartOfDay();
         LocalDateTime startOfNextDay = today.plusDays(1).atStartOfDay();
 
@@ -48,9 +49,9 @@ public class DashboardServiceImpl implements DashboardService {
     @Override
     public DashboardResponse getIGDashboard() {
         long totalUsers = userRepository.countByDeletedFalse();
-        long upcomingEvents = eventRepository.countByEventDateGreaterThanEqualAndActiveTrue(LocalDate.now());
+        long upcomingEvents = eventRepository.countByEventDateGreaterThanEqualAndActiveTrue(LocalDate.now(ZoneId.of("Asia/Kolkata")));
 
-        LocalDate today = LocalDate.now();
+        LocalDate today = LocalDate.now(ZoneId.of("Asia/Kolkata"));
         LocalDateTime startOfDay = today.atStartOfDay();
         LocalDateTime startOfNextDay = today.plusDays(1).atStartOfDay();
 
@@ -66,7 +67,7 @@ public class DashboardServiceImpl implements DashboardService {
 
     public List<Map<String, Object>> getChart(int days) {
         LocalDateTime start =
-                LocalDate.now().minusDays(days).atStartOfDay();
+                LocalDate.now(ZoneId.of("Asia/Kolkata")).minusDays(days).atStartOfDay();
 
         return igMessageLogRepository
                 .getDailyCounts(start)
