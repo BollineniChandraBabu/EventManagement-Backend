@@ -1,6 +1,7 @@
 package com.familywishes.entity;
 
 import com.familywishes.entity.enums.EmailStatus;
+import com.familywishes.entity.enums.EmailType;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.JdbcTypeCode;
@@ -20,6 +21,10 @@ public class EmailLog {
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private EmailStatus status;
+
+    @Enumerated(EnumType.STRING)
+    @Column
+    private EmailType emailType;
     @Column(nullable = false)
     private int retryCount;
     @Column(columnDefinition = "TEXT")
@@ -31,4 +36,12 @@ public class EmailLog {
     @JdbcTypeCode(java.sql.Types.VARBINARY)
     @Column(name = "image_data")
     private byte[] imageData;
+
+    @PrePersist
+    @PreUpdate
+    private void ensureEmailType() {
+        if (emailType == null) {
+            emailType = EmailType.EVENT;
+        }
+    }
 }
