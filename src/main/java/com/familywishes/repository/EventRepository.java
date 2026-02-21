@@ -14,6 +14,8 @@ public interface EventRepository extends JpaRepository<Event, Long> {
 
   long countByEventDateGreaterThanEqualAndActiveTrue(LocalDate eventDate);
 
+  long countByUser_IdAndEventDateGreaterThanEqualAndActiveTrue(Long userId, LocalDate eventDate);
+
   List<Event> findByEventType_CodeInAndActiveTrue(List<String> eventTypes);
 
   @Query(

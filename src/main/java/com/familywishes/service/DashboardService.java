@@ -1,13 +1,22 @@
 package com.familywishes.service;
 
+import com.familywishes.dto.DashboardDtos.DashboardGraphResponse;
 import com.familywishes.dto.DashboardDtos.DashboardResponse;
-import java.util.List;
-import java.util.Map;
 
 public interface DashboardService {
-  DashboardResponse getDashboard();
+  DashboardResponse getDashboard(String requesterEmail, boolean isAdmin);
 
-  DashboardResponse getIGDashboard();
+  DashboardResponse getIGDashboard(String requesterEmail, boolean isAdmin);
 
-  List<Map<String, Object>> getChart(int days);
+  DashboardGraphResponse getMailChart(int days, String requesterEmail, boolean isAdmin);
+
+  DashboardGraphResponse getInstaChart(int days, String requesterEmail, boolean isAdmin);
+
+  DashboardResponse getOtpDashboard();
+
+  DashboardResponse getForgotPasswordDashboard();
+
+  DashboardGraphResponse getOtpChart(int days);
+
+  DashboardGraphResponse getForgotPasswordChart(int days);
 }

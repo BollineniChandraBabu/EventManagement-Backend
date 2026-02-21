@@ -4,6 +4,7 @@ import com.familywishes.dto.CommonDtos.PagedResponse;
 import com.familywishes.dto.EmailDtos.EmailStatusResponse;
 import com.familywishes.service.GmailEmailService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -45,5 +46,27 @@ public class EmailController {
 
     return emailService.getStatus(
         page, size, searchKey, mailTab, authentication.getName(), isAdmin, sortBy, sortDir);
+  }
+
+  @GetMapping("/status/admin/otp")
+  @PreAuthorize("hasRole('ADMIN')")
+  public PagedResponse<EmailStatusResponse> otpStatus(
+      @RequestParam(defaultValue = "0") int page,
+      @RequestParam(defaultValue = "10") int size,
+      @RequestParam(defaultValue = "") String searchKey,
+      @RequestParam(defaultValue = "id") String sortBy,
+      @RequestParam(defaultValue = "desc") String sortDir) {
+    return emailService.getOtpStatus(page, size, searchKey, sortBy, sortDir);
+  }
+
+  @GetMapping("/status/admin/forgot-password")
+  @PreAuthorize("hasRole('ADMIN')")
+  public PagedResponse<EmailStatusResponse> forgotPasswordStatus(
+      @RequestParam(defaultValue = "0") int page,
+      @RequestParam(defaultValue = "10") int size,
+      @RequestParam(defaultValue = "") String searchKey,
+      @RequestParam(defaultValue = "id") String sortBy,
+      @RequestParam(defaultValue = "desc") String sortDir) {
+    return emailService.getForgotPasswordStatus(page, size, searchKey, sortBy, sortDir);
   }
 }

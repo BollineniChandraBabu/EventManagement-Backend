@@ -2,9 +2,7 @@ package com.familywishes.scheduler;
 
 import com.familywishes.dto.AiWishRequest;
 import com.familywishes.dto.AiWishResponse;
-import com.familywishes.entity.WishSeedTemplate;
 import com.familywishes.repository.EventRepository;
-import com.familywishes.repository.WishSeedTemplateRepository;
 import com.familywishes.service.AiService;
 import com.familywishes.service.GmailEmailService;
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -20,18 +18,16 @@ import org.springframework.stereotype.Component;
 @RequiredArgsConstructor
 @Slf4j
 public class WishesScheduler implements Job {
+  private static final String DEFAULT_RELATION = "Family";
+  private static final String DEFAULT_TONE = "Emotional";
+  private static final String DEFAULT_LANGUAGE = "EN";
+
   private final EventRepository eventRepository;
-  private final WishSeedTemplateRepository wishSeedTemplateRepository;
   private final GmailEmailService emailService;
   private final AiService aiService;
 
   @Override
   public void execute(JobExecutionContext context) {
-    WishSeedTemplate festivalTemplate =
-        wishSeedTemplateRepository
-            .findByType_CodeAndActiveTrue("FESTIVAL")
-            .orElse(defaultFestivalTemplate());
-
     eventRepository
         .findByEventDateAndActiveTrue(LocalDate.now(ZoneId.of("Asia/Kolkata")))
         .forEach(
@@ -42,8 +38,7 @@ public class WishesScheduler implements Job {
                     buildRequest(
                         event.getUser().getName(),
                         event.getEventType().getCode(),
-                        event.getFestivalName(),
-                        festivalTemplate);
+                        event.getFestivalName());
                 ai = aiService.generate(request);
               } catch (JsonProcessingException e) {
                 throw new RuntimeException(e);
@@ -56,29 +51,13 @@ public class WishesScheduler implements Job {
     log.info("Daily wish job completed");
   }
 
-  private AiWishRequest buildRequest(
-      String name, String eventType, String festivalName, WishSeedTemplate festivalTemplate) {
-    if ("FESTIVAL".equalsIgnoreCase(eventType)) {
-      return new AiWishRequest(
-          name,
-          festivalTemplate.getRelation(),
-          festivalTemplate.getEvent(),
-          festivalName,
-          festivalTemplate.getTone(),
-          festivalTemplate.getLanguage());
-    }
-
-    return new AiWishRequest(name, "Family", eventType, festivalName, "Emotional", "EN");
-  }
-
-  private WishSeedTemplate defaultFestivalTemplate() {
-    return WishSeedTemplate.builder()
-        .type(null)
-        .relation("Family")
-        .event("FESTIVAL")
-        .tone("Emotional")
-        .language("EN")
-        .active(true)
-        .build();
+  private AiWishRequest buildRequest(String name, String eventType, String festivalName) {
+    return new AiWishRequest(
+        name,
+        DEFAULT_RELATION,
+        eventType,
+        festivalName,
+        DEFAULT_TONE,
+        DEFAULT_LANGUAGE);
   }
 }

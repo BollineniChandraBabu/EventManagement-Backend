@@ -5,8 +5,6 @@ import com.familywishes.dto.SeedDtos.EnumSeedRequest;
 import com.familywishes.dto.SeedDtos.EnumSeedResponse;
 import com.familywishes.dto.SeedDtos.SpecialEventSeedRequest;
 import com.familywishes.dto.SeedDtos.SpecialEventSeedResponse;
-import com.familywishes.dto.SeedDtos.WishTemplateSeedRequest;
-import com.familywishes.dto.SeedDtos.WishTemplateSeedResponse;
 import java.util.List;
 
 public interface SeedService {
@@ -28,12 +26,4 @@ public interface SeedService {
   SpecialEventSeedResponse updateSpecialEventSeed(Long id, SpecialEventSeedRequest request);
 
   void deleteSpecialEventSeed(Long id);
-
-  WishTemplateSeedResponse createWishTemplateSeed(WishTemplateSeedRequest request);
-
-  WishTemplateSeedResponse getWishTemplateSeedByType(String type);
-
-  List<WishTemplateSeedResponse> listWishTemplateSeeds();
-
-  WishTemplateSeedResponse updateWishTemplateSeed(String type, WishTemplateSeedRequest request);
 }

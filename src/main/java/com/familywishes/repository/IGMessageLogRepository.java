@@ -18,4 +18,15 @@ public interface IGMessageLogRepository extends JpaRepository<MessageLog, Long> 
   @Query(
       "SELECT DATE(m.createdAt), COUNT(m) FROM MessageLog m WHERE m.createdAt >= :start GROUP BY DATE(m.createdAt) ORDER BY DATE(m.createdAt)")
   List<Object[]> getDailyCounts(LocalDateTime start);
+
+  @Query(
+      """
+      SELECT DATE(m.createdAt), COUNT(m)
+      FROM MessageLog m
+      WHERE m.createdAt >= :start
+        AND m.status = :status
+      GROUP BY DATE(m.createdAt)
+      ORDER BY DATE(m.createdAt)
+      """)
+  List<Object[]> getDailyCountsByStatus(LocalDateTime start, MessageStatus status);
 }

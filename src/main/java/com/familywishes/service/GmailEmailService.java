@@ -18,6 +18,12 @@ public interface GmailEmailService {
       String sortBy,
       String sortDir);
 
+  PagedResponse<EmailDtos.EmailStatusResponse> getOtpStatus(
+      int page, int size, String searchKey, String sortBy, String sortDir);
+
+  PagedResponse<EmailDtos.EmailStatusResponse> getForgotPasswordStatus(
+      int page, int size, String searchKey, String sortBy, String sortDir);
+
   EmailDtos.EmailStatusResponse getStatusById(Long id, String requesterEmail);
 
   void sendTestEmail(String to);

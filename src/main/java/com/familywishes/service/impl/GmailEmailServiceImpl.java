@@ -42,6 +42,12 @@ public class GmailEmailServiceImpl implements GmailEmailService {
   @Value("${gmail.from-email}")
   private String senderEmail;
 
+  private static final List<EmailType> SENSITIVE_TYPES =
+      List.of(EmailType.OTP, EmailType.FORGOT_PASSWORD);
+
+  private static final List<EmailType> NON_SENSITIVE_TYPES =
+      List.of(EmailType.GOOD_MORNING, EmailType.GOOD_NIGHT, EmailType.BIRTHDAY, EmailType.EVENT);
+
   // ==========================
   // SEND EMAIL
   // ==========================
@@ -188,23 +194,14 @@ public class GmailEmailServiceImpl implements GmailEmailService {
         "asc".equalsIgnoreCase(sortDir) ? Sort.Direction.ASC : Sort.Direction.DESC;
     String normalizedSortBy = (sortBy == null || sortBy.isBlank()) ? "id" : sortBy.trim();
     PageRequest pageRequest = PageRequest.of(page, size, Sort.by(direction, normalizedSortBy));
-    List<EmailType> filteredTypes = resolveTypesFromTab(mailTab);
+    List<EmailType> filteredTypes = resolveNonSensitiveTypesFromTab(mailTab);
 
-    Page<EmailLog> logs;
-    if (isAdmin) {
-      logs =
-          filteredTypes == null
-              ? logRepository.findAllBySearchKey(normalizedSearchKey, pageRequest)
-              : logRepository.findAllBySearchKeyAndEmailTypeIn(
-                  normalizedSearchKey, filteredTypes, pageRequest);
-    } else {
-      logs =
-          filteredTypes == null
-              ? logRepository.findAllByRecipientEmailAndSearchKey(
-                  requesterEmail, normalizedSearchKey, pageRequest)
-              : logRepository.findAllByRecipientEmailAndSearchKeyAndEmailTypeIn(
-                  requesterEmail, normalizedSearchKey, filteredTypes, pageRequest);
-    }
+    Page<EmailLog> logs =
+        isAdmin
+            ? logRepository.findAllBySearchKeyAndEmailTypeIn(
+                normalizedSearchKey, filteredTypes, pageRequest)
+            : logRepository.findAllByRecipientEmailAndSearchKeyAndEmailTypeIn(
+                requesterEmail, normalizedSearchKey, filteredTypes, pageRequest);
 
     return new PagedResponse<>(
         logs.getContent().stream().map(this::toEmailStatusResponse).toList(),
@@ -216,12 +213,29 @@ public class GmailEmailServiceImpl implements GmailEmailService {
         logs.hasPrevious());
   }
 
+
+  @Override
+  public PagedResponse<EmailDtos.EmailStatusResponse> getOtpStatus(
+      int page, int size, String searchKey, String sortBy, String sortDir) {
+    return getAdminStatusByTypes(page, size, searchKey, sortBy, sortDir, List.of(EmailType.OTP));
+  }
+
+  @Override
+  public PagedResponse<EmailDtos.EmailStatusResponse> getForgotPasswordStatus(
+      int page, int size, String searchKey, String sortBy, String sortDir) {
+    return getAdminStatusByTypes(
+        page, size, searchKey, sortBy, sortDir, List.of(EmailType.FORGOT_PASSWORD));
+  }
+
   @Override
   public EmailDtos.EmailStatusResponse getStatusById(Long id, String requesterEmail) {
     EmailLog log =
         logRepository.findById(id).orElseThrow(() -> new NotFoundException("Email log not found"));
 
     if (!log.getRecipientEmail().equalsIgnoreCase(requesterEmail)) {
+      throw new NotFoundException("Email log not found");
+    }
+    if (SENSITIVE_TYPES.contains(log.getEmailType())) {
       throw new NotFoundException("Email log not found");
     }
 
@@ -245,16 +259,36 @@ public class GmailEmailServiceImpl implements GmailEmailService {
         log.getSentAt());
   }
 
-  private List<EmailType> resolveTypesFromTab(String mailTab) {
+  private PagedResponse<EmailDtos.EmailStatusResponse> getAdminStatusByTypes(
+      int page, int size, String searchKey, String sortBy, String sortDir, List<EmailType> types) {
+    String normalizedSearchKey = searchKey == null ? "" : searchKey.trim();
+    Sort.Direction direction =
+        "asc".equalsIgnoreCase(sortDir) ? Sort.Direction.ASC : Sort.Direction.DESC;
+    String normalizedSortBy = (sortBy == null || sortBy.isBlank()) ? "id" : sortBy.trim();
+    PageRequest pageRequest = PageRequest.of(page, size, Sort.by(direction, normalizedSortBy));
+
+    Page<EmailLog> logs =
+        logRepository.findAllBySearchKeyAndEmailTypeIn(normalizedSearchKey, types, pageRequest);
+
+    return new PagedResponse<>(
+        logs.getContent().stream().map(this::toEmailStatusResponse).toList(),
+        logs.getNumber(),
+        logs.getSize(),
+        logs.getTotalElements(),
+        logs.getTotalPages(),
+        logs.hasNext(),
+        logs.hasPrevious());
+  }
+
+  private List<EmailType> resolveNonSensitiveTypesFromTab(String mailTab) {
     String normalizedTab = mailTab == null ? "ALL" : mailTab.trim().toUpperCase(Locale.ROOT);
 
     return switch (normalizedTab) {
-      case "OTP" -> List.of(EmailType.OTP);
-      case "FORGOT_PASSWORD", "FORGOT" -> List.of(EmailType.FORGOT_PASSWORD);
-      case "WISHES_EVENTS", "OTHERS", "GOOD_MORNING_GOOD_NIGHT_EVENTS" ->
-          List.of(
-              EmailType.GOOD_MORNING, EmailType.GOOD_NIGHT, EmailType.BIRTHDAY, EmailType.EVENT);
-      default -> null;
+      case "GOOD_MORNING" -> List.of(EmailType.GOOD_MORNING);
+      case "GOOD_NIGHT" -> List.of(EmailType.GOOD_NIGHT);
+      case "BIRTHDAY" -> List.of(EmailType.BIRTHDAY);
+      case "EVENT" -> List.of(EmailType.EVENT);
+      default -> NON_SENSITIVE_TYPES;
     };
   }
 

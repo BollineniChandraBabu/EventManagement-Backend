@@ -9,4 +9,6 @@ public interface InstagramUserRepository extends JpaRepository<InstagramUser, Lo
 
   @Query("SELECT u FROM InstagramUser u WHERE MONTH(u.birthday)=:month AND DAY(u.birthday)=:day")
   List<InstagramUser> findTodaysBirthdays(int month, int day);
+
+  long countByInstagramUserIdIsNotNullAndInstagramUserIdNot(String instagramUserId);
 }

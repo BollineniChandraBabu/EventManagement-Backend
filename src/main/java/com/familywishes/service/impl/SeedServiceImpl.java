@@ -5,12 +5,16 @@ import com.familywishes.dto.SeedDtos.EnumSeedRequest;
 import com.familywishes.dto.SeedDtos.EnumSeedResponse;
 import com.familywishes.dto.SeedDtos.SpecialEventSeedRequest;
 import com.familywishes.dto.SeedDtos.SpecialEventSeedResponse;
-import com.familywishes.dto.SeedDtos.WishTemplateSeedRequest;
-import com.familywishes.dto.SeedDtos.WishTemplateSeedResponse;
-import com.familywishes.entity.*;
+import com.familywishes.entity.EventTypeSeed;
+import com.familywishes.entity.RelationshipSeed;
+import com.familywishes.entity.SpecialEvent;
+import com.familywishes.entity.TemplateTypeSeed;
 import com.familywishes.exception.BadRequestException;
 import com.familywishes.exception.NotFoundException;
-import com.familywishes.repository.*;
+import com.familywishes.repository.EventTypeSeedRepository;
+import com.familywishes.repository.RelationshipSeedRepository;
+import com.familywishes.repository.SpecialEventRepository;
+import com.familywishes.repository.TemplateTypeSeedRepository;
 import com.familywishes.service.SeedService;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
@@ -23,7 +27,6 @@ import org.springframework.stereotype.Service;
 @RequiredArgsConstructor
 public class SeedServiceImpl implements SeedService {
   private final SpecialEventRepository specialEventRepository;
-  private final WishSeedTemplateRepository wishSeedTemplateRepository;
   private final RelationshipSeedRepository relationshipSeedRepository;
   private final EventTypeSeedRepository eventTypeSeedRepository;
   private final TemplateTypeSeedRepository templateTypeSeedRepository;
@@ -195,59 +198,6 @@ public class SeedServiceImpl implements SeedService {
     specialEventRepository.deleteById(id);
   }
 
-  @Override
-  public WishTemplateSeedResponse createWishTemplateSeed(WishTemplateSeedRequest request) {
-    WishSeedTemplate seed =
-        wishSeedTemplateRepository
-            .findByType_Code(normalizeCode(request.type()))
-            .orElseGet(() -> WishSeedTemplate.builder().type(resolveTemplateType(request.type())).build());
-
-    seed.setType(resolveTemplateType(request.type()));
-    seed.setRelation(request.relation());
-    seed.setEvent(request.event());
-    seed.setTone(request.tone());
-    seed.setLanguage(request.language());
-    seed.setActive(request.active());
-
-    return toWishTemplateResponse(wishSeedTemplateRepository.save(seed));
-  }
-
-  @Override
-  public WishTemplateSeedResponse getWishTemplateSeedByType(String type) {
-    return toWishTemplateResponse(
-        wishSeedTemplateRepository
-            .findByType_Code(normalizeCode(type))
-            .orElseThrow(() -> new NotFoundException("Wish template seed not found")));
-  }
-
-  @Override
-  public List<WishTemplateSeedResponse> listWishTemplateSeeds() {
-    return wishSeedTemplateRepository.findAll().stream().map(this::toWishTemplateResponse).toList();
-  }
-
-  @Override
-  public WishTemplateSeedResponse updateWishTemplateSeed(String type, WishTemplateSeedRequest request) {
-    WishSeedTemplate seed =
-        wishSeedTemplateRepository
-            .findByType_Code(normalizeCode(type))
-            .orElseThrow(() -> new NotFoundException("Wish template seed not found"));
-
-    seed.setType(resolveTemplateType(request.type()));
-    seed.setRelation(request.relation());
-    seed.setEvent(request.event());
-    seed.setTone(request.tone());
-    seed.setLanguage(request.language());
-    seed.setActive(request.active());
-
-    return toWishTemplateResponse(wishSeedTemplateRepository.save(seed));
-  }
-
-  private TemplateTypeSeed resolveTemplateType(String code) {
-    return templateTypeSeedRepository
-        .findByCodeAndActiveTrue(normalizeCode(code))
-        .orElseThrow(() -> new BadRequestException("Invalid template type"));
-  }
-
   private String normalizeCode(String value) {
     return value.trim().toUpperCase();
   }
@@ -279,16 +229,5 @@ public class SeedServiceImpl implements SeedService {
         event.getMonth(),
         event.getMessage(),
         event.isActive());
-  }
-
-  private WishTemplateSeedResponse toWishTemplateResponse(WishSeedTemplate seed) {
-    return new WishTemplateSeedResponse(
-        seed.getId(),
-        seed.getType().getCode(),
-        seed.getRelation(),
-        seed.getEvent(),
-        seed.getTone(),
-        seed.getLanguage(),
-        seed.isActive());
   }
 }
