@@ -216,11 +216,13 @@ public class GmailEmailServiceImpl implements GmailEmailService {
     // ==========================
 
     @Override
-    public PagedResponse<EmailDtos.EmailStatusResponse> getStatus(int page, int size, String searchKey) {
-        Page<EmailLog> logs = logRepository.findAllBySearchKey(
-                searchKey == null ? "" : searchKey.trim(),
-                PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "id"))
-        );
+    public PagedResponse<EmailDtos.EmailStatusResponse> getStatus(int page, int size, String searchKey, String requesterEmail, boolean isAdmin) {
+        String normalizedSearchKey = searchKey == null ? "" : searchKey.trim();
+        PageRequest pageRequest = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "id"));
+
+        Page<EmailLog> logs = isAdmin
+                ? logRepository.findAllBySearchKey(normalizedSearchKey, pageRequest)
+                : logRepository.findAllByRecipientEmailAndSearchKey(requesterEmail, normalizedSearchKey, pageRequest);
 
         return new PagedResponse<>(
                 logs.getContent().stream().map(log -> new EmailDtos.EmailStatusResponse(
