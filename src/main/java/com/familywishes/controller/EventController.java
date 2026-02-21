@@ -25,7 +25,9 @@ public class EventController {
   public PagedResponse<EventResponse> list(
       @RequestParam(defaultValue = "0") int page,
       @RequestParam(defaultValue = "10") int size,
-      @RequestParam(defaultValue = "") String searchKey) {
-    return eventService.list(page, size, searchKey);
+      @RequestParam(defaultValue = "") String searchKey,
+      @RequestParam(defaultValue = "id") String sortBy,
+      @RequestParam(defaultValue = "desc") String sortDir) {
+    return eventService.list(page, size, searchKey, sortBy, sortDir);
   }
 }

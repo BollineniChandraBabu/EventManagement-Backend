@@ -26,6 +26,9 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 @RequiredArgsConstructor
 public class AuthServiceImpl implements AuthService {
+  private static final SecureRandom SECURE_RANDOM = new SecureRandom();
+  private static final int OTP_TTL_MINUTES = 5;
+
   private final AuthenticationManager authManager;
   private final UserRepository userRepository;
   private final JwtService jwtService;
@@ -81,20 +84,37 @@ public class AuthServiceImpl implements AuthService {
 
   @Override
   public void sendOtp(OtpSendRequest request) {
-    String otp = String.format("%06d", new SecureRandom().nextInt(1_000_000));
+    String otp = String.format("%06d", SECURE_RANDOM.nextInt(1_000_000));
     otpCodeRepository.save(
         OtpCode.builder()
             .email(request.email())
             .code(otp)
-            .expiresAt(LocalDateTime.now(ZoneId.of("Asia/Kolkata")).plusMinutes(5))
+            .expiresAt(LocalDateTime.now(ZoneId.of("Asia/Kolkata")).plusMinutes(OTP_TTL_MINUTES))
             .used(false)
             .build());
+
     emailService.sendEmailWithAttachments(
         request.email(),
-        "Your OTP",
-        "<p>Your OTP is <b>" + otp + "</b>. Valid for 5 minutes.</p>",
+        "Your Family Wishes OTP",
+        buildOtpEmailBody(otp),
         null,
         null);
+  }
+
+  private String buildOtpEmailBody(String otp) {
+    return
+        """
+            <div style='font-family:Arial,sans-serif;line-height:1.5;color:#111827'>
+              <h3 style='margin-bottom:8px'>Family Wishes Verification Code</h3>
+              <p style='margin:0 0 12px 0'>Use the OTP below to complete your sign-in.</p>
+              <p style='margin:0 0 12px 0'>
+                <span style='display:inline-block;padding:10px 16px;border:1px solid #d1d5db;border-radius:8px;font-size:22px;font-weight:700;letter-spacing:4px'>%s</span>
+              </p>
+              <p style='margin:0 0 8px 0'>This OTP is valid for <b>%d minutes</b>.</p>
+              <p style='margin:0;color:#6b7280'>If you did not request this code, please ignore this email.</p>
+            </div>
+            """
+            .formatted(otp, OTP_TTL_MINUTES);
   }
 
   @Override

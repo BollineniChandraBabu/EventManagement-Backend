@@ -179,9 +179,14 @@ public class GmailEmailServiceImpl implements GmailEmailService {
       String searchKey,
       String mailTab,
       String requesterEmail,
-      boolean isAdmin) {
+      boolean isAdmin,
+      String sortBy,
+      String sortDir) {
     String normalizedSearchKey = searchKey == null ? "" : searchKey.trim();
-    PageRequest pageRequest = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "id"));
+    Sort.Direction direction =
+        "asc".equalsIgnoreCase(sortDir) ? Sort.Direction.ASC : Sort.Direction.DESC;
+    String normalizedSortBy = (sortBy == null || sortBy.isBlank()) ? "id" : sortBy.trim();
+    PageRequest pageRequest = PageRequest.of(page, size, Sort.by(direction, normalizedSortBy));
     List<EmailType> filteredTypes = resolveTypesFromTab(mailTab);
 
     Page<EmailLog> logs;

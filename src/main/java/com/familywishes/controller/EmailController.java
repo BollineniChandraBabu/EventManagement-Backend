@@ -29,13 +29,15 @@ public class EmailController {
       @RequestParam(defaultValue = "0") int page,
       @RequestParam(defaultValue = "10") int size,
       @RequestParam(defaultValue = "") String searchKey,
-      @RequestParam(defaultValue = "ALL") String mailTab) {
+      @RequestParam(defaultValue = "ALL") String mailTab,
+      @RequestParam(defaultValue = "id") String sortBy,
+      @RequestParam(defaultValue = "desc") String sortDir) {
     boolean isAdmin =
         authentication.getAuthorities().stream()
             .map(GrantedAuthority::getAuthority)
             .anyMatch("ROLE_ADMIN"::equals);
 
     return emailService.getStatus(
-        page, size, searchKey, mailTab, authentication.getName(), isAdmin);
+        page, size, searchKey, mailTab, authentication.getName(), isAdmin, sortBy, sortDir);
   }
 }

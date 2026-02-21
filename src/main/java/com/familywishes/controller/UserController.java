@@ -31,8 +31,10 @@ public class UserController {
   public PagedResponse<UserResponse> list(
       @RequestParam(defaultValue = "0") int page,
       @RequestParam(defaultValue = "10") int size,
-      @RequestParam(defaultValue = "") String searchKey) {
-    return userService.list(page, size, searchKey);
+      @RequestParam(defaultValue = "") String searchKey,
+      @RequestParam(defaultValue = "createdAt") String sortBy,
+      @RequestParam(defaultValue = "desc") String sortDir) {
+    return userService.list(page, size, searchKey, sortBy, sortDir);
   }
 
   @GetMapping("/me")

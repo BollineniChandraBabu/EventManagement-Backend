@@ -9,7 +9,14 @@ public interface GmailEmailService {
   void retryFailed();
 
   PagedResponse<EmailDtos.EmailStatusResponse> getStatus(
-      int page, int size, String searchKey, String mailTab, String requesterEmail, boolean isAdmin);
+      int page,
+      int size,
+      String searchKey,
+      String mailTab,
+      String requesterEmail,
+      boolean isAdmin,
+      String sortBy,
+      String sortDir);
 
   void sendTestEmail(String to);
 }
