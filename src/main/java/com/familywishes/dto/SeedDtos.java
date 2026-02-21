@@ -20,21 +20,4 @@ public class SeedDtos {
 
   public record SpecialEventSeedResponse(
       Long id, String eventName, int day, int month, String message, boolean active) {}
-
-  public record WishTemplateSeedRequest(
-      @NotBlank String type,
-      @NotBlank String relation,
-      @NotBlank String event,
-      @NotBlank String tone,
-      @NotBlank String language,
-      @NotNull Boolean active) {}
-
-  public record WishTemplateSeedResponse(
-      Long id,
-      String type,
-      String relation,
-      String event,
-      String tone,
-      String language,
-      boolean active) {}
 }

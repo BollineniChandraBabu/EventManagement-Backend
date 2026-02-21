@@ -3,9 +3,7 @@ package com.familywishes.scheduler;
 import com.familywishes.dto.AiWishRequest;
 import com.familywishes.dto.AiWishResponse;
 import com.familywishes.entity.UserWishSettings;
-import com.familywishes.entity.WishSeedTemplate;
 import com.familywishes.repository.UserWishSettingsRepository;
-import com.familywishes.repository.WishSeedTemplateRepository;
 import com.familywishes.service.AiService;
 import com.familywishes.service.GmailEmailService;
 import java.util.Date;
@@ -21,8 +19,12 @@ import org.springframework.stereotype.Component;
 @Slf4j
 public class GoodMorningScheduler implements Job {
 
+  private static final String DEFAULT_RELATION = "Family";
+  private static final String DEFAULT_EVENT = "Good Morning";
+  private static final String DEFAULT_TONE = "Emotional";
+  private static final String DEFAULT_LANGUAGE = "EN";
+
   private final UserWishSettingsRepository userWishSettingsRepository;
-  private final WishSeedTemplateRepository wishSeedTemplateRepository;
   private final AiService aiService;
   private final GmailEmailService emailService;
 
@@ -40,19 +42,14 @@ public class GoodMorningScheduler implements Job {
 
   private void triggerMessages(UserWishSettings event) {
     try {
-      WishSeedTemplate template =
-          wishSeedTemplateRepository
-              .findByType_CodeAndActiveTrue("GOOD_MORNING")
-              .orElse(defaultGoodMorningTemplate());
-
       AiWishRequest request =
           new AiWishRequest(
               event.getUser().getName(),
-              template.getRelation(),
-              template.getEvent(),
+              DEFAULT_RELATION,
+              DEFAULT_EVENT,
               "",
-              template.getTone(),
-              template.getLanguage());
+              DEFAULT_TONE,
+              DEFAULT_LANGUAGE);
 
       AiWishResponse ai = aiService.generate(request);
       byte[] image = aiService.callGeminiImage(request);
@@ -64,17 +61,6 @@ public class GoodMorningScheduler implements Job {
       log.error(e.getMessage(), e);
       sendErrorEmail(e);
     }
-  }
-
-  private WishSeedTemplate defaultGoodMorningTemplate() {
-    return WishSeedTemplate.builder()
-        .type(null)
-        .relation("Family")
-        .event("Good Morning")
-        .tone("Emotional")
-        .language("EN")
-        .active(true)
-        .build();
   }
 
   private void sendErrorEmail(Exception e) {

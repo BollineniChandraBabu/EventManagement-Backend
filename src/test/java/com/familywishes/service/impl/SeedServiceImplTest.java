@@ -1,18 +1,18 @@
 package com.familywishes.service.impl;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 
 import com.familywishes.dto.CommonDtos.PagedResponse;
-import com.familywishes.dto.SeedDtos.SpecialEventSeedRequest;
 import com.familywishes.dto.SeedDtos.SpecialEventSeedResponse;
-import com.familywishes.dto.SeedDtos.WishTemplateSeedRequest;
 import com.familywishes.entity.SpecialEvent;
-import com.familywishes.entity.TemplateTypeSeed;
-import com.familywishes.entity.WishSeedTemplate;
 import com.familywishes.exception.NotFoundException;
-import com.familywishes.repository.*;
+import com.familywishes.repository.EventTypeSeedRepository;
+import com.familywishes.repository.RelationshipSeedRepository;
+import com.familywishes.repository.SpecialEventRepository;
+import com.familywishes.repository.TemplateTypeSeedRepository;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -26,7 +26,6 @@ import org.springframework.data.domain.PageRequest;
 class SeedServiceImplTest {
 
   @Mock private SpecialEventRepository specialEventRepository;
-  @Mock private WishSeedTemplateRepository wishSeedTemplateRepository;
   @Mock private RelationshipSeedRepository relationshipSeedRepository;
   @Mock private EventTypeSeedRepository eventTypeSeedRepository;
   @Mock private TemplateTypeSeedRepository templateTypeSeedRepository;
@@ -53,34 +52,5 @@ class SeedServiceImplTest {
 
     assertEquals(1, response.content().size());
     assertEquals("Diwali", response.content().get(0).eventName());
-  }
-
-  @Test
-  void updateWishTemplateShouldPersistChanges() {
-    TemplateTypeSeed templateType = TemplateTypeSeed.builder().code("GOOD_MORNING").active(true).build();
-    WishSeedTemplate existing =
-        WishSeedTemplate.builder()
-            .id(1L)
-            .type(templateType)
-            .relation("Family")
-            .event("Good Morning")
-            .tone("Emotional")
-            .language("EN")
-            .active(true)
-            .build();
-
-    when(templateTypeSeedRepository.findByCodeAndActiveTrue("GOOD_MORNING"))
-        .thenReturn(Optional.of(templateType));
-    when(wishSeedTemplateRepository.findByType_Code("GOOD_MORNING")).thenReturn(Optional.of(existing));
-    when(wishSeedTemplateRepository.save(any(WishSeedTemplate.class)))
-        .thenAnswer(invocation -> invocation.getArgument(0));
-
-    var response =
-        seedService.updateWishTemplateSeed(
-            "GOOD_MORNING",
-            new WishTemplateSeedRequest("GOOD_MORNING", "Friends", "Morning", "Warm", "EN", true));
-
-    assertEquals("Friends", response.relation());
-    assertEquals("Morning", response.event());
   }
 }

@@ -19,6 +19,26 @@ public interface EmailLogRepository extends JpaRepository<EmailLog, Long> {
   long countByStatusAndSentAtGreaterThanEqualAndSentAtLessThan(
       EmailStatus status, LocalDateTime startTime, LocalDateTime endTime);
 
+  long countByStatusAndSentAtGreaterThanEqualAndSentAtLessThanAndEmailTypeIn(
+      EmailStatus status, LocalDateTime startTime, LocalDateTime endTime, List<EmailType> emailTypes);
+
+  long countByStatusAndEmailTypeIn(EmailStatus status, List<EmailType> emailTypes);
+
+  long countByStatusAndSentAtGreaterThanEqualAndSentAtLessThanAndEmailTypeNotIn(
+      EmailStatus status, LocalDateTime startTime, LocalDateTime endTime, List<EmailType> emailTypes);
+
+  long countByStatusAndEmailTypeNotIn(EmailStatus status, List<EmailType> emailTypes);
+
+  long countByRecipientEmailAndStatusAndSentAtGreaterThanEqualAndSentAtLessThanAndEmailTypeNotIn(
+      String recipientEmail,
+      EmailStatus status,
+      LocalDateTime startTime,
+      LocalDateTime endTime,
+      List<EmailType> emailTypes);
+
+  long countByRecipientEmailAndStatusAndEmailTypeNotIn(
+      String recipientEmail, EmailStatus status, List<EmailType> emailTypes);
+
   @Query(
       """
             SELECT e FROM EmailLog e
@@ -82,4 +102,64 @@ public interface EmailLogRepository extends JpaRepository<EmailLog, Long> {
       @Param("searchKey") String searchKey,
       @Param("emailTypes") List<EmailType> emailTypes,
       Pageable pageable);
+
+  @Query(
+      """
+            SELECT DATE(e.sentAt), COUNT(e)
+            FROM EmailLog e
+            WHERE e.sentAt >= :start
+              AND e.status = :status
+            GROUP BY DATE(e.sentAt)
+            ORDER BY DATE(e.sentAt)
+            """)
+  List<Object[]> getDailyCountsByStatus(@Param("start") LocalDateTime start, @Param("status") EmailStatus status);
+
+  @Query(
+      """
+            SELECT DATE(e.sentAt), COUNT(e)
+            FROM EmailLog e
+            WHERE e.sentAt >= :start
+              AND e.status = :status
+              AND e.emailType IN :emailTypes
+            GROUP BY DATE(e.sentAt)
+            ORDER BY DATE(e.sentAt)
+            """)
+  List<Object[]> getDailyCountsByStatusAndEmailTypeIn(
+      @Param("start") LocalDateTime start,
+      @Param("status") EmailStatus status,
+      @Param("emailTypes") List<EmailType> emailTypes);
+
+  @Query(
+      """
+            SELECT DATE(e.sentAt), COUNT(e)
+            FROM EmailLog e
+            WHERE e.sentAt >= :start
+              AND e.status = :status
+              AND e.emailType NOT IN :emailTypes
+            GROUP BY DATE(e.sentAt)
+            ORDER BY DATE(e.sentAt)
+            """)
+  List<Object[]> getDailyCountsByStatusAndEmailTypeNotIn(
+      @Param("start") LocalDateTime start,
+      @Param("status") EmailStatus status,
+      @Param("emailTypes") List<EmailType> emailTypes);
+
+
+  @Query(
+      """
+            SELECT DATE(e.sentAt), COUNT(e)
+            FROM EmailLog e
+            WHERE e.sentAt >= :start
+              AND e.status = :status
+              AND e.recipientEmail = :recipientEmail
+              AND e.emailType NOT IN :emailTypes
+            GROUP BY DATE(e.sentAt)
+            ORDER BY DATE(e.sentAt)
+            """)
+  List<Object[]> getDailyCountsByRecipientAndStatusAndEmailTypeNotIn(
+      @Param("start") LocalDateTime start,
+      @Param("status") EmailStatus status,
+      @Param("recipientEmail") String recipientEmail,
+      @Param("emailTypes") List<EmailType> emailTypes);
+
 }
