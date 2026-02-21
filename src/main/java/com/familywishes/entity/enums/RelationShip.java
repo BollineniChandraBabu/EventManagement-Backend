@@ -6,6 +6,7 @@ public enum RelationShip {
   FRIEND,
   MOTHER,
   SISTER,
+  BROTHER,
   SON,
   DAUGHTER,
   DAUGHTER_IN_LAW,

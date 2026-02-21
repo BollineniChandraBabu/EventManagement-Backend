@@ -12,6 +12,7 @@ import com.familywishes.entity.UserWishSettings;
 import com.familywishes.entity.enums.RelationShip;
 import com.familywishes.entity.enums.Role;
 import com.familywishes.repository.UserRepository;
+import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
@@ -20,6 +21,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
@@ -40,7 +42,7 @@ class UserServiceImplTest {
   void createShouldPersistBirthdayFlagInWishSettings() {
     UserRequest request =
         new UserRequest(
-            "Aman", "aman@example.com", Role.USER, RelationShip.BROTHER, true, false, true);
+            "Aman", "aman@example.com", Role.ROLE_USER, RelationShip.BROTHER, true, false, true);
 
     when(passwordEncoder.encode("Test")).thenReturn("encoded-password");
     when(userRepository.save(any(User.class)))
@@ -65,8 +67,8 @@ class UserServiceImplTest {
             .id(10L)
             .name("Ravi")
             .email("ravi@example.com")
-            .role(Role.USER)
-            .relationShip(RelationShip.FATHER)
+            .role(Role.ROLE_USER)
+            .relationShip(RelationShip.SON)
             .active(true)
             .deleted(false)
             .build();
@@ -80,9 +82,11 @@ class UserServiceImplTest {
 
     SecurityContextHolder.getContext()
         .setAuthentication(
-            new UsernamePasswordAuthenticationToken("ravi@example.com", "password"));
+            new UsernamePasswordAuthenticationToken(
+                "ravi@example.com", "password", List.of(new SimpleGrantedAuthority("ROLE_USER"))));
 
-    when(userRepository.findByEmailAndDeletedFalse("ravi@example.com")).thenReturn(Optional.of(user));
+    when(userRepository.findByEmailAndDeletedFalse("ravi@example.com"))
+        .thenReturn(Optional.of(user));
     when(userRepository.save(any(User.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
     UserResponse response =

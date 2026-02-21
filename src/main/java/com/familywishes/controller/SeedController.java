@@ -46,7 +46,8 @@ public class SeedController {
   @GetMapping("/special-events/today")
   public List<SpecialEventSeedResponse> listTodayActiveSpecialEventSeeds() {
     LocalDate today = LocalDate.now(ZoneId.of("Asia/Kolkata"));
-    return seedService.listTodayActiveSpecialEventSeeds(today.getDayOfMonth(), today.getMonthValue());
+    return seedService.listTodayActiveSpecialEventSeeds(
+        today.getDayOfMonth(), today.getMonthValue());
   }
 
   @PutMapping("/special-events/{id}")
