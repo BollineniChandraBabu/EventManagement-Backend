@@ -21,4 +21,7 @@ public class AuthDtos {
 
   public record ResetPasswordWithEmailRequest(
       @Email String email, @NotBlank String token, @NotBlank String newPassword) {}
+
+  public record ChangePasswordRequest(
+      @NotBlank String currentPassword, @NotBlank String newPassword) {}
 }
