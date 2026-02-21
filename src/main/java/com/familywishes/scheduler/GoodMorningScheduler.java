@@ -3,7 +3,10 @@ package com.familywishes.scheduler;
 import com.familywishes.dto.AiWishRequest;
 import com.familywishes.dto.AiWishResponse;
 import com.familywishes.entity.UserWishSettings;
+import com.familywishes.entity.WishSeedTemplate;
+import com.familywishes.entity.enums.SeedTemplateType;
 import com.familywishes.repository.UserWishSettingsRepository;
+import com.familywishes.repository.WishSeedTemplateRepository;
 import com.familywishes.service.AiService;
 import com.familywishes.service.GmailEmailService;
 import java.util.Date;
@@ -20,6 +23,7 @@ import org.springframework.stereotype.Component;
 public class GoodMorningScheduler implements Job {
 
   private final UserWishSettingsRepository userWishSettingsRepository;
+  private final WishSeedTemplateRepository wishSeedTemplateRepository;
   private final AiService aiService;
   private final GmailEmailService emailService;
 
@@ -36,20 +40,22 @@ public class GoodMorningScheduler implements Job {
   }
 
   private void triggerMessages(UserWishSettings event) {
-
     try {
+      WishSeedTemplate template =
+          wishSeedTemplateRepository
+              .findByTypeAndActiveTrue(SeedTemplateType.GOOD_MORNING)
+              .orElse(defaultGoodMorningTemplate());
 
       AiWishRequest request =
           new AiWishRequest(
               event.getUser().getName(),
-              event.getUser().getRelationShip().name(),
-              "Good Morning",
+              template.getRelation(),
+              template.getEvent(),
               "",
-              "Emotional",
-              "EN");
+              template.getTone(),
+              template.getLanguage());
 
       AiWishResponse ai = aiService.generate(request);
-
       byte[] image = aiService.callGeminiImage(request);
 
       emailService.sendEmailWithAttachments(
@@ -61,10 +67,19 @@ public class GoodMorningScheduler implements Job {
     }
   }
 
+  private WishSeedTemplate defaultGoodMorningTemplate() {
+    return WishSeedTemplate.builder()
+        .type(SeedTemplateType.GOOD_MORNING)
+        .relation("Family")
+        .event("Good Morning")
+        .tone("Emotional")
+        .language("EN")
+        .active(true)
+        .build();
+  }
+
   private void sendErrorEmail(Exception e) {
-
     String subject = "🚨 Family Wishes Scheduler Failed";
-
     String body = "<h3>Error in Good Morning Job</h3>" + "<p>" + e.getMessage() + "</p>";
 
     emailService.sendEmailWithAttachments(alertEmail, subject, body, null, null);

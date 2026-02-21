@@ -7,9 +7,13 @@ import static org.mockito.Mockito.when;
 import com.familywishes.dto.CommonDtos.PagedResponse;
 import com.familywishes.dto.SeedDtos.SpecialEventSeedRequest;
 import com.familywishes.dto.SeedDtos.SpecialEventSeedResponse;
+import com.familywishes.dto.SeedDtos.WishTemplateSeedRequest;
 import com.familywishes.entity.SpecialEvent;
+import com.familywishes.entity.WishSeedTemplate;
+import com.familywishes.entity.enums.SeedTemplateType;
 import com.familywishes.exception.NotFoundException;
 import com.familywishes.repository.SpecialEventRepository;
+import com.familywishes.repository.WishSeedTemplateRepository;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -23,6 +27,7 @@ import org.springframework.data.domain.PageRequest;
 class SeedServiceImplTest {
 
   @Mock private SpecialEventRepository specialEventRepository;
+  @Mock private WishSeedTemplateRepository wishSeedTemplateRepository;
 
   @InjectMocks private SeedServiceImpl seedService;
 
@@ -99,5 +104,33 @@ class SeedServiceImplTest {
     assertEquals("New", response.eventName());
     assertEquals(2, response.day());
     assertFalse(response.active());
+  }
+
+  @Test
+  void updateWishTemplateShouldPersistChanges() {
+    WishSeedTemplate existing =
+        WishSeedTemplate.builder()
+            .id(1L)
+            .type(SeedTemplateType.GOOD_MORNING)
+            .relation("Family")
+            .event("Good Morning")
+            .tone("Emotional")
+            .language("EN")
+            .active(true)
+            .build();
+
+    when(wishSeedTemplateRepository.findByType(SeedTemplateType.GOOD_MORNING))
+        .thenReturn(Optional.of(existing));
+    when(wishSeedTemplateRepository.save(any(WishSeedTemplate.class)))
+        .thenAnswer(invocation -> invocation.getArgument(0));
+
+    var response =
+        seedService.updateWishTemplateSeed(
+            SeedTemplateType.GOOD_MORNING,
+            new WishTemplateSeedRequest(
+                SeedTemplateType.GOOD_MORNING, "Friends", "Morning", "Warm", "EN", true));
+
+    assertEquals("Friends", response.relation());
+    assertEquals("Morning", response.event());
   }
 }

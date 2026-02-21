@@ -3,9 +3,14 @@ package com.familywishes.service.impl;
 import com.familywishes.dto.CommonDtos.PagedResponse;
 import com.familywishes.dto.SeedDtos.SpecialEventSeedRequest;
 import com.familywishes.dto.SeedDtos.SpecialEventSeedResponse;
+import com.familywishes.dto.SeedDtos.WishTemplateSeedRequest;
+import com.familywishes.dto.SeedDtos.WishTemplateSeedResponse;
 import com.familywishes.entity.SpecialEvent;
+import com.familywishes.entity.WishSeedTemplate;
+import com.familywishes.entity.enums.SeedTemplateType;
 import com.familywishes.exception.NotFoundException;
 import com.familywishes.repository.SpecialEventRepository;
+import com.familywishes.repository.WishSeedTemplateRepository;
 import com.familywishes.service.SeedService;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
@@ -18,6 +23,7 @@ import org.springframework.stereotype.Service;
 @RequiredArgsConstructor
 public class SeedServiceImpl implements SeedService {
   private final SpecialEventRepository specialEventRepository;
+  private final WishSeedTemplateRepository wishSeedTemplateRepository;
 
   @Override
   public SpecialEventSeedResponse createSpecialEventSeed(SpecialEventSeedRequest request) {
@@ -62,7 +68,6 @@ public class SeedServiceImpl implements SeedService {
         specialEventPage.hasPrevious());
   }
 
-
   @Override
   public List<SpecialEventSeedResponse> listTodayActiveSpecialEventSeeds(int day, int month) {
     return specialEventRepository.findByDayAndMonthAndActiveTrue(day, month).stream()
@@ -94,6 +99,52 @@ public class SeedServiceImpl implements SeedService {
     specialEventRepository.deleteById(id);
   }
 
+  @Override
+  public WishTemplateSeedResponse createWishTemplateSeed(WishTemplateSeedRequest request) {
+    WishSeedTemplate seed =
+        wishSeedTemplateRepository
+            .findByType(request.type())
+            .orElseGet(() -> WishSeedTemplate.builder().type(request.type()).build());
+
+    seed.setRelation(request.relation());
+    seed.setEvent(request.event());
+    seed.setTone(request.tone());
+    seed.setLanguage(request.language());
+    seed.setActive(request.active());
+
+    return toWishTemplateResponse(wishSeedTemplateRepository.save(seed));
+  }
+
+  @Override
+  public WishTemplateSeedResponse getWishTemplateSeedByType(SeedTemplateType type) {
+    return toWishTemplateResponse(
+        wishSeedTemplateRepository
+            .findByType(type)
+            .orElseThrow(() -> new NotFoundException("Wish template seed not found")));
+  }
+
+  @Override
+  public List<WishTemplateSeedResponse> listWishTemplateSeeds() {
+    return wishSeedTemplateRepository.findAll().stream().map(this::toWishTemplateResponse).toList();
+  }
+
+  @Override
+  public WishTemplateSeedResponse updateWishTemplateSeed(
+      SeedTemplateType type, WishTemplateSeedRequest request) {
+    WishSeedTemplate seed =
+        wishSeedTemplateRepository
+            .findByType(type)
+            .orElseThrow(() -> new NotFoundException("Wish template seed not found"));
+
+    seed.setRelation(request.relation());
+    seed.setEvent(request.event());
+    seed.setTone(request.tone());
+    seed.setLanguage(request.language());
+    seed.setActive(request.active());
+
+    return toWishTemplateResponse(wishSeedTemplateRepository.save(seed));
+  }
+
   private SpecialEventSeedResponse toResponse(SpecialEvent event) {
     return new SpecialEventSeedResponse(
         event.getId(),
@@ -102,5 +153,16 @@ public class SeedServiceImpl implements SeedService {
         event.getMonth(),
         event.getMessage(),
         event.isActive());
+  }
+
+  private WishTemplateSeedResponse toWishTemplateResponse(WishSeedTemplate seed) {
+    return new WishTemplateSeedResponse(
+        seed.getId(),
+        seed.getType(),
+        seed.getRelation(),
+        seed.getEvent(),
+        seed.getTone(),
+        seed.getLanguage(),
+        seed.isActive());
   }
 }
