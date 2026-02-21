@@ -21,8 +21,6 @@ public interface EventRepository extends JpaRepository<Event, Long> {
       """
             SELECT e FROM Event e
             WHERE :searchKey = ''
-               OR LOWER(e.subject) LIKE LOWER(CONCAT('%', :searchKey, '%'))
-               OR LOWER(e.body) LIKE LOWER(CONCAT('%', :searchKey, '%'))
                OR LOWER(COALESCE(e.festivalName, '')) LIKE LOWER(CONCAT('%', :searchKey, '%'))
                OR LOWER(CAST(e.eventType as string)) LIKE LOWER(CONCAT('%', :searchKey, '%'))
             """)
