@@ -2,9 +2,22 @@ package com.familywishes.repository;
 
 import com.familywishes.entity.SpecialEvent;
 import java.util.List;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
 public interface SpecialEventRepository extends JpaRepository<SpecialEvent, Long> {
 
   List<SpecialEvent> findByDayAndMonthAndActiveTrue(int day, int month);
+
+  @Query(
+      """
+            SELECT s FROM SpecialEvent s
+            WHERE :searchKey = ''
+               OR LOWER(s.eventName) LIKE LOWER(CONCAT('%', :searchKey, '%'))
+               OR LOWER(s.message) LIKE LOWER(CONCAT('%', :searchKey, '%'))
+            """)
+  Page<SpecialEvent> findAllBySearchKey(@Param("searchKey") String searchKey, Pageable pageable);
 }

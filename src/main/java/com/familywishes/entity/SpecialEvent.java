@@ -4,6 +4,7 @@ import jakarta.persistence.*;
 import lombok.*;
 
 @Entity
+@Table(name = "seed_special_events")
 @Getter
 @Setter
 @Builder
