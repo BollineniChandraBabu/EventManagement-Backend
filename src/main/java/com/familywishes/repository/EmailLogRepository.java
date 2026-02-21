@@ -28,6 +28,7 @@ public interface EmailLogRepository extends JpaRepository<EmailLog, Long> {
                OR LOWER(e.recipientEmail) LIKE LOWER(CONCAT('%', :searchKey, '%'))
                OR LOWER(e.subject) LIKE LOWER(CONCAT('%', :searchKey, '%'))
                OR LOWER(CAST(e.status as string)) LIKE LOWER(CONCAT('%', :searchKey, '%'))
+               OR LOWER(CAST(e.emailType as string)) LIKE LOWER(CONCAT('%', :searchKey, '%'))
             """)
     Page<EmailLog> findAllBySearchKey(@Param("searchKey") String searchKey, Pageable pageable);
 
@@ -39,6 +40,7 @@ public interface EmailLogRepository extends JpaRepository<EmailLog, Long> {
                     OR LOWER(e.recipientEmail) LIKE LOWER(CONCAT('%', :searchKey, '%'))
                     OR LOWER(e.subject) LIKE LOWER(CONCAT('%', :searchKey, '%'))
                     OR LOWER(CAST(e.status as string)) LIKE LOWER(CONCAT('%', :searchKey, '%'))
+               OR LOWER(CAST(e.emailType as string)) LIKE LOWER(CONCAT('%', :searchKey, '%'))
               )
             """)
     Page<EmailLog> findAllByRecipientEmailAndSearchKey(

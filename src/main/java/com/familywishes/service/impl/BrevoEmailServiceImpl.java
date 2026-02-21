@@ -3,6 +3,7 @@ package com.familywishes.service.impl;
 import com.familywishes.dto.EmailDtos;
 import com.familywishes.entity.EmailLog;
 import com.familywishes.entity.enums.EmailStatus;
+import com.familywishes.entity.enums.EmailType;
 import com.familywishes.repository.EmailLogRepository;
 import com.familywishes.service.BrevoEmailService;
 import lombok.RequiredArgsConstructor;
@@ -65,6 +66,7 @@ public class BrevoEmailServiceImpl implements BrevoEmailService {
                         .recipientEmail(to)
                         .subject(subject)
                         .status(EmailStatus.PENDING)
+                        .emailType(classifyEmailType(subject, html))
                         .retryCount(0)
                         .build()
         )
@@ -133,10 +135,33 @@ public class BrevoEmailServiceImpl implements BrevoEmailService {
         List<EmailDtos.EmailStatusResponse> emailStatusResponses = new ArrayList<>();
         List<EmailLog> emailLogList = logRepository.findAll();
         emailLogList.forEach(emailLog -> {
-            EmailDtos.EmailStatusResponse emailStatusResponse = new EmailDtos.EmailStatusResponse(emailLog.getId(), emailLog.getRecipientEmail(), emailLog.getSubject(),emailLog.getBody(),emailLog.getImageData(), emailLog.getStatus().name(), emailLog.getSentAt());
+            EmailDtos.EmailStatusResponse emailStatusResponse = new EmailDtos.EmailStatusResponse(emailLog.getId(), emailLog.getRecipientEmail(), emailLog.getSubject(), emailLog.getBody(), emailLog.getImageData(), emailLog.getStatus().name(), emailLog.getEmailType() == null ? EmailType.EVENT.name() : emailLog.getEmailType().name(), emailLog.getSentAt());
             emailStatusResponses.add(emailStatusResponse);
         });
         return emailStatusResponses;
+    }
+
+
+    private EmailType classifyEmailType(String subject, String html) {
+        String content = ((subject == null ? "" : subject) + " " + (html == null ? "" : html)).toLowerCase();
+
+        if (content.contains("otp")) {
+            return EmailType.OTP;
+        }
+        if (content.contains("reset your") || content.contains("forgot password") || content.contains("password reset")) {
+            return EmailType.FORGOT_PASSWORD;
+        }
+        if (content.contains("good morning")) {
+            return EmailType.GOOD_MORNING;
+        }
+        if (content.contains("good night")) {
+            return EmailType.GOOD_NIGHT;
+        }
+        if (content.contains("birthday")) {
+            return EmailType.BIRTHDAY;
+        }
+
+        return EmailType.EVENT;
     }
 
     @Override
