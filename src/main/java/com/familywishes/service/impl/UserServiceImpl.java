@@ -2,9 +2,12 @@ package com.familywishes.service.impl;
 
 import com.familywishes.dto.CommonDtos.PagedResponse;
 import com.familywishes.dto.UserDtos.*;
+import com.familywishes.entity.RelationshipSeed;
 import com.familywishes.entity.User;
 import com.familywishes.entity.UserWishSettings;
+import com.familywishes.exception.BadRequestException;
 import com.familywishes.exception.NotFoundException;
+import com.familywishes.repository.RelationshipSeedRepository;
 import com.familywishes.repository.UserRepository;
 import com.familywishes.service.UserService;
 import java.util.Objects;
@@ -22,6 +25,7 @@ import org.springframework.stereotype.Service;
 public class UserServiceImpl implements UserService {
   private final UserRepository userRepository;
   private final PasswordEncoder encoder;
+  private final RelationshipSeedRepository relationshipSeedRepository;
 
   @Override
   public UserResponse create(UserRequest request) {
@@ -31,7 +35,7 @@ public class UserServiceImpl implements UserService {
             .email(request.email())
             .password(encoder.encode("Test"))
             .role(request.role())
-            .relationShip(request.relationShip())
+            .relationShip(resolveRelationship(request.relationShip()))
             .active(true)
             .deleted(false)
             .build();
@@ -56,7 +60,7 @@ public class UserServiceImpl implements UserService {
           user.getEmail(),
           user.getRole(),
           user.isActive(),
-          user.getRelationShip().name(),
+          user.getRelationShip().getCode(),
           user.getWishSettings().isGoodMorningEnabled(),
           user.getWishSettings().isGoodNightEnabled(),
           user.getWishSettings().isBirthdayEnabled());
@@ -67,7 +71,7 @@ public class UserServiceImpl implements UserService {
           user.getEmail(),
           user.getRole(),
           user.isActive(),
-          user.getRelationShip().name(),
+          user.getRelationShip().getCode(),
           false,
           false,
           false);
@@ -82,7 +86,7 @@ public class UserServiceImpl implements UserService {
             .orElseThrow(() -> new NotFoundException("User not found"));
     user.setName(request.name());
     user.setRole(request.role());
-    user.setRelationShip(request.relationShip());
+    user.setRelationShip(resolveRelationship(request.relationShip()));
 
     UserWishSettings userWishSettings =
         user.getWishSettings() == null
@@ -141,15 +145,9 @@ public class UserServiceImpl implements UserService {
             ? UserWishSettings.builder().user(user).build()
             : user.getWishSettings();
 
-    if (request.isGoodMorningEnabled() != null) {
-      settings.setGoodMorningEnabled(request.isGoodMorningEnabled());
-    }
-    if (request.isGoodNightEnabled() != null) {
-      settings.setGoodNightEnabled(request.isGoodNightEnabled());
-    }
-    if (request.isBirthdayEnabled() != null) {
-      settings.setBirthdayEnabled(request.isBirthdayEnabled());
-    }
+    if (request.isGoodMorningEnabled() != null) settings.setGoodMorningEnabled(request.isGoodMorningEnabled());
+    if (request.isGoodNightEnabled() != null) settings.setGoodNightEnabled(request.isGoodNightEnabled());
+    if (request.isBirthdayEnabled() != null) settings.setBirthdayEnabled(request.isBirthdayEnabled());
 
     user.setWishSettings(settings);
     user = userRepository.save(user);
@@ -162,6 +160,12 @@ public class UserServiceImpl implements UserService {
         userRepository.findById(id).orElseThrow(() -> new NotFoundException("User not found"));
     user.setActive(false);
     userRepository.save(user);
+  }
+
+  private RelationshipSeed resolveRelationship(String relationship) {
+    return relationshipSeedRepository
+        .findByCodeAndActiveTrue(relationship.trim().toUpperCase())
+        .orElseThrow(() -> new BadRequestException("Invalid relationship"));
   }
 
   private User findAuthenticatedUser() {

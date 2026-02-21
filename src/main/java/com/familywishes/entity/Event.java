@@ -1,6 +1,5 @@
 package com.familywishes.entity;
 
-import com.familywishes.entity.enums.EventType;
 import jakarta.persistence.*;
 import java.time.LocalDate;
 import lombok.*;
@@ -17,9 +16,9 @@ public class Event {
   @GeneratedValue(strategy = GenerationType.IDENTITY)
   private Long id;
 
-  @Enumerated(EnumType.STRING)
-  @Column(nullable = false)
-  private EventType eventType;
+  @ManyToOne(fetch = FetchType.EAGER)
+  @JoinColumn(name = "event_type_seed_id", nullable = false)
+  private EventTypeSeed eventType;
 
   private String festivalName;
   @Column private LocalDate eventDate;

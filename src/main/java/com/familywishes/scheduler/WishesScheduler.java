@@ -3,8 +3,6 @@ package com.familywishes.scheduler;
 import com.familywishes.dto.AiWishRequest;
 import com.familywishes.dto.AiWishResponse;
 import com.familywishes.entity.WishSeedTemplate;
-import com.familywishes.entity.enums.EventType;
-import com.familywishes.entity.enums.SeedTemplateType;
 import com.familywishes.repository.EventRepository;
 import com.familywishes.repository.WishSeedTemplateRepository;
 import com.familywishes.service.AiService;
@@ -31,7 +29,7 @@ public class WishesScheduler implements Job {
   public void execute(JobExecutionContext context) {
     WishSeedTemplate festivalTemplate =
         wishSeedTemplateRepository
-            .findByTypeAndActiveTrue(SeedTemplateType.FESTIVAL)
+            .findByType_CodeAndActiveTrue("FESTIVAL")
             .orElse(defaultFestivalTemplate());
 
     eventRepository
@@ -43,7 +41,7 @@ public class WishesScheduler implements Job {
                 AiWishRequest request =
                     buildRequest(
                         event.getUser().getName(),
-                        event.getEventType(),
+                        event.getEventType().getCode(),
                         event.getFestivalName(),
                         festivalTemplate);
                 ai = aiService.generate(request);
@@ -59,8 +57,8 @@ public class WishesScheduler implements Job {
   }
 
   private AiWishRequest buildRequest(
-      String name, EventType eventType, String festivalName, WishSeedTemplate festivalTemplate) {
-    if (eventType == EventType.FESTIVAL) {
+      String name, String eventType, String festivalName, WishSeedTemplate festivalTemplate) {
+    if ("FESTIVAL".equalsIgnoreCase(eventType)) {
       return new AiWishRequest(
           name,
           festivalTemplate.getRelation(),
@@ -70,12 +68,12 @@ public class WishesScheduler implements Job {
           festivalTemplate.getLanguage());
     }
 
-    return new AiWishRequest(name, "Family", eventType.name(), festivalName, "Emotional", "EN");
+    return new AiWishRequest(name, "Family", eventType, festivalName, "Emotional", "EN");
   }
 
   private WishSeedTemplate defaultFestivalTemplate() {
     return WishSeedTemplate.builder()
-        .type(SeedTemplateType.FESTIVAL)
+        .type(null)
         .relation("Family")
         .event("FESTIVAL")
         .tone("Emotional")

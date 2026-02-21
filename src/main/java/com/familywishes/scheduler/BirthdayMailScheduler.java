@@ -63,7 +63,7 @@ public class BirthdayMailScheduler implements Job {
   private void sendBirthdayWish(User user) throws JsonProcessingException {
     AiWishRequest request =
         new AiWishRequest(
-            user.getName(), user.getRelationShip().name(), "Birthday", "", "Emotional", "EN");
+            user.getName(), user.getRelationShip().getCode(), "Birthday", "", "Emotional", "EN");
     AiWishResponse ai = aiService.generate(request);
     byte[] image = aiService.callGeminiImage(request);
     emailService.sendEmailWithAttachments(

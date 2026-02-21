@@ -42,7 +42,7 @@ public class GoodNightScheduler implements Job {
       AiWishRequest request =
           new AiWishRequest(
               event.getUser().getName(),
-              event.getUser().getRelationShip().name(),
+              event.getUser().getRelationShip().getCode(),
               "Good Night",
               "",
               "Emotional",

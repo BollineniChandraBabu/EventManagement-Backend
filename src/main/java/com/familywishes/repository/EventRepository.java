@@ -1,7 +1,6 @@
 package com.familywishes.repository;
 
 import com.familywishes.entity.Event;
-import com.familywishes.entity.enums.EventType;
 import java.time.LocalDate;
 import java.util.List;
 import org.springframework.data.domain.Page;
@@ -15,14 +14,14 @@ public interface EventRepository extends JpaRepository<Event, Long> {
 
   long countByEventDateGreaterThanEqualAndActiveTrue(LocalDate eventDate);
 
-  List<Event> findByEventTypeInAndActiveTrue(List<EventType> eventTypes);
+  List<Event> findByEventType_CodeInAndActiveTrue(List<String> eventTypes);
 
   @Query(
       """
             SELECT e FROM Event e
             WHERE :searchKey = ''
                OR LOWER(COALESCE(e.festivalName, '')) LIKE LOWER(CONCAT('%', :searchKey, '%'))
-               OR LOWER(CAST(e.eventType as string)) LIKE LOWER(CONCAT('%', :searchKey, '%'))
+               OR LOWER(CAST(e.eventType.code as string)) LIKE LOWER(CONCAT('%', :searchKey, '%'))
             """)
   Page<Event> findAllBySearchKey(@Param("searchKey") String searchKey, Pageable pageable);
 }

@@ -1,6 +1,5 @@
 package com.familywishes.entity;
 
-import com.familywishes.entity.enums.RelationShip;
 import com.familywishes.entity.enums.Role;
 import jakarta.persistence.*;
 import java.time.LocalDate;
@@ -44,9 +43,9 @@ public class User {
   @Column(nullable = false)
   private LocalDateTime createdAt;
 
-  @Enumerated(EnumType.STRING)
-  @Column(nullable = false)
-  private RelationShip relationShip;
+  @ManyToOne(fetch = FetchType.EAGER)
+  @JoinColumn(name = "relationship_seed_id", nullable = false)
+  private RelationshipSeed relationShip;
 
   @Column(name = "birthday")
   private LocalDate birthday;

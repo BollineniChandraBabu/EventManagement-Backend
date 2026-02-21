@@ -4,7 +4,6 @@ import com.familywishes.dto.AiWishRequest;
 import com.familywishes.dto.AiWishResponse;
 import com.familywishes.entity.UserWishSettings;
 import com.familywishes.entity.WishSeedTemplate;
-import com.familywishes.entity.enums.SeedTemplateType;
 import com.familywishes.repository.UserWishSettingsRepository;
 import com.familywishes.repository.WishSeedTemplateRepository;
 import com.familywishes.service.AiService;
@@ -43,7 +42,7 @@ public class GoodMorningScheduler implements Job {
     try {
       WishSeedTemplate template =
           wishSeedTemplateRepository
-              .findByTypeAndActiveTrue(SeedTemplateType.GOOD_MORNING)
+              .findByType_CodeAndActiveTrue("GOOD_MORNING")
               .orElse(defaultGoodMorningTemplate());
 
       AiWishRequest request =
@@ -69,7 +68,7 @@ public class GoodMorningScheduler implements Job {
 
   private WishSeedTemplate defaultGoodMorningTemplate() {
     return WishSeedTemplate.builder()
-        .type(SeedTemplateType.GOOD_MORNING)
+        .type(null)
         .relation("Family")
         .event("Good Morning")
         .tone("Emotional")
