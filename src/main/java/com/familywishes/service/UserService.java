@@ -8,7 +8,8 @@ public interface UserService {
 
   UserResponse update(UserRequest request);
 
-  PagedResponse<UserResponse> list(int page, int size, String searchKey);
+  PagedResponse<UserResponse> list(
+      int page, int size, String searchKey, String sortBy, String sortDir);
 
   UserResponse getCurrentUser();
 

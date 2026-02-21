@@ -46,11 +46,16 @@ public class EventServiceImpl implements EventService {
   }
 
   @Override
-  public PagedResponse<EventResponse> list(int page, int size, String searchKey) {
+  public PagedResponse<EventResponse> list(
+      int page, int size, String searchKey, String sortBy, String sortDir) {
+    Sort.Direction direction =
+        "asc".equalsIgnoreCase(sortDir) ? Sort.Direction.ASC : Sort.Direction.DESC;
+    String normalizedSortBy = (sortBy == null || sortBy.isBlank()) ? "id" : sortBy.trim();
+
     Page<Event> events =
         eventRepository.findAllBySearchKey(
             searchKey == null ? "" : searchKey.trim(),
-            PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "id")));
+            PageRequest.of(page, size, Sort.by(direction, normalizedSortBy)));
 
     return new PagedResponse<>(
         events.getContent().stream()

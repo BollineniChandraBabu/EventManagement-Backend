@@ -24,8 +24,11 @@ public class SchedulerController {
   public ResponseEntity<PagedResponse<SchedulerStatusResponse>> getAllSchedulers(
       @RequestParam(defaultValue = "0") int page,
       @RequestParam(defaultValue = "10") int size,
-      @RequestParam(defaultValue = "") String searchKey) {
-    return ResponseEntity.ok(schedulerManagementService.getAllStatuses(page, size, searchKey));
+      @RequestParam(defaultValue = "") String searchKey,
+      @RequestParam(defaultValue = "name") String sortBy,
+      @RequestParam(defaultValue = "asc") String sortDir) {
+    return ResponseEntity.ok(
+        schedulerManagementService.getAllStatuses(page, size, searchKey, sortBy, sortDir));
   }
 
   @PostMapping("/{jobName}/trigger")

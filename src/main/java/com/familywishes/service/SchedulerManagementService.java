@@ -67,7 +67,7 @@ public class SchedulerManagementService {
   }
 
   public PagedResponse<SchedulerStatusResponse> getAllStatuses(
-      int page, int size, String searchKey) {
+      int page, int size, String searchKey, String sortBy, String sortDir) {
     List<SchedulerStatusResponse> statuses = new ArrayList<>();
 
     try {
@@ -81,7 +81,11 @@ public class SchedulerManagementService {
     manualJobs()
         .forEach((jobName, definition) -> statuses.add(buildManualStatus(jobName, definition)));
 
-    statuses.sort(Comparator.comparing(SchedulerStatusResponse::name));
+    Comparator<SchedulerStatusResponse> comparator = resolveComparator(sortBy);
+    if (!"asc".equalsIgnoreCase(sortDir)) {
+      comparator = comparator.reversed();
+    }
+    statuses.sort(comparator);
 
     String normalizedSearchKey = searchKey == null ? "" : searchKey.trim().toLowerCase(Locale.ROOT);
     List<SchedulerStatusResponse> filteredStatuses =
@@ -179,6 +183,22 @@ public class SchedulerManagementService {
     return next != null ? next.toInstant() : null;
   }
 
+
+  private Comparator<SchedulerStatusResponse> resolveComparator(String sortBy) {
+    String normalizedSortBy = sortBy == null ? "name" : sortBy.trim().toLowerCase(Locale.ROOT);
+
+    return switch (normalizedSortBy) {
+      case "type" -> Comparator.comparing(SchedulerStatusResponse::type, String.CASE_INSENSITIVE_ORDER);
+      case "totalruns" -> Comparator.comparingInt(SchedulerStatusResponse::totalRuns);
+      case "successruns" -> Comparator.comparingInt(SchedulerStatusResponse::successRuns);
+      case "failedruns" -> Comparator.comparingInt(SchedulerStatusResponse::failedRuns);
+      case "nextfiretime" -> Comparator.comparing(
+          SchedulerStatusResponse::nextFireTime, Comparator.nullsLast(Comparator.naturalOrder()));
+      case "previousfiretime" -> Comparator.comparing(
+          SchedulerStatusResponse::previousFireTime, Comparator.nullsLast(Comparator.naturalOrder()));
+      default -> Comparator.comparing(SchedulerStatusResponse::name, String.CASE_INSENSITIVE_ORDER);
+    };
+  }
   private SchedulerStatusResponse fromStats(
       String name,
       String type,
