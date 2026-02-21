@@ -1,52 +1,63 @@
 package com.familywishes.entity;
 
-import com.familywishes.entity.enums.EventType;
 import com.familywishes.entity.enums.RelationShip;
 import com.familywishes.entity.enums.Role;
 import jakarta.persistence.*;
-import lombok.*;
-
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
+import lombok.*;
 
 @Entity
 @Table(name = "users")
-@Getter @Setter @Builder @NoArgsConstructor @AllArgsConstructor
+@Getter
+@Setter
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
 public class User {
-    @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
-    @Column(nullable = false)
-    private String name;
-    @Column(nullable = false, unique = true)
-    private String email;
-    @Column(nullable = false)
-    private String password;
-    @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
-    private Role role;
-    @Column(nullable = false)
-    @Builder.Default
-    private boolean active = true;
-    @Column(nullable = false)
-    @Builder.Default
-    private boolean deleted = false;
-    @Column(nullable = false)
-    private LocalDateTime createdAt;
+  @Id
+  @GeneratedValue(strategy = GenerationType.IDENTITY)
+  private Long id;
 
-    @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
-    private RelationShip relationShip;
+  @Column(nullable = false)
+  private String name;
 
-    @Column(name = "birthday")
-    private LocalDate birthday;
+  @Column(nullable = false, unique = true)
+  private String email;
 
-    @Column
-    private LocalDate lastBirthdayWishSent;
+  @Column(nullable = false)
+  private String password;
 
-    @OneToOne(mappedBy = "user", cascade = CascadeType.ALL)
-    private UserWishSettings wishSettings;
+  @Enumerated(EnumType.STRING)
+  @Column(nullable = false)
+  private Role role;
 
-    @PrePersist
-    void init() { if (createdAt == null) createdAt = LocalDateTime.now(ZoneId.of("Asia/Kolkata")); }
+  @Column(nullable = false)
+  @Builder.Default
+  private boolean active = true;
+
+  @Column(nullable = false)
+  @Builder.Default
+  private boolean deleted = false;
+
+  @Column(nullable = false)
+  private LocalDateTime createdAt;
+
+  @Enumerated(EnumType.STRING)
+  @Column(nullable = false)
+  private RelationShip relationShip;
+
+  @Column(name = "birthday")
+  private LocalDate birthday;
+
+  @Column private LocalDate lastBirthdayWishSent;
+
+  @OneToOne(mappedBy = "user", cascade = CascadeType.ALL)
+  private UserWishSettings wishSettings;
+
+  @PrePersist
+  void init() {
+    if (createdAt == null) createdAt = LocalDateTime.now(ZoneId.of("Asia/Kolkata"));
+  }
 }

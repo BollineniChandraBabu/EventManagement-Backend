@@ -1,8 +1,8 @@
 package com.familywishes.controller;
 
+import com.familywishes.dto.CommonDtos.PagedResponse;
 import com.familywishes.dto.SchedulerDtos.SchedulerStatusResponse;
 import com.familywishes.dto.SchedulerDtos.SchedulerTriggerResponse;
-import com.familywishes.dto.CommonDtos.PagedResponse;
 import com.familywishes.service.SchedulerManagementService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -18,19 +18,18 @@ import org.springframework.web.bind.annotation.RestController;
 @RequiredArgsConstructor
 public class SchedulerController {
 
-    private final SchedulerManagementService schedulerManagementService;
+  private final SchedulerManagementService schedulerManagementService;
 
-    @GetMapping
-    public ResponseEntity<PagedResponse<SchedulerStatusResponse>> getAllSchedulers(
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "10") int size,
-            @RequestParam(defaultValue = "") String searchKey
-    ) {
-        return ResponseEntity.ok(schedulerManagementService.getAllStatuses(page, size, searchKey));
-    }
+  @GetMapping
+  public ResponseEntity<PagedResponse<SchedulerStatusResponse>> getAllSchedulers(
+      @RequestParam(defaultValue = "0") int page,
+      @RequestParam(defaultValue = "10") int size,
+      @RequestParam(defaultValue = "") String searchKey) {
+    return ResponseEntity.ok(schedulerManagementService.getAllStatuses(page, size, searchKey));
+  }
 
-    @PostMapping("/{jobName}/trigger")
-    public ResponseEntity<SchedulerTriggerResponse> triggerScheduler(@PathVariable String jobName) {
-        return ResponseEntity.ok(schedulerManagementService.trigger(jobName));
-    }
+  @PostMapping("/{jobName}/trigger")
+  public ResponseEntity<SchedulerTriggerResponse> triggerScheduler(@PathVariable String jobName) {
+    return ResponseEntity.ok(schedulerManagementService.trigger(jobName));
+  }
 }

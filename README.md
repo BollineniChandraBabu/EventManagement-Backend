@@ -88,4 +88,3 @@ This backend integrates with Gemini for AI wish generation and can be extended t
 ### Provider dashboard references
 - Gemini developer/API resources are managed via Google AI/Vertex tooling based on your account setup.
 - Hugging Face models and tokens can be managed at: https://huggingface.co/
-

@@ -4,12 +4,21 @@ import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 
 public class AuthDtos {
-    public record LoginRequest(@Email String email, @NotBlank String password) {}
-    public record AuthResponse(String accessToken, String refreshToken, String tokenType, String role, long expiresIn) {}
-    public record RefreshRequest(@NotBlank String refreshToken) {}
-    public record OtpSendRequest(@Email String email) {}
-    public record OtpVerifyRequest(@Email String email, @NotBlank String otp) {}
-    public record ForgotPasswordRequest(@Email String email) {}
-    public record ResetPasswordRequest(@NotBlank String token, @NotBlank String newPassword) {}
-    public record ResetPasswordWithEmailRequest(@Email String email, @NotBlank String token, @NotBlank String newPassword) {}
+  public record LoginRequest(@Email String email, @NotBlank String password) {}
+
+  public record AuthResponse(
+      String accessToken, String refreshToken, String tokenType, String role, long expiresIn) {}
+
+  public record RefreshRequest(@NotBlank String refreshToken) {}
+
+  public record OtpSendRequest(@Email String email) {}
+
+  public record OtpVerifyRequest(@Email String email, @NotBlank String otp) {}
+
+  public record ForgotPasswordRequest(@Email String email) {}
+
+  public record ResetPasswordRequest(@NotBlank String token, @NotBlank String newPassword) {}
+
+  public record ResetPasswordWithEmailRequest(
+      @Email String email, @NotBlank String token, @NotBlank String newPassword) {}
 }

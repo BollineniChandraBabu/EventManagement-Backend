@@ -12,8 +12,11 @@ import org.springframework.web.bind.annotation.*;
 @RequestMapping("/api/ai")
 @RequiredArgsConstructor
 public class AiController {
-    private final AiService aiService;
+  private final AiService aiService;
 
-    @PostMapping("/generate-wish")
-    public AiWishResponse generate(@Valid @RequestBody AiWishRequest request) throws JsonProcessingException { return aiService.generate(request); }
+  @PostMapping("/generate-wish")
+  public AiWishResponse generate(@Valid @RequestBody AiWishRequest request)
+      throws JsonProcessingException {
+    return aiService.generate(request);
+  }
 }

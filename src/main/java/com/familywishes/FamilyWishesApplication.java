@@ -9,7 +9,7 @@ import org.springframework.scheduling.annotation.EnableScheduling;
 @EnableScheduling
 @EnableAsync
 public class FamilyWishesApplication {
-    public static void main(String[] args) {
-        SpringApplication.run(FamilyWishesApplication.class, args);
-    }
+  public static void main(String[] args) {
+    SpringApplication.run(FamilyWishesApplication.class, args);
+  }
 }

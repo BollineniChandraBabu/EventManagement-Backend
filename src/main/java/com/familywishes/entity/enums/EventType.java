@@ -1,3 +1,10 @@
 package com.familywishes.entity.enums;
 
-public enum EventType { BIRTHDAY, ANNIVERSARY, ENGAGEMENT, FESTIVAL, GOODMORNING, GOODNIGHT }
+public enum EventType {
+  BIRTHDAY,
+  ANNIVERSARY,
+  ENGAGEMENT,
+  FESTIVAL,
+  GOODMORNING,
+  GOODNIGHT
+}

@@ -8,36 +8,35 @@ import org.springframework.web.bind.annotation.*;
 @RequestMapping("/instagram")
 public class InstagramController {
 
-    @Value("${instagram.verify.token}")
-    private String VERIFY_TOKEN;
+  @Value("${instagram.verify.token}")
+  private String VERIFY_TOKEN;
 
-    @GetMapping("/webhook")
-    public ResponseEntity<String> verifyWebhook(
-            @RequestParam("hub.mode") String mode,
-            @RequestParam("hub.challenge") String challenge,
-            @RequestParam("hub.verify_token") String token) {
+  @GetMapping("/webhook")
+  public ResponseEntity<String> verifyWebhook(
+      @RequestParam("hub.mode") String mode,
+      @RequestParam("hub.challenge") String challenge,
+      @RequestParam("hub.verify_token") String token) {
 
-        System.out.println("INSTA token: " +token);
-        if ("subscribe".equals(mode) && VERIFY_TOKEN.equals(token)) {
-            return ResponseEntity.ok(challenge);
-        }
-
-        return ResponseEntity.status(403).body("Verification failed");
+    System.out.println("INSTA token: " + token);
+    if ("subscribe".equals(mode) && VERIFY_TOKEN.equals(token)) {
+      return ResponseEntity.ok(challenge);
     }
 
-    @PostMapping("/webhook")
-    public ResponseEntity<String> receiveWebhook(@RequestBody String payload) {
+    return ResponseEntity.status(403).body("Verification failed");
+  }
 
-        System.out.println("Instagram Webhook Event:");
-        System.out.println(payload);
+  @PostMapping("/webhook")
+  public ResponseEntity<String> receiveWebhook(@RequestBody String payload) {
 
-        return ResponseEntity.ok("EVENT_RECEIVED");
-    }
+    System.out.println("Instagram Webhook Event:");
+    System.out.println(payload);
 
-    @GetMapping("/callback")
-    public ResponseEntity<String> instagramCallback(
-            @RequestParam("code") String code) {
-        System.out.println("Authorization Code: " + code);
-        return ResponseEntity.ok("Instagram login successful. Code: " + code);
-    }
+    return ResponseEntity.ok("EVENT_RECEIVED");
+  }
+
+  @GetMapping("/callback")
+  public ResponseEntity<String> instagramCallback(@RequestParam("code") String code) {
+    System.out.println("Authorization Code: " + code);
+    return ResponseEntity.ok("Instagram login successful. Code: " + code);
+  }
 }

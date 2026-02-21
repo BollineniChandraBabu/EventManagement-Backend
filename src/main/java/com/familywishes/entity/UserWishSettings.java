@@ -12,17 +12,17 @@ import lombok.*;
 @AllArgsConstructor
 public class UserWishSettings {
 
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+  @Id
+  @GeneratedValue(strategy = GenerationType.IDENTITY)
+  private Long id;
 
-    private boolean goodMorningEnabled;
+  private boolean goodMorningEnabled;
 
-    private boolean goodNightEnabled;
+  private boolean goodNightEnabled;
 
-    private boolean birthdayEnabled;
+  private boolean birthdayEnabled;
 
-    @OneToOne
-    @JoinColumn(name = "user_id")
-    private User user;
+  @OneToOne
+  @JoinColumn(name = "user_id")
+  private User user;
 }

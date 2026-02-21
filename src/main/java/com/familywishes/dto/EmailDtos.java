@@ -3,7 +3,13 @@ package com.familywishes.dto;
 import java.time.LocalDateTime;
 
 public class EmailDtos {
-    public record EmailStatusResponse(long id, String toEmail, String subject, String body, byte[] imgData, String status, String emailType, LocalDateTime sentAt) {}
-
+  public record EmailStatusResponse(
+      long id,
+      String toEmail,
+      String subject,
+      String body,
+      byte[] imgData,
+      String status,
+      String emailType,
+      LocalDateTime sentAt) {}
 }
-
