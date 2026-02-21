@@ -28,6 +28,8 @@ import java.io.ByteArrayOutputStream;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.Base64;
+import java.util.List;
+import java.util.Locale;
 import java.util.Properties;
 
 @Service
@@ -66,6 +68,10 @@ public class GmailEmailServiceImpl implements GmailEmailService {
                         .build()
         )
                 : logRepository.findById(logId).orElseThrow();
+
+        if (logEntry.getEmailType() == null) {
+            logEntry.setEmailType(classifyEmailType(subject, html));
+        }
 
         try {
 
@@ -218,13 +224,21 @@ public class GmailEmailServiceImpl implements GmailEmailService {
     // ==========================
 
     @Override
-    public PagedResponse<EmailDtos.EmailStatusResponse> getStatus(int page, int size, String searchKey, String requesterEmail, boolean isAdmin) {
+    public PagedResponse<EmailDtos.EmailStatusResponse> getStatus(int page, int size, String searchKey, String mailTab, String requesterEmail, boolean isAdmin) {
         String normalizedSearchKey = searchKey == null ? "" : searchKey.trim();
         PageRequest pageRequest = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "id"));
+        List<EmailType> filteredTypes = resolveTypesFromTab(mailTab);
 
-        Page<EmailLog> logs = isAdmin
-                ? logRepository.findAllBySearchKey(normalizedSearchKey, pageRequest)
-                : logRepository.findAllByRecipientEmailAndSearchKey(requesterEmail, normalizedSearchKey, pageRequest);
+        Page<EmailLog> logs;
+        if (isAdmin) {
+            logs = filteredTypes == null
+                    ? logRepository.findAllBySearchKey(normalizedSearchKey, pageRequest)
+                    : logRepository.findAllBySearchKeyAndEmailTypeIn(normalizedSearchKey, filteredTypes, pageRequest);
+        } else {
+            logs = filteredTypes == null
+                    ? logRepository.findAllByRecipientEmailAndSearchKey(requesterEmail, normalizedSearchKey, pageRequest)
+                    : logRepository.findAllByRecipientEmailAndSearchKeyAndEmailTypeIn(requesterEmail, normalizedSearchKey, filteredTypes, pageRequest);
+        }
 
         return new PagedResponse<>(
                 logs.getContent().stream().map(log -> new EmailDtos.EmailStatusResponse(
@@ -255,6 +269,18 @@ public class GmailEmailServiceImpl implements GmailEmailService {
                 null,
                 null
         );
+    }
+
+    private List<EmailType> resolveTypesFromTab(String mailTab) {
+        String normalizedTab = mailTab == null ? "ALL" : mailTab.trim().toUpperCase(Locale.ROOT);
+
+        return switch (normalizedTab) {
+            case "OTP" -> List.of(EmailType.OTP);
+            case "FORGOT_PASSWORD", "FORGOT" -> List.of(EmailType.FORGOT_PASSWORD);
+            case "WISHES_EVENTS", "OTHERS", "GOOD_MORNING_GOOD_NIGHT_EVENTS" ->
+                    List.of(EmailType.GOOD_MORNING, EmailType.GOOD_NIGHT, EmailType.BIRTHDAY, EmailType.EVENT);
+            default -> null;
+        };
     }
 
     private EmailType classifyEmailType(String subject, String html) {

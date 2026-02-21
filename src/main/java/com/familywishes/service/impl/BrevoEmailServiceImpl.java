@@ -71,6 +71,10 @@ public class BrevoEmailServiceImpl implements BrevoEmailService {
                         .build()
         )
                 : logRepository.findById(logId).orElseThrow();
+
+        if (logEntry.getEmailType() == null) {
+            logEntry.setEmailType(classifyEmailType(subject, html));
+        }
         try {
             HttpHeaders headers = new HttpHeaders();
             headers.set("api-key", brevoApiKey);

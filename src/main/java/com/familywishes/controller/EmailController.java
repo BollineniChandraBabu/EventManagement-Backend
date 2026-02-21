@@ -26,12 +26,13 @@ public class EmailController {
             Authentication authentication,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size,
-            @RequestParam(defaultValue = "") String searchKey
+            @RequestParam(defaultValue = "") String searchKey,
+            @RequestParam(defaultValue = "ALL") String mailTab
     ) {
         boolean isAdmin = authentication.getAuthorities().stream()
                 .map(GrantedAuthority::getAuthority)
                 .anyMatch("ROLE_ADMIN"::equals);
 
-        return emailService.getStatus(page, size, searchKey, authentication.getName(), isAdmin);
+        return emailService.getStatus(page, size, searchKey, mailTab, authentication.getName(), isAdmin);
     }
 }

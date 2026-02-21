@@ -36,4 +36,12 @@ public class EmailLog {
     @JdbcTypeCode(java.sql.Types.VARBINARY)
     @Column(name = "image_data")
     private byte[] imageData;
+
+    @PrePersist
+    @PreUpdate
+    private void ensureEmailType() {
+        if (emailType == null) {
+            emailType = EmailType.EVENT;
+        }
+    }
 }
