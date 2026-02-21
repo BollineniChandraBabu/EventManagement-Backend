@@ -1,16 +1,16 @@
 package com.familywishes.service.impl;
 
 import com.familywishes.dto.CommonDtos.PagedResponse;
+import com.familywishes.dto.SeedDtos.EnumSeedRequest;
+import com.familywishes.dto.SeedDtos.EnumSeedResponse;
 import com.familywishes.dto.SeedDtos.SpecialEventSeedRequest;
 import com.familywishes.dto.SeedDtos.SpecialEventSeedResponse;
 import com.familywishes.dto.SeedDtos.WishTemplateSeedRequest;
 import com.familywishes.dto.SeedDtos.WishTemplateSeedResponse;
-import com.familywishes.entity.SpecialEvent;
-import com.familywishes.entity.WishSeedTemplate;
-import com.familywishes.entity.enums.SeedTemplateType;
+import com.familywishes.entity.*;
+import com.familywishes.exception.BadRequestException;
 import com.familywishes.exception.NotFoundException;
-import com.familywishes.repository.SpecialEventRepository;
-import com.familywishes.repository.WishSeedTemplateRepository;
+import com.familywishes.repository.*;
 import com.familywishes.service.SeedService;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
@@ -24,6 +24,104 @@ import org.springframework.stereotype.Service;
 public class SeedServiceImpl implements SeedService {
   private final SpecialEventRepository specialEventRepository;
   private final WishSeedTemplateRepository wishSeedTemplateRepository;
+  private final RelationshipSeedRepository relationshipSeedRepository;
+  private final EventTypeSeedRepository eventTypeSeedRepository;
+  private final TemplateTypeSeedRepository templateTypeSeedRepository;
+
+  @Override
+  public EnumSeedResponse createEnumSeed(String category, EnumSeedRequest request) {
+    String code = normalizeCode(request.code());
+    String display = request.displayName().trim();
+    boolean active = request.active();
+    return switch (normalizeCategory(category)) {
+      case "RELATIONSHIP" -> {
+        RelationshipSeed seed =
+            relationshipSeedRepository
+                .findByCode(code)
+                .orElseGet(() -> RelationshipSeed.builder().code(code).build());
+        seed.setDisplayName(display);
+        seed.setActive(active);
+        yield toResponse(relationshipSeedRepository.save(seed), "RELATIONSHIP");
+      }
+      case "EVENT_TYPE" -> {
+        EventTypeSeed seed =
+            eventTypeSeedRepository
+                .findByCode(code)
+                .orElseGet(() -> EventTypeSeed.builder().code(code).build());
+        seed.setDisplayName(display);
+        seed.setActive(active);
+        yield toResponse(eventTypeSeedRepository.save(seed), "EVENT_TYPE");
+      }
+      case "TEMPLATE_TYPE" -> {
+        TemplateTypeSeed seed =
+            templateTypeSeedRepository
+                .findByCode(code)
+                .orElseGet(() -> TemplateTypeSeed.builder().code(code).build());
+        seed.setDisplayName(display);
+        seed.setActive(active);
+        yield toResponse(templateTypeSeedRepository.save(seed), "TEMPLATE_TYPE");
+      }
+      default -> throw new BadRequestException("Unsupported enum category");
+    };
+  }
+
+  @Override
+  public EnumSeedResponse updateEnumSeed(String category, String code, EnumSeedRequest request) {
+    String normalized = normalizeCategory(category);
+    String targetCode = normalizeCode(code);
+    String newCode = normalizeCode(request.code());
+    String display = request.displayName().trim();
+
+    return switch (normalized) {
+      case "RELATIONSHIP" -> {
+        RelationshipSeed seed =
+            relationshipSeedRepository
+                .findByCode(targetCode)
+                .orElseThrow(() -> new NotFoundException("Enum seed not found"));
+        seed.setCode(newCode);
+        seed.setDisplayName(display);
+        seed.setActive(request.active());
+        yield toResponse(relationshipSeedRepository.save(seed), normalized);
+      }
+      case "EVENT_TYPE" -> {
+        EventTypeSeed seed =
+            eventTypeSeedRepository
+                .findByCode(targetCode)
+                .orElseThrow(() -> new NotFoundException("Enum seed not found"));
+        seed.setCode(newCode);
+        seed.setDisplayName(display);
+        seed.setActive(request.active());
+        yield toResponse(eventTypeSeedRepository.save(seed), normalized);
+      }
+      case "TEMPLATE_TYPE" -> {
+        TemplateTypeSeed seed =
+            templateTypeSeedRepository
+                .findByCode(targetCode)
+                .orElseThrow(() -> new NotFoundException("Enum seed not found"));
+        seed.setCode(newCode);
+        seed.setDisplayName(display);
+        seed.setActive(request.active());
+        yield toResponse(templateTypeSeedRepository.save(seed), normalized);
+      }
+      default -> throw new BadRequestException("Unsupported enum category");
+    };
+  }
+
+  @Override
+  public List<EnumSeedResponse> listEnumSeeds(String category) {
+    return switch (normalizeCategory(category)) {
+      case "RELATIONSHIP" -> relationshipSeedRepository.findByActiveTrueOrderByDisplayNameAsc().stream()
+          .map(seed -> toResponse(seed, "RELATIONSHIP"))
+          .toList();
+      case "EVENT_TYPE" -> eventTypeSeedRepository.findByActiveTrueOrderByDisplayNameAsc().stream()
+          .map(seed -> toResponse(seed, "EVENT_TYPE"))
+          .toList();
+      case "TEMPLATE_TYPE" -> templateTypeSeedRepository.findByActiveTrueOrderByDisplayNameAsc().stream()
+          .map(seed -> toResponse(seed, "TEMPLATE_TYPE"))
+          .toList();
+      default -> throw new BadRequestException("Unsupported enum category");
+    };
+  }
 
   @Override
   public SpecialEventSeedResponse createSpecialEventSeed(SpecialEventSeedRequest request) {
@@ -93,9 +191,7 @@ public class SeedServiceImpl implements SeedService {
 
   @Override
   public void deleteSpecialEventSeed(Long id) {
-    if (!specialEventRepository.existsById(id)) {
-      throw new NotFoundException("Special event seed not found");
-    }
+    if (!specialEventRepository.existsById(id)) throw new NotFoundException("Special event seed not found");
     specialEventRepository.deleteById(id);
   }
 
@@ -103,9 +199,10 @@ public class SeedServiceImpl implements SeedService {
   public WishTemplateSeedResponse createWishTemplateSeed(WishTemplateSeedRequest request) {
     WishSeedTemplate seed =
         wishSeedTemplateRepository
-            .findByType(request.type())
-            .orElseGet(() -> WishSeedTemplate.builder().type(request.type()).build());
+            .findByType_Code(normalizeCode(request.type()))
+            .orElseGet(() -> WishSeedTemplate.builder().type(resolveTemplateType(request.type())).build());
 
+    seed.setType(resolveTemplateType(request.type()));
     seed.setRelation(request.relation());
     seed.setEvent(request.event());
     seed.setTone(request.tone());
@@ -116,10 +213,10 @@ public class SeedServiceImpl implements SeedService {
   }
 
   @Override
-  public WishTemplateSeedResponse getWishTemplateSeedByType(SeedTemplateType type) {
+  public WishTemplateSeedResponse getWishTemplateSeedByType(String type) {
     return toWishTemplateResponse(
         wishSeedTemplateRepository
-            .findByType(type)
+            .findByType_Code(normalizeCode(type))
             .orElseThrow(() -> new NotFoundException("Wish template seed not found")));
   }
 
@@ -129,13 +226,13 @@ public class SeedServiceImpl implements SeedService {
   }
 
   @Override
-  public WishTemplateSeedResponse updateWishTemplateSeed(
-      SeedTemplateType type, WishTemplateSeedRequest request) {
+  public WishTemplateSeedResponse updateWishTemplateSeed(String type, WishTemplateSeedRequest request) {
     WishSeedTemplate seed =
         wishSeedTemplateRepository
-            .findByType(type)
+            .findByType_Code(normalizeCode(type))
             .orElseThrow(() -> new NotFoundException("Wish template seed not found"));
 
+    seed.setType(resolveTemplateType(request.type()));
     seed.setRelation(request.relation());
     seed.setEvent(request.event());
     seed.setTone(request.tone());
@@ -143,6 +240,35 @@ public class SeedServiceImpl implements SeedService {
     seed.setActive(request.active());
 
     return toWishTemplateResponse(wishSeedTemplateRepository.save(seed));
+  }
+
+  private TemplateTypeSeed resolveTemplateType(String code) {
+    return templateTypeSeedRepository
+        .findByCodeAndActiveTrue(normalizeCode(code))
+        .orElseThrow(() -> new BadRequestException("Invalid template type"));
+  }
+
+  private String normalizeCode(String value) {
+    return value.trim().toUpperCase();
+  }
+
+  private String normalizeCategory(String category) {
+    return switch (normalizeCode(category)) {
+      case "RELATIONSHIP", "EVENT_TYPE", "TEMPLATE_TYPE" -> normalizeCode(category);
+      default -> throw new BadRequestException("Unsupported enum category");
+    };
+  }
+
+  private EnumSeedResponse toResponse(RelationshipSeed seed, String category) {
+    return new EnumSeedResponse(seed.getId(), category, seed.getCode(), seed.getDisplayName(), seed.isActive());
+  }
+
+  private EnumSeedResponse toResponse(EventTypeSeed seed, String category) {
+    return new EnumSeedResponse(seed.getId(), category, seed.getCode(), seed.getDisplayName(), seed.isActive());
+  }
+
+  private EnumSeedResponse toResponse(TemplateTypeSeed seed, String category) {
+    return new EnumSeedResponse(seed.getId(), category, seed.getCode(), seed.getDisplayName(), seed.isActive());
   }
 
   private SpecialEventSeedResponse toResponse(SpecialEvent event) {
@@ -158,7 +284,7 @@ public class SeedServiceImpl implements SeedService {
   private WishTemplateSeedResponse toWishTemplateResponse(WishSeedTemplate seed) {
     return new WishTemplateSeedResponse(
         seed.getId(),
-        seed.getType(),
+        seed.getType().getCode(),
         seed.getRelation(),
         seed.getEvent(),
         seed.getTone(),

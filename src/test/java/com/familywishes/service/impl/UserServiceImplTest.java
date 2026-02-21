@@ -7,10 +7,11 @@ import static org.mockito.Mockito.when;
 import com.familywishes.dto.UserDtos.UserRequest;
 import com.familywishes.dto.UserDtos.UserResponse;
 import com.familywishes.dto.UserDtos.WishSettingsUpdateRequest;
+import com.familywishes.entity.RelationshipSeed;
 import com.familywishes.entity.User;
 import com.familywishes.entity.UserWishSettings;
-import com.familywishes.entity.enums.RelationShip;
 import com.familywishes.entity.enums.Role;
+import com.familywishes.repository.RelationshipSeedRepository;
 import com.familywishes.repository.UserRepository;
 import java.util.List;
 import java.util.Optional;
@@ -30,6 +31,7 @@ class UserServiceImplTest {
 
   @Mock private UserRepository userRepository;
   @Mock private PasswordEncoder passwordEncoder;
+  @Mock private RelationshipSeedRepository relationshipSeedRepository;
 
   @InjectMocks private UserServiceImpl userService;
 
@@ -41,9 +43,11 @@ class UserServiceImplTest {
   @Test
   void createShouldPersistBirthdayFlagInWishSettings() {
     UserRequest request =
-        new UserRequest(
-            "Aman", "aman@example.com", Role.ROLE_USER, RelationShip.BROTHER, true, false, true);
+        new UserRequest("Aman", "aman@example.com", Role.ROLE_USER, "BROTHER", true, false, true);
 
+    RelationshipSeed relationship = RelationshipSeed.builder().code("BROTHER").active(true).build();
+    when(relationshipSeedRepository.findByCodeAndActiveTrue("BROTHER"))
+        .thenReturn(Optional.of(relationship));
     when(passwordEncoder.encode("Test")).thenReturn("encoded-password");
     when(userRepository.save(any(User.class)))
         .thenAnswer(
@@ -62,13 +66,14 @@ class UserServiceImplTest {
 
   @Test
   void updateCurrentUserWishSettingsShouldApplyPartialPatch() {
+    RelationshipSeed relationship = RelationshipSeed.builder().code("SON").active(true).build();
     User user =
         User.builder()
             .id(10L)
             .name("Ravi")
             .email("ravi@example.com")
             .role(Role.ROLE_USER)
-            .relationShip(RelationShip.SON)
+            .relationShip(relationship)
             .active(true)
             .deleted(false)
             .build();
@@ -85,8 +90,7 @@ class UserServiceImplTest {
             new UsernamePasswordAuthenticationToken(
                 "ravi@example.com", "password", List.of(new SimpleGrantedAuthority("ROLE_USER"))));
 
-    when(userRepository.findByEmailAndDeletedFalse("ravi@example.com"))
-        .thenReturn(Optional.of(user));
+    when(userRepository.findByEmailAndDeletedFalse("ravi@example.com")).thenReturn(Optional.of(user));
     when(userRepository.save(any(User.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
     UserResponse response =

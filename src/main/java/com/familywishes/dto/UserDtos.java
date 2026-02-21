@@ -1,6 +1,5 @@
 package com.familywishes.dto;
 
-import com.familywishes.entity.enums.RelationShip;
 import com.familywishes.entity.enums.Role;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
@@ -10,7 +9,7 @@ public class UserDtos {
       @NotBlank String name,
       @Email String email,
       Role role,
-      RelationShip relationShip,
+      @NotBlank String relationShip,
       boolean isGoodMorningEnabled,
       boolean isGoodNightEnabled,
       boolean isBirthdayEnabled) {}

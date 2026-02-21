@@ -1,6 +1,5 @@
 package com.familywishes.entity;
 
-import com.familywishes.entity.enums.SeedTemplateType;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -17,9 +16,9 @@ public class WishSeedTemplate {
   @GeneratedValue(strategy = GenerationType.IDENTITY)
   private Long id;
 
-  @Enumerated(EnumType.STRING)
-  @Column(nullable = false, unique = true)
-  private SeedTemplateType type;
+  @ManyToOne(fetch = FetchType.EAGER)
+  @JoinColumn(name = "type_seed_id", nullable = false, unique = true)
+  private TemplateTypeSeed type;
 
   @Column(nullable = false)
   private String relation;

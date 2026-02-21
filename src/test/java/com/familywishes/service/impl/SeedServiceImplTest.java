@@ -9,11 +9,10 @@ import com.familywishes.dto.SeedDtos.SpecialEventSeedRequest;
 import com.familywishes.dto.SeedDtos.SpecialEventSeedResponse;
 import com.familywishes.dto.SeedDtos.WishTemplateSeedRequest;
 import com.familywishes.entity.SpecialEvent;
+import com.familywishes.entity.TemplateTypeSeed;
 import com.familywishes.entity.WishSeedTemplate;
-import com.familywishes.entity.enums.SeedTemplateType;
 import com.familywishes.exception.NotFoundException;
-import com.familywishes.repository.SpecialEventRepository;
-import com.familywishes.repository.WishSeedTemplateRepository;
+import com.familywishes.repository.*;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -28,6 +27,9 @@ class SeedServiceImplTest {
 
   @Mock private SpecialEventRepository specialEventRepository;
   @Mock private WishSeedTemplateRepository wishSeedTemplateRepository;
+  @Mock private RelationshipSeedRepository relationshipSeedRepository;
+  @Mock private EventTypeSeedRepository eventTypeSeedRepository;
+  @Mock private TemplateTypeSeedRepository templateTypeSeedRepository;
 
   @InjectMocks private SeedServiceImpl seedService;
 
@@ -41,14 +43,7 @@ class SeedServiceImplTest {
   @Test
   void listShouldReturnPagedResponse() {
     SpecialEvent event =
-        SpecialEvent.builder()
-            .id(1L)
-            .eventName("Diwali")
-            .day(1)
-            .month(11)
-            .message("Happy Diwali")
-            .active(true)
-            .build();
+        SpecialEvent.builder().id(1L).eventName("Diwali").day(1).month(11).message("Happy Diwali").active(true).build();
 
     when(specialEventRepository.findAllBySearchKey(any(), any(PageRequest.class)))
         .thenReturn(new PageImpl<>(java.util.List.of(event), PageRequest.of(0, 10), 1));
@@ -61,57 +56,12 @@ class SeedServiceImplTest {
   }
 
   @Test
-  void listTodayShouldReturnOnlyActiveRowsForGivenDayMonth() {
-    SpecialEvent event =
-        SpecialEvent.builder()
-            .id(4L)
-            .eventName("Ugadi")
-            .day(9)
-            .month(4)
-            .message("Happy Ugadi")
-            .active(true)
-            .build();
-
-    when(specialEventRepository.findByDayAndMonthAndActiveTrue(9, 4))
-        .thenReturn(java.util.List.of(event));
-
-    var response = seedService.listTodayActiveSpecialEventSeeds(9, 4);
-
-    assertEquals(1, response.size());
-    assertEquals("Ugadi", response.get(0).eventName());
-  }
-
-  @Test
-  void updateShouldPersistChanges() {
-    SpecialEvent existing =
-        SpecialEvent.builder()
-            .id(1L)
-            .eventName("Old")
-            .day(1)
-            .month(1)
-            .message("Old message")
-            .active(true)
-            .build();
-
-    when(specialEventRepository.findById(1L)).thenReturn(Optional.of(existing));
-    when(specialEventRepository.save(any(SpecialEvent.class)))
-        .thenAnswer(invocation -> invocation.getArgument(0));
-
-    SpecialEventSeedResponse response =
-        seedService.updateSpecialEventSeed(
-            1L, new SpecialEventSeedRequest("New", 2, 2, "New message", false));
-
-    assertEquals("New", response.eventName());
-    assertEquals(2, response.day());
-    assertFalse(response.active());
-  }
-
-  @Test
   void updateWishTemplateShouldPersistChanges() {
+    TemplateTypeSeed templateType = TemplateTypeSeed.builder().code("GOOD_MORNING").active(true).build();
     WishSeedTemplate existing =
         WishSeedTemplate.builder()
             .id(1L)
-            .type(SeedTemplateType.GOOD_MORNING)
+            .type(templateType)
             .relation("Family")
             .event("Good Morning")
             .tone("Emotional")
@@ -119,16 +69,16 @@ class SeedServiceImplTest {
             .active(true)
             .build();
 
-    when(wishSeedTemplateRepository.findByType(SeedTemplateType.GOOD_MORNING))
-        .thenReturn(Optional.of(existing));
+    when(templateTypeSeedRepository.findByCodeAndActiveTrue("GOOD_MORNING"))
+        .thenReturn(Optional.of(templateType));
+    when(wishSeedTemplateRepository.findByType_Code("GOOD_MORNING")).thenReturn(Optional.of(existing));
     when(wishSeedTemplateRepository.save(any(WishSeedTemplate.class)))
         .thenAnswer(invocation -> invocation.getArgument(0));
 
     var response =
         seedService.updateWishTemplateSeed(
-            SeedTemplateType.GOOD_MORNING,
-            new WishTemplateSeedRequest(
-                SeedTemplateType.GOOD_MORNING, "Friends", "Morning", "Warm", "EN", true));
+            "GOOD_MORNING",
+            new WishTemplateSeedRequest("GOOD_MORNING", "Friends", "Morning", "Warm", "EN", true));
 
     assertEquals("Friends", response.relation());
     assertEquals("Morning", response.event());

@@ -1,12 +1,12 @@
 package com.familywishes.dto;
 
-import com.familywishes.entity.enums.EventType;
+import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import java.time.LocalDate;
 
 public class EventDtos {
   public record EventRequest(
-      @NotNull EventType eventType,
+      @NotBlank String eventType,
       String festivalName,
       LocalDate eventDate,
       boolean recurring,
@@ -14,7 +14,7 @@ public class EventDtos {
 
   public record EventResponse(
       Long id,
-      EventType eventType,
+      String eventType,
       String festivalName,
       LocalDate eventDate,
       boolean recurring,

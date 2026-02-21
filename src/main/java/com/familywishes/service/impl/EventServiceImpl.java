@@ -3,8 +3,11 @@ package com.familywishes.service.impl;
 import com.familywishes.dto.CommonDtos.PagedResponse;
 import com.familywishes.dto.EventDtos.*;
 import com.familywishes.entity.Event;
+import com.familywishes.entity.EventTypeSeed;
+import com.familywishes.exception.BadRequestException;
 import com.familywishes.exception.NotFoundException;
 import com.familywishes.repository.EventRepository;
+import com.familywishes.repository.EventTypeSeedRepository;
 import com.familywishes.repository.UserRepository;
 import com.familywishes.service.EventService;
 import lombok.RequiredArgsConstructor;
@@ -18,6 +21,7 @@ import org.springframework.stereotype.Service;
 public class EventServiceImpl implements EventService {
   private final EventRepository eventRepository;
   private final UserRepository userRepository;
+  private final EventTypeSeedRepository eventTypeSeedRepository;
 
   @Override
   public EventResponse create(EventRequest request) {
@@ -27,7 +31,7 @@ public class EventServiceImpl implements EventService {
             .orElseThrow(() -> new NotFoundException("User not found"));
     Event event =
         Event.builder()
-            .eventType(request.eventType())
+            .eventType(resolveEventType(request.eventType()))
             .festivalName(request.festivalName())
             .eventDate(request.eventDate())
             .recurring(request.recurring())
@@ -67,10 +71,16 @@ public class EventServiceImpl implements EventService {
         events.hasPrevious());
   }
 
+  private EventTypeSeed resolveEventType(String eventType) {
+    return eventTypeSeedRepository
+        .findByCodeAndActiveTrue(eventType.trim().toUpperCase())
+        .orElseThrow(() -> new BadRequestException("Invalid event type"));
+  }
+
   private EventResponse toResponse(Event event) {
     return new EventResponse(
         event.getId(),
-        event.getEventType(),
+        event.getEventType().getCode(),
         event.getFestivalName(),
         event.getEventDate(),
         event.isRecurring(),

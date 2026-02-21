@@ -1,11 +1,12 @@
 package com.familywishes.controller;
 
 import com.familywishes.dto.CommonDtos.PagedResponse;
+import com.familywishes.dto.SeedDtos.EnumSeedRequest;
+import com.familywishes.dto.SeedDtos.EnumSeedResponse;
 import com.familywishes.dto.SeedDtos.SpecialEventSeedRequest;
 import com.familywishes.dto.SeedDtos.SpecialEventSeedResponse;
 import com.familywishes.dto.SeedDtos.WishTemplateSeedRequest;
 import com.familywishes.dto.SeedDtos.WishTemplateSeedResponse;
-import com.familywishes.entity.enums.SeedTemplateType;
 import com.familywishes.service.SeedService;
 import jakarta.validation.Valid;
 import java.time.LocalDate;
@@ -21,6 +22,25 @@ import org.springframework.web.bind.annotation.*;
 @PreAuthorize("hasRole('ADMIN')")
 public class SeedController {
   private final SeedService seedService;
+
+  @PostMapping("/enums/{category}")
+  public EnumSeedResponse createEnumSeed(
+      @PathVariable String category, @Valid @RequestBody EnumSeedRequest request) {
+    return seedService.createEnumSeed(category, request);
+  }
+
+  @PutMapping("/enums/{category}/{code}")
+  public EnumSeedResponse updateEnumSeed(
+      @PathVariable String category,
+      @PathVariable String code,
+      @Valid @RequestBody EnumSeedRequest request) {
+    return seedService.updateEnumSeed(category, code, request);
+  }
+
+  @GetMapping("/enums/{category}")
+  public List<EnumSeedResponse> listEnumSeeds(@PathVariable String category) {
+    return seedService.listEnumSeeds(category);
+  }
 
   @PostMapping("/special-events")
   public SpecialEventSeedResponse createSpecialEventSeed(
@@ -73,13 +93,13 @@ public class SeedController {
   }
 
   @GetMapping("/wish-templates/{type}")
-  public WishTemplateSeedResponse getWishTemplateSeedByType(@PathVariable SeedTemplateType type) {
+  public WishTemplateSeedResponse getWishTemplateSeedByType(@PathVariable String type) {
     return seedService.getWishTemplateSeedByType(type);
   }
 
   @PutMapping("/wish-templates/{type}")
   public WishTemplateSeedResponse updateWishTemplateSeed(
-      @PathVariable SeedTemplateType type, @Valid @RequestBody WishTemplateSeedRequest request) {
+      @PathVariable String type, @Valid @RequestBody WishTemplateSeedRequest request) {
     return seedService.updateWishTemplateSeed(type, request);
   }
 }

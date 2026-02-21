@@ -1,12 +1,15 @@
 package com.familywishes.dto;
 
-import com.familywishes.entity.enums.SeedTemplateType;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 
 public class SeedDtos {
+
+  public record EnumSeedRequest(@NotBlank String code, @NotBlank String displayName, @NotNull Boolean active) {}
+
+  public record EnumSeedResponse(Long id, String category, String code, String displayName, boolean active) {}
 
   public record SpecialEventSeedRequest(
       @NotBlank String eventName,
@@ -19,7 +22,7 @@ public class SeedDtos {
       Long id, String eventName, int day, int month, String message, boolean active) {}
 
   public record WishTemplateSeedRequest(
-      @NotNull SeedTemplateType type,
+      @NotBlank String type,
       @NotBlank String relation,
       @NotBlank String event,
       @NotBlank String tone,
@@ -28,7 +31,7 @@ public class SeedDtos {
 
   public record WishTemplateSeedResponse(
       Long id,
-      SeedTemplateType type,
+      String type,
       String relation,
       String event,
       String tone,

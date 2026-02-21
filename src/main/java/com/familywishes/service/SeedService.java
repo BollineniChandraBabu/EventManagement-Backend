@@ -1,14 +1,21 @@
 package com.familywishes.service;
 
 import com.familywishes.dto.CommonDtos.PagedResponse;
+import com.familywishes.dto.SeedDtos.EnumSeedRequest;
+import com.familywishes.dto.SeedDtos.EnumSeedResponse;
 import com.familywishes.dto.SeedDtos.SpecialEventSeedRequest;
 import com.familywishes.dto.SeedDtos.SpecialEventSeedResponse;
 import com.familywishes.dto.SeedDtos.WishTemplateSeedRequest;
 import com.familywishes.dto.SeedDtos.WishTemplateSeedResponse;
-import com.familywishes.entity.enums.SeedTemplateType;
 import java.util.List;
 
 public interface SeedService {
+  EnumSeedResponse createEnumSeed(String category, EnumSeedRequest request);
+
+  EnumSeedResponse updateEnumSeed(String category, String code, EnumSeedRequest request);
+
+  List<EnumSeedResponse> listEnumSeeds(String category);
+
   SpecialEventSeedResponse createSpecialEventSeed(SpecialEventSeedRequest request);
 
   SpecialEventSeedResponse getSpecialEventSeedById(Long id);
@@ -24,10 +31,9 @@ public interface SeedService {
 
   WishTemplateSeedResponse createWishTemplateSeed(WishTemplateSeedRequest request);
 
-  WishTemplateSeedResponse getWishTemplateSeedByType(SeedTemplateType type);
+  WishTemplateSeedResponse getWishTemplateSeedByType(String type);
 
   List<WishTemplateSeedResponse> listWishTemplateSeeds();
 
-  WishTemplateSeedResponse updateWishTemplateSeed(
-      SeedTemplateType type, WishTemplateSeedRequest request);
+  WishTemplateSeedResponse updateWishTemplateSeed(String type, WishTemplateSeedRequest request);
 }
