@@ -119,6 +119,15 @@ public class UserServiceImpl implements UserService {
   }
 
   @Override
+  public UserResponse getById(Long id) {
+    User user =
+        userRepository
+            .findById(id)
+            .orElseThrow(() -> new NotFoundException("User not found"));
+    return getUserResponse(user);
+  }
+
+  @Override
   public UserResponse getCurrentUser() {
     Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
     if (authentication == null || !authentication.isAuthenticated()) {

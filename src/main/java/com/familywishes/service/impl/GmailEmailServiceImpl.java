@@ -5,6 +5,7 @@ import com.familywishes.dto.EmailDtos;
 import com.familywishes.entity.EmailLog;
 import com.familywishes.entity.enums.EmailStatus;
 import com.familywishes.entity.enums.EmailType;
+import com.familywishes.exception.NotFoundException;
 import com.familywishes.repository.EmailLogRepository;
 import com.familywishes.service.GmailEmailService;
 import com.google.api.services.gmail.Gmail;
@@ -206,21 +207,7 @@ public class GmailEmailServiceImpl implements GmailEmailService {
     }
 
     return new PagedResponse<>(
-        logs.getContent().stream()
-            .map(
-                log ->
-                    new EmailDtos.EmailStatusResponse(
-                        log.getId(),
-                        log.getRecipientEmail(),
-                        log.getSubject(),
-                        log.getBody(),
-                        log.getImageData(),
-                        log.getStatus().name(),
-                        log.getEmailType() == null
-                            ? EmailType.EVENT.name()
-                            : log.getEmailType().name(),
-                        log.getSentAt()))
-            .toList(),
+        logs.getContent().stream().map(this::toEmailStatusResponse).toList(),
         logs.getNumber(),
         logs.getSize(),
         logs.getTotalElements(),
@@ -230,8 +217,32 @@ public class GmailEmailServiceImpl implements GmailEmailService {
   }
 
   @Override
+  public EmailDtos.EmailStatusResponse getStatusById(Long id, String requesterEmail) {
+    EmailLog log =
+        logRepository.findById(id).orElseThrow(() -> new NotFoundException("Email log not found"));
+
+    if (!log.getRecipientEmail().equalsIgnoreCase(requesterEmail)) {
+      throw new NotFoundException("Email log not found");
+    }
+
+    return toEmailStatusResponse(log);
+  }
+
+  @Override
   public void sendTestEmail(String to) {
     sendEmailWithAttachments(to, "Test Email", "<h3>Family Wishes Gmail API test</h3>", null, null);
+  }
+
+  private EmailDtos.EmailStatusResponse toEmailStatusResponse(EmailLog log) {
+    return new EmailDtos.EmailStatusResponse(
+        log.getId(),
+        log.getRecipientEmail(),
+        log.getSubject(),
+        log.getBody(),
+        log.getImageData(),
+        log.getStatus().name(),
+        log.getEmailType() == null ? EmailType.EVENT.name() : log.getEmailType().name(),
+        log.getSentAt());
   }
 
   private List<EmailType> resolveTypesFromTab(String mailTab) {

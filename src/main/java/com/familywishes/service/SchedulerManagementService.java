@@ -117,6 +117,19 @@ public class SchedulerManagementService {
         safePage > 0);
   }
 
+  public SchedulerStatusResponse getStatusByName(String jobName) {
+    Map<String, ManualSchedulerDefinition> manualJobs = manualJobs();
+    if (manualJobs.containsKey(jobName)) {
+      return buildManualStatus(jobName, manualJobs.get(jobName));
+    }
+
+    try {
+      return buildQuartzStatus(resolveQuartzJobKey(jobName));
+    } catch (SchedulerException e) {
+      throw new RuntimeException("Failed to load quartz scheduler: " + jobName, e);
+    }
+  }
+
   public SchedulerTriggerResponse trigger(String jobName) {
     Map<String, ManualSchedulerDefinition> manualJobs = manualJobs();
 

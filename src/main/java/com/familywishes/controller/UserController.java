@@ -26,6 +26,11 @@ public class UserController {
     return userService.update(request);
   }
 
+  @GetMapping("/{id}")
+  public UserResponse getById(@PathVariable Long id) {
+    return userService.getById(id);
+  }
+
   @GetMapping
   @PreAuthorize("hasRole('ADMIN')")
   public PagedResponse<UserResponse> list(

@@ -20,6 +20,11 @@ public class EventController {
     return eventService.create(request);
   }
 
+  @GetMapping("/{id}")
+  public EventResponse getById(@PathVariable Long id) {
+    return eventService.getById(id);
+  }
+
   @GetMapping
   @PreAuthorize("hasRole('ADMIN')")
   public PagedResponse<EventResponse> list(

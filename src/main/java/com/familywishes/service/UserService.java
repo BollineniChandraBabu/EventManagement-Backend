@@ -11,6 +11,8 @@ public interface UserService {
   PagedResponse<UserResponse> list(
       int page, int size, String searchKey, String sortBy, String sortDir);
 
+  UserResponse getById(Long id);
+
   UserResponse getCurrentUser();
 
   void deactivate(Long id);
