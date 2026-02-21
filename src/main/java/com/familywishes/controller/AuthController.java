@@ -43,12 +43,17 @@ public class AuthController {
   }
 
   @PostMapping("/reset-password")
-  public void resetPassword(@Valid @RequestBody ResetPasswordRequest request) {
-    authService.resetPassword(request);
+  public void resetPassword(@Valid @RequestBody ResetPasswordWithEmailRequest request) {
+    authService.resetPasswordWithEmail(request);
   }
 
   @PostMapping("/password-reset/confirm")
   public void resetPasswordWithEmail(@Valid @RequestBody ResetPasswordWithEmailRequest request) {
     authService.resetPasswordWithEmail(request);
+  }
+
+  @PostMapping("/change-password")
+  public void changePassword(@Valid @RequestBody ChangePasswordRequest request) {
+    authService.changePassword(request);
   }
 }

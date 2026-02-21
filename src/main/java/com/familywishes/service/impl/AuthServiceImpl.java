@@ -19,6 +19,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -38,8 +40,8 @@ public class AuthServiceImpl implements AuthService {
   private final PasswordEncoder passwordEncoder;
   private final GmailEmailService emailService;
 
-  @Value("${app.password-reset.base-url:https://family-wishes/reset}")
-  private String passwordResetBaseUrl;
+  @Value("${app.password-reset.ui-url:http://localhost:4200/reset-password}")
+  private String passwordResetUiUrl;
 
   @Value("${app.password-reset.ttl-minutes:30}")
   private int passwordResetTtlMinutes;
@@ -161,7 +163,7 @@ public class AuthServiceImpl implements AuthService {
             .used(false)
             .build());
 
-    String resetUrl = passwordResetBaseUrl + "?token=" + token + "&email=" + user.getEmail();
+    String resetUrl = passwordResetUiUrl + "?token=" + token + "&email=" + user.getEmail();
     String body =
         """
                 <div style='font-family:Arial,sans-serif;line-height:1.5'>
@@ -193,6 +195,33 @@ public class AuthServiceImpl implements AuthService {
         || token.getExpiresAt().isBefore(LocalDateTime.now(ZoneId.of("Asia/Kolkata"))))
       throw new BadRequestException("Expired token");
     User user = token.getUser();
+    user.setPassword(passwordEncoder.encode(request.newPassword()));
+    userRepository.save(user);
+    resetTokenRepository.invalidateAllByUserId(user.getId());
+  }
+
+
+  @Override
+  @Transactional
+  public void changePassword(ChangePasswordRequest request) {
+    Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+    if (authentication == null || !authentication.isAuthenticated()) {
+      throw new BadRequestException("Authenticated user not found");
+    }
+
+    User user =
+        userRepository
+            .findByEmailAndDeletedFalse(authentication.getName())
+            .orElseThrow(() -> new NotFoundException("User not found"));
+
+    if (!passwordEncoder.matches(request.currentPassword(), user.getPassword())) {
+      throw new BadRequestException("Current password is incorrect");
+    }
+
+    if (request.currentPassword().equals(request.newPassword())) {
+      throw new BadRequestException("New password must be different from current password");
+    }
+
     user.setPassword(passwordEncoder.encode(request.newPassword()));
     userRepository.save(user);
     resetTokenRepository.invalidateAllByUserId(user.getId());
