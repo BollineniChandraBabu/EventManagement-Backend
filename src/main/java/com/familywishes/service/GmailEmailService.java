@@ -18,5 +18,7 @@ public interface GmailEmailService {
       String sortBy,
       String sortDir);
 
+  EmailDtos.EmailStatusResponse getStatusById(Long id, String requesterEmail);
+
   void sendTestEmail(String to);
 }

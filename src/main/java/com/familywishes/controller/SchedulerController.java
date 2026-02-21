@@ -20,6 +20,11 @@ public class SchedulerController {
 
   private final SchedulerManagementService schedulerManagementService;
 
+  @GetMapping("/{jobName}")
+  public ResponseEntity<SchedulerStatusResponse> getSchedulerByName(@PathVariable String jobName) {
+    return ResponseEntity.ok(schedulerManagementService.getStatusByName(jobName));
+  }
+
   @GetMapping
   public ResponseEntity<PagedResponse<SchedulerStatusResponse>> getAllSchedulers(
       @RequestParam(defaultValue = "0") int page,

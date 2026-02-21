@@ -35,14 +35,14 @@ public class EventServiceImpl implements EventService {
             .active(true)
             .build();
     event = eventRepository.save(event);
-    return new EventResponse(
-        event.getId(),
-        event.getEventType(),
-        event.getFestivalName(),
-        event.getEventDate(),
-        event.isRecurring(),
-        event.getUser().getId(),
-        event.isActive());
+    return toResponse(event);
+  }
+
+  @Override
+  public EventResponse getById(Long id) {
+    Event event =
+        eventRepository.findById(id).orElseThrow(() -> new NotFoundException("Event not found"));
+    return toResponse(event);
   }
 
   @Override
@@ -58,23 +58,23 @@ public class EventServiceImpl implements EventService {
             PageRequest.of(page, size, Sort.by(direction, normalizedSortBy)));
 
     return new PagedResponse<>(
-        events.getContent().stream()
-            .map(
-                e ->
-                    new EventResponse(
-                        e.getId(),
-                        e.getEventType(),
-                        e.getFestivalName(),
-                        e.getEventDate(),
-                        e.isRecurring(),
-                        e.getUser().getId(),
-                        e.isActive()))
-            .toList(),
+        events.getContent().stream().map(this::toResponse).toList(),
         events.getNumber(),
         events.getSize(),
         events.getTotalElements(),
         events.getTotalPages(),
         events.hasNext(),
         events.hasPrevious());
+  }
+
+  private EventResponse toResponse(Event event) {
+    return new EventResponse(
+        event.getId(),
+        event.getEventType(),
+        event.getFestivalName(),
+        event.getEventDate(),
+        event.isRecurring(),
+        event.getUser().getId(),
+        event.isActive());
   }
 }

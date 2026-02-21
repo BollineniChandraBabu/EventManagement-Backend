@@ -106,7 +106,8 @@ public class AuthServiceImpl implements AuthService {
                 <span style='display:inline-block;padding:10px 16px;border:1px solid #d1d5db;border-radius:8px;font-size:22px;font-weight:700;letter-spacing:4px'>%s</span>
               </p>
               <p style='margin:0 0 8px 0'>This OTP is valid for <b>%d minutes</b>.</p>
-              <p style='margin:0;color:#6b7280'>If you did not request this code, please ignore this email.</p>
+              <p style='margin:0 0 12px 0;color:#6b7280'>If you did not request this code, please ignore this email.</p>
+              <p style='margin:0'>Thanks and regards,<br/>Family Wishes Team</p>
             </div>
             """
         .formatted(otp, OTP_TTL_MINUTES);
@@ -172,6 +173,7 @@ public class AuthServiceImpl implements AuthService {
                   <p><b>%s</b></p>
                   <p>This link/token expires in %d minutes.</p>
                   <p>If you did not request this, you can safely ignore this email.</p>
+                  <p>Thanks and regards,<br/>Family Wishes Team</p>
                 </div>
                 """
             .formatted(user.getName(), resetUrl, token, passwordResetTtlMinutes);

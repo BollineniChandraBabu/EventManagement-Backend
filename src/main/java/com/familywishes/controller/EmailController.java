@@ -7,6 +7,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -21,6 +22,11 @@ public class EmailController {
   @PostMapping("/test")
   public void test(Authentication authentication) {
     emailService.sendTestEmail(authentication.getName());
+  }
+
+  @GetMapping("/status/{id}")
+  public EmailStatusResponse statusById(@PathVariable Long id, Authentication authentication) {
+    return emailService.getStatusById(id, authentication.getName());
   }
 
   @GetMapping("/status")
