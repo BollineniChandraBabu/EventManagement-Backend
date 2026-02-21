@@ -47,6 +47,11 @@ public class UserController {
     return userService.getCurrentUser();
   }
 
+  @PatchMapping("/me/wish-settings")
+  public UserResponse updateMyWishSettings(@RequestBody WishSettingsUpdateRequest request) {
+    return userService.updateCurrentUserWishSettings(request);
+  }
+
   @PostMapping("/{id}/deactivate")
   @PreAuthorize("hasRole('ADMIN')")
   public void deactivate(@PathVariable Long id) {

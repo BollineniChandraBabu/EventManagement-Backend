@@ -6,10 +6,26 @@ Production-ready Spring Boot 3.x (Java 17) backend for family wish automation.
 - JWT auth + refresh tokens
 - OTP login and forgot/reset password
 - Role-based user management
-- Event management and festival templates with versioning
+- Event management + admin-managed festival seed table for scheduler templates
 - Gemini API wish generation
 - Quartz daily scheduler
 - SMTP email sending with retry and status tracking
+
+
+## Seed management APIs
+- `GET /api/seed/special-events/{id}` (admin)
+- `GET /api/seed/special-events` (admin, supports pagination/search/sort)
+- `POST /api/seed/special-events` (admin)
+- `GET /api/seed/special-events/today` (admin, active seeds for current IST day)
+- `PUT /api/seed/special-events/{id}` (admin)
+- `DELETE /api/seed/special-events/{id}` (admin)
+
+These APIs manage data in the `seed_special_events` table used by the festival scheduler.
+
+### Do you need both `Event` and `SpecialEvent`?
+- `Event` is user-scoped and used by the daily email/AI wishes flow.
+- `SpecialEvent` seed rows are global templates used by Instagram festival broadcasting.
+- If you want only one model, we can later unify them by redesigning `Event` to support global template records and message bodies.
 
 ## Run
 ```bash

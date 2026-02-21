@@ -15,5 +15,7 @@ public interface UserService {
 
   UserResponse getCurrentUser();
 
+  UserResponse updateCurrentUserWishSettings(WishSettingsUpdateRequest request);
+
   void deactivate(Long id);
 }
