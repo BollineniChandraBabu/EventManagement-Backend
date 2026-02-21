@@ -1,5 +1,6 @@
 package com.familywishes.dto;
 
+import com.familywishes.entity.enums.SeedTemplateType;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
@@ -16,4 +17,21 @@ public class SeedDtos {
 
   public record SpecialEventSeedResponse(
       Long id, String eventName, int day, int month, String message, boolean active) {}
+
+  public record WishTemplateSeedRequest(
+      @NotNull SeedTemplateType type,
+      @NotBlank String relation,
+      @NotBlank String event,
+      @NotBlank String tone,
+      @NotBlank String language,
+      @NotNull Boolean active) {}
+
+  public record WishTemplateSeedResponse(
+      Long id,
+      SeedTemplateType type,
+      String relation,
+      String event,
+      String tone,
+      String language,
+      boolean active) {}
 }
