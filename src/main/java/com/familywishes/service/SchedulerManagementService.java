@@ -183,22 +183,27 @@ public class SchedulerManagementService {
     return next != null ? next.toInstant() : null;
   }
 
-
   private Comparator<SchedulerStatusResponse> resolveComparator(String sortBy) {
     String normalizedSortBy = sortBy == null ? "name" : sortBy.trim().toLowerCase(Locale.ROOT);
 
     return switch (normalizedSortBy) {
-      case "type" -> Comparator.comparing(SchedulerStatusResponse::type, String.CASE_INSENSITIVE_ORDER);
-      case "totalruns" -> Comparator.comparingInt(SchedulerStatusResponse::totalRuns);
-      case "successruns" -> Comparator.comparingInt(SchedulerStatusResponse::successRuns);
-      case "failedruns" -> Comparator.comparingInt(SchedulerStatusResponse::failedRuns);
-      case "nextfiretime" -> Comparator.comparing(
-          SchedulerStatusResponse::nextFireTime, Comparator.nullsLast(Comparator.naturalOrder()));
-      case "previousfiretime" -> Comparator.comparing(
-          SchedulerStatusResponse::previousFireTime, Comparator.nullsLast(Comparator.naturalOrder()));
+      case "type" ->
+          Comparator.comparing(SchedulerStatusResponse::type, String.CASE_INSENSITIVE_ORDER);
+      case "totalruns" -> Comparator.comparingLong(SchedulerStatusResponse::totalRuns);
+      case "successruns" -> Comparator.comparingLong(SchedulerStatusResponse::successRuns);
+      case "failedruns" -> Comparator.comparingLong(SchedulerStatusResponse::failedRuns);
+      case "nextfiretime" ->
+          Comparator.comparing(
+              SchedulerStatusResponse::nextFireTime,
+              Comparator.nullsLast(Comparator.naturalOrder()));
+      case "previousfiretime" ->
+          Comparator.comparing(
+              SchedulerStatusResponse::previousFireTime,
+              Comparator.nullsLast(Comparator.naturalOrder()));
       default -> Comparator.comparing(SchedulerStatusResponse::name, String.CASE_INSENSITIVE_ORDER);
     };
   }
+
   private SchedulerStatusResponse fromStats(
       String name,
       String type,
