@@ -8,11 +8,13 @@ import com.familywishes.dto.UserDtos.UserRequest;
 import com.familywishes.dto.UserDtos.UserResponse;
 import com.familywishes.dto.UserDtos.WishSettingsUpdateRequest;
 import com.familywishes.entity.RelationshipSeed;
+import com.familywishes.exception.BadRequestException;
 import com.familywishes.entity.User;
 import com.familywishes.entity.UserWishSettings;
 import com.familywishes.entity.enums.Role;
 import com.familywishes.repository.RelationshipSeedRepository;
 import com.familywishes.repository.UserRepository;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.AfterEach;
@@ -43,7 +45,15 @@ class UserServiceImplTest {
   @Test
   void createShouldPersistBirthdayFlagInWishSettings() {
     UserRequest request =
-        new UserRequest("Aman", "aman@example.com", Role.ROLE_USER, "BROTHER", true, false, true);
+        new UserRequest(
+            "Aman",
+            "aman@example.com",
+            Role.ROLE_USER,
+            LocalDate.of(1995, 5, 4),
+            "BROTHER",
+            true,
+            false,
+            true);
 
     RelationshipSeed relationship = RelationshipSeed.builder().code("BROTHER").active(true).build();
     when(relationshipSeedRepository.findByCodeAndActiveTrue("BROTHER"))
@@ -62,6 +72,7 @@ class UserServiceImplTest {
     assertTrue(response.isBirthdayEnabled());
     assertTrue(response.isGoodMorningEnabled());
     assertFalse(response.isGoodNightEnabled());
+    assertEquals(LocalDate.of(1995, 5, 4), response.dateOfBirth());
   }
 
   @Test
@@ -73,6 +84,7 @@ class UserServiceImplTest {
             .name("Ravi")
             .email("ravi@example.com")
             .role(Role.ROLE_USER)
+            .birthday(LocalDate.of(1997, 6, 15))
             .relationShip(relationship)
             .active(true)
             .deleted(false)
@@ -100,4 +112,42 @@ class UserServiceImplTest {
     assertTrue(response.isGoodNightEnabled());
     assertTrue(response.isBirthdayEnabled());
   }
+
+
+  @Test
+  void updateShouldRejectRoleChangeForNonAdmin() {
+    RelationshipSeed relationship = RelationshipSeed.builder().code("BROTHER").active(true).build();
+    User existingUser =
+        User.builder()
+            .id(22L)
+            .name("Aman")
+            .email("aman@example.com")
+            .role(Role.ROLE_USER)
+            .birthday(LocalDate.of(1995, 5, 4))
+            .relationShip(relationship)
+            .active(true)
+            .deleted(false)
+            .build();
+
+    UserRequest request =
+        new UserRequest(
+            "Aman Updated",
+            "aman@example.com",
+            Role.ROLE_ADMIN,
+            LocalDate.of(1995, 5, 4),
+            "BROTHER",
+            true,
+            true,
+            true);
+
+    SecurityContextHolder.getContext()
+        .setAuthentication(
+            new UsernamePasswordAuthenticationToken(
+                "aman@example.com", "password", List.of(new SimpleGrantedAuthority("ROLE_USER"))));
+
+    when(userRepository.findByEmail("aman@example.com")).thenReturn(Optional.of(existingUser));
+
+    assertThrows(BadRequestException.class, () -> userService.update(request));
+  }
+
 }
