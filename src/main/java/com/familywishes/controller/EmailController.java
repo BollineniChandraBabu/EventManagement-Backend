@@ -2,14 +2,17 @@ package com.familywishes.controller;
 
 import com.familywishes.dto.CommonDtos.PagedResponse;
 import com.familywishes.dto.EmailDtos.EmailStatusResponse;
+import com.familywishes.dto.EmailDtos.SendEmailNowRequest;
 import com.familywishes.service.GmailEmailService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
+import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -23,6 +26,13 @@ public class EmailController {
   @PostMapping("/test")
   public void test(Authentication authentication) {
     emailService.sendTestEmail(authentication.getName());
+  }
+
+
+  @PostMapping("/send-now")
+  @PreAuthorize("hasRole('ADMIN')")
+  public void sendNow(@Valid @RequestBody SendEmailNowRequest request) {
+    emailService.sendEmailNow(request);
   }
 
   @GetMapping("/status/{id}")

@@ -3,10 +3,13 @@ package com.familywishes.service.impl;
 import com.familywishes.dto.CommonDtos.PagedResponse;
 import com.familywishes.dto.EmailDtos;
 import com.familywishes.entity.EmailLog;
+import com.familywishes.entity.EventTypeSeed;
 import com.familywishes.entity.enums.EmailStatus;
 import com.familywishes.entity.enums.EmailType;
 import com.familywishes.exception.NotFoundException;
 import com.familywishes.repository.EmailLogRepository;
+import com.familywishes.repository.EventTypeSeedRepository;
+import com.familywishes.repository.UserRepository;
 import com.familywishes.service.GmailEmailService;
 import com.google.api.services.gmail.Gmail;
 import com.google.api.services.gmail.model.Message;
@@ -36,6 +39,8 @@ import org.springframework.stereotype.Service;
 @Slf4j
 public class GmailEmailServiceImpl implements GmailEmailService {
   private final EmailLogRepository logRepository;
+  private final UserRepository userRepository;
+  private final EventTypeSeedRepository eventTypeSeedRepository;
 
   private final Gmail gmail;
 
@@ -58,14 +63,7 @@ public class GmailEmailServiceImpl implements GmailEmailService {
 
     EmailLog logEntry =
         logId == null
-            ? logRepository.save(
-                EmailLog.builder()
-                    .recipientEmail(to)
-                    .subject(subject)
-                    .status(EmailStatus.PENDING)
-                    .emailType(classifyEmailType(subject, html))
-                    .retryCount(0)
-                    .build())
+            ? createPendingEmailLog(to, subject, classifyEmailType(subject, html))
             : logRepository.findById(logId).orElseThrow();
 
     if (logEntry.getEmailType() == null) {
@@ -247,6 +245,30 @@ public class GmailEmailServiceImpl implements GmailEmailService {
     sendEmailWithAttachments(to, "Test Email", "<h3>Family Wishes Gmail API test</h3>", null, null);
   }
 
+  @Override
+  public void sendEmailNow(EmailDtos.SendEmailNowRequest request) {
+    userRepository
+        .findByEmailAndDeletedFalse(request.userEmail())
+        .orElseThrow(() -> new NotFoundException("User not found"));
+
+    EventTypeSeed eventTypeSeed =
+        eventTypeSeedRepository
+            .findByCodeAndActiveTrue(request.eventTypeCode().trim().toUpperCase(Locale.ROOT))
+            .orElseThrow(() -> new NotFoundException("Event type not found"));
+
+    String htmlBody =
+        "<p><strong>Event Type:</strong> "
+            + eventTypeSeed.getDisplayName()
+            + " ("
+            + eventTypeSeed.getCode()
+            + ")</p><br/>"
+            + request.body();
+
+    EmailLog logEntry = createPendingEmailLog(request.userEmail(), request.subject(), EmailType.EVENT);
+    sendEmailWithAttachments(
+        request.userEmail(), request.subject(), htmlBody, logEntry.getId(), null);
+  }
+
   private EmailDtos.EmailStatusResponse toEmailStatusResponse(EmailLog log) {
     return new EmailDtos.EmailStatusResponse(
         log.getId(),
@@ -315,5 +337,16 @@ public class GmailEmailServiceImpl implements GmailEmailService {
     }
 
     return EmailType.EVENT;
+  }
+
+  private EmailLog createPendingEmailLog(String to, String subject, EmailType emailType) {
+    return logRepository.save(
+        EmailLog.builder()
+            .recipientEmail(to)
+            .subject(subject)
+            .status(EmailStatus.PENDING)
+            .emailType(emailType)
+            .retryCount(0)
+            .build());
   }
 }

@@ -16,6 +16,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -35,6 +36,7 @@ public class UserServiceImpl implements UserService {
             .email(request.email())
             .password(encoder.encode("Test"))
             .role(request.role())
+            .birthday(request.dateOfBirth())
             .relationShip(resolveRelationship(request.relationShip()))
             .active(true)
             .deleted(false)
@@ -59,6 +61,7 @@ public class UserServiceImpl implements UserService {
           user.getName(),
           user.getEmail(),
           user.getRole(),
+          user.getBirthday(),
           user.isActive(),
           user.getRelationShip().getCode(),
           user.getWishSettings().isGoodMorningEnabled(),
@@ -70,6 +73,7 @@ public class UserServiceImpl implements UserService {
           user.getName(),
           user.getEmail(),
           user.getRole(),
+          user.getBirthday(),
           user.isActive(),
           user.getRelationShip().getCode(),
           false,
@@ -85,7 +89,11 @@ public class UserServiceImpl implements UserService {
             .findByEmail(request.email())
             .orElseThrow(() -> new NotFoundException("User not found"));
     user.setName(request.name());
+    if (!user.getRole().equals(request.role()) && !isAdminAuthenticated()) {
+      throw new BadRequestException("Only admin can update role");
+    }
     user.setRole(request.role());
+    user.setBirthday(request.dateOfBirth());
     user.setRelationShip(resolveRelationship(request.relationShip()));
 
     UserWishSettings userWishSettings =
@@ -178,5 +186,16 @@ public class UserServiceImpl implements UserService {
     return userRepository
         .findByEmailAndDeletedFalse(email)
         .orElseThrow(() -> new NotFoundException("User not found"));
+  }
+
+  private boolean isAdminAuthenticated() {
+    Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+    if (authentication == null || authentication.getAuthorities() == null) {
+      return false;
+    }
+
+    return authentication.getAuthorities().stream()
+        .map(GrantedAuthority::getAuthority)
+        .anyMatch("ROLE_ADMIN"::equals);
   }
 }

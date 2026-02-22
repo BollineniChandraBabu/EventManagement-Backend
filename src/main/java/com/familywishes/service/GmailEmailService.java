@@ -27,4 +27,6 @@ public interface GmailEmailService {
   EmailDtos.EmailStatusResponse getStatusById(Long id, String requesterEmail);
 
   void sendTestEmail(String to);
+
+  void sendEmailNow(EmailDtos.SendEmailNowRequest request);
 }
