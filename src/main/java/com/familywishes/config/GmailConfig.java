@@ -4,7 +4,6 @@ import com.google.api.client.googleapis.javanet.GoogleNetHttpTransport;
 import com.google.api.client.http.HttpResponseException;
 import com.google.api.client.json.jackson2.JacksonFactory;
 import com.google.api.services.gmail.Gmail;
-import com.google.auth.oauth2.GoogleAuthException;
 import com.google.auth.oauth2.UserCredentials;
 import java.io.IOException;
 import java.util.Locale;
@@ -52,7 +51,7 @@ public class GmailConfig {
     try {
       credentials.refreshIfExpired();
       return credentials.getAccessToken().getTokenValue();
-    } catch (GoogleAuthException ex) {
+    } catch (IOException ex) {
       if (isInvalidGrant(ex)) {
         log.error(
             "Gmail OAuth refresh token is expired or revoked. Generate a new refresh token and update GMAIL_REFRESH_TOKEN.");
@@ -64,8 +63,9 @@ public class GmailConfig {
     }
   }
 
-  boolean isInvalidGrant(GoogleAuthException ex) {
-    if (!(ex.getCause() instanceof HttpResponseException responseException)) {
+  boolean isInvalidGrant(IOException ex) {
+    HttpResponseException responseException = extractHttpResponseException(ex);
+    if (responseException == null) {
       return false;
     }
 
@@ -77,5 +77,16 @@ public class GmailConfig {
     String normalized = content.toLowerCase(Locale.ROOT);
     return normalized.contains("invalid_grant")
         && (normalized.contains("expired") || normalized.contains("revoked"));
+  }
+
+  HttpResponseException extractHttpResponseException(Throwable throwable) {
+    Throwable current = throwable;
+    while (current != null) {
+      if (current instanceof HttpResponseException responseException) {
+        return responseException;
+      }
+      current = current.getCause();
+    }
+    return null;
   }
 }

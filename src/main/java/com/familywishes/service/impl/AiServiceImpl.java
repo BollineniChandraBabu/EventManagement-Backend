@@ -6,7 +6,6 @@ import com.familywishes.exception.BadRequestException;
 import com.familywishes.service.AiService;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Map;
 import lombok.RequiredArgsConstructor;
@@ -15,7 +14,8 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.*;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.HttpStatusCodeException;
-import org.springframework.web.util.UriUtils;
+import org.springframework.util.StringUtils;
+import org.springframework.web.util.UriComponentsBuilder;
 import org.springframework.web.client.RestTemplate;
 
 @Service
@@ -35,6 +35,9 @@ public class AiServiceImpl implements AiService {
 
   @Value("${app.pollinations.image.key}")
   private String pollinationsApiKey;
+
+  @Value("${app.pollinations.image.model:imagen-4}")
+  private String pollinationsImageModel;
 
   @Override
   public AiWishResponse generate(AiWishRequest request) throws JsonProcessingException {
@@ -61,11 +64,17 @@ public class AiServiceImpl implements AiService {
 
   public byte[] callGeminiImage(AiWishRequest request) {
     HttpHeaders headers = new HttpHeaders();
-    headers.set("Authorization", "Bearer " + pollinationsApiKey);
+    if (StringUtils.hasText(pollinationsApiKey)) {
+      headers.setBearerAuth(pollinationsApiKey);
+    }
     headers.setAccept(List.of(MediaType.IMAGE_PNG));
 
-    String imagePrompt = UriUtils.encodePathSegment(getImagePrompt(request), StandardCharsets.UTF_8);
-    String requestUrl = pollinationsImageUrl + imagePrompt;
+    String requestUrl =
+        UriComponentsBuilder.fromHttpUrl(pollinationsImageUrl)
+            .pathSegment(getImagePrompt(request).trim())
+            .queryParam("model", pollinationsImageModel)
+            .build()
+            .toUriString();
 
     HttpEntity<Void> entity = new HttpEntity<>(headers);
 
@@ -75,7 +84,8 @@ public class AiServiceImpl implements AiService {
       return response.getBody();
     } catch (HttpStatusCodeException ex) {
       log.warn(
-          "Pollinations image generation failed with status {}: {}",
+          "Pollinations image generation failed for URL {} with status {}: {}",
+          requestUrl,
           ex.getStatusCode().value(),
           ex.getResponseBodyAsString());
       return null;
