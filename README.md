@@ -94,7 +94,7 @@ Example response:
 This backend integrates with Gemini for AI wish generation and can be extended to support other providers.
 
 - Gemini: https://gemini.google.com/
-- Hugging Face: https://huggingface.co/
+- Pollinations AI: https://pollinations.ai/
 
 ### Gemini setup notes
 - Ensure `GEMINI_API_KEY` is set in your environment.
@@ -103,4 +103,40 @@ This backend integrates with Gemini for AI wish generation and can be extended t
 
 ### Provider dashboard references
 - Gemini developer/API resources are managed via Google AI/Vertex tooling based on your account setup.
-- Hugging Face models and tokens can be managed at: https://huggingface.co/
+- Pollinations image API reference: https://gen.pollinations.ai/image/{prompt}
+
+## Gmail OAuth troubleshooting
+
+If you see this error while sending emails:
+
+```text
+com.google.auth.oauth2.GoogleAuthException: ...
+"error": "invalid_grant",
+"error_description": "Token has been expired or revoked."
+```
+
+your configured `GMAIL_REFRESH_TOKEN` is no longer valid.
+
+### Fix steps
+1. Re-run Google OAuth consent for your Gmail app and generate a **new refresh token**.
+2. Update deployment environment variables:
+   - `GMAIL_CLIENT_ID`
+   - `GMAIL_CLIENT_SECRET`
+   - `GMAIL_REFRESH_TOKEN`
+3. Restart the backend service.
+
+The backend now logs a clear startup/runtime hint when this specific revoked/expired token condition is detected.
+
+## Pollinations image provider setup
+
+This backend now uses Pollinations image generation API:
+
+```text
+https://gen.pollinations.ai/image/{prompt}
+```
+
+Required environment variables:
+- `POLLINATIONS_IMAGE_URL` (default: `https://gen.pollinations.ai/image/`)
+- `POLLINATIONS_IMAGE_KEY` (optional; set this if your account requires API-key auth)
+
+If Pollinations image generation fails, backend logs a warning and continues sending emails **without** inline AI images.

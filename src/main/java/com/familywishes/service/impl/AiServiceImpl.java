@@ -6,17 +6,21 @@ import com.familywishes.exception.BadRequestException;
 import com.familywishes.service.AiService;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import java.util.HashMap;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Map;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.*;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.HttpStatusCodeException;
+import org.springframework.web.util.UriUtils;
 import org.springframework.web.client.RestTemplate;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class AiServiceImpl implements AiService {
   private final RestTemplate restTemplate;
 
@@ -26,11 +30,11 @@ public class AiServiceImpl implements AiService {
   @Value("${app.gemini.api.url}")
   private String apiURL;
 
-  @Value("${app.huggingface.image.url}")
-  private String imageURL;
+  @Value("${app.pollinations.image.url}")
+  private String pollinationsImageUrl;
 
-  @Value("${app.huggingface.image.key}")
-  private String imageKey;
+  @Value("${app.pollinations.image.key}")
+  private String pollinationsApiKey;
 
   @Override
   public AiWishResponse generate(AiWishRequest request) throws JsonProcessingException {
@@ -55,29 +59,27 @@ public class AiServiceImpl implements AiService {
         text.replace("```json", "").replace("```", "").trim(), AiWishResponse.class);
   }
 
-  public byte[] callGeminiImage(AiWishRequest request) throws JsonProcessingException {
-
-    RestTemplate restTemplate = new RestTemplate();
-
+  public byte[] callGeminiImage(AiWishRequest request) {
     HttpHeaders headers = new HttpHeaders();
-    headers.set("Authorization", "Bearer " + imageKey);
-    headers.setContentType(MediaType.APPLICATION_JSON);
-    headers.set("Accept", "image/png");
+    headers.set("Authorization", "Bearer " + pollinationsApiKey);
+    headers.setAccept(List.of(MediaType.IMAGE_PNG));
 
-    // Correct JSON
-    Map<String, Object> body = new HashMap<>();
-    body.put("inputs", getImagePrompt(request));
+    String imagePrompt = UriUtils.encodePathSegment(getImagePrompt(request), StandardCharsets.UTF_8);
+    String requestUrl = pollinationsImageUrl + imagePrompt;
 
-    ObjectMapper mapper = new ObjectMapper();
+    HttpEntity<Void> entity = new HttpEntity<>(headers);
 
-    String json = mapper.writeValueAsString(body);
-
-    HttpEntity<String> entity = new HttpEntity<>(json, headers);
-
-    ResponseEntity<byte[]> response =
-        restTemplate.exchange(imageURL, HttpMethod.POST, entity, byte[].class);
-
-    return response.getBody();
+    try {
+      ResponseEntity<byte[]> response =
+          restTemplate.exchange(requestUrl, HttpMethod.GET, entity, byte[].class);
+      return response.getBody();
+    } catch (HttpStatusCodeException ex) {
+      log.warn(
+          "Pollinations image generation failed with status {}: {}",
+          ex.getStatusCode().value(),
+          ex.getResponseBodyAsString());
+      return null;
+    }
   }
 
   private static String getWishPrompt(AiWishRequest request) {
