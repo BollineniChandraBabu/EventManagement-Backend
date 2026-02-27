@@ -103,7 +103,7 @@ This backend integrates with Gemini for AI wish generation and can be extended t
 
 ### Provider dashboard references
 - Gemini developer/API resources are managed via Google AI/Vertex tooling based on your account setup.
-- Pollinations image API reference: https://gen.pollinations.ai/image/{prompt}
+- Pollinations image API reference: https://gen.pollinations.ai/image/{prompt}?model=imagen-4
 
 ## Gmail OAuth troubleshooting
 
@@ -132,11 +132,19 @@ The backend now logs a clear startup/runtime hint when this specific revoked/exp
 This backend now uses Pollinations image generation API:
 
 ```text
-https://gen.pollinations.ai/image/{prompt}
+https://gen.pollinations.ai/image/{prompt}?model=imagen-4
 ```
 
 Required environment variables:
 - `POLLINATIONS_IMAGE_URL` (default: `https://gen.pollinations.ai/image/`)
 - `POLLINATIONS_IMAGE_KEY` (optional; set this if your account requires API-key auth)
+- `POLLINATIONS_IMAGE_MODEL` (default: `imagen-4`)
 
 If Pollinations image generation fails, backend logs a warning and continues sending emails **without** inline AI images.
+
+Example request:
+
+```bash
+curl "https://gen.pollinations.ai/image/a beautiful sunset over mountains?model=imagen-4" \
+  --header "Authorization: Bearer <your_pollinations_api_key>"
+```
