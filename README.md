@@ -94,7 +94,7 @@ Example response:
 This backend integrates with Gemini for AI wish generation and can be extended to support other providers.
 
 - Gemini: https://gemini.google.com/
-- Hugging Face: https://huggingface.co/
+- Pollinations AI: https://pollinations.ai/
 
 ### Gemini setup notes
 - Ensure `GEMINI_API_KEY` is set in your environment.
@@ -103,7 +103,7 @@ This backend integrates with Gemini for AI wish generation and can be extended t
 
 ### Provider dashboard references
 - Gemini developer/API resources are managed via Google AI/Vertex tooling based on your account setup.
-- Hugging Face models and tokens can be managed at: https://huggingface.co/
+- Pollinations image API reference: https://gen.pollinations.ai/image/{prompt}
 
 ## Gmail OAuth troubleshooting
 
@@ -127,17 +127,16 @@ your configured `GMAIL_REFRESH_TOKEN` is no longer valid.
 
 The backend now logs a clear startup/runtime hint when this specific revoked/expired token condition is detected.
 
-## Hugging Face 402 troubleshooting
+## Pollinations image provider setup
 
-If image generation returns:
+This backend now uses Pollinations image generation API:
 
 ```text
-402 Payment Required
-{"error":"Credit balance is depleted ..."}
+https://gen.pollinations.ai/image/{prompt}
 ```
 
-your Hugging Face Inference Provider credits/plan quota are exhausted.
+Required environment variables:
+- `POLLINATIONS_IMAGE_URL` (default: `https://gen.pollinations.ai/image/`)
+- `POLLINATIONS_IMAGE_KEY` (optional; set this if your account requires API-key auth)
 
-- Recharge credits or upgrade the account plan on Hugging Face.
-- Verify `HUGGINGFACE_IMAGE_KEY` and `HUGGINGFACE_IMAGE_URL` are set correctly.
-- Current backend behavior: logs a warning and continues sending emails **without** inline AI images when this specific 402 condition occurs.
+If Pollinations image generation fails, backend logs a warning and continues sending emails **without** inline AI images.
