@@ -10,13 +10,16 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.*;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.HttpStatusCodeException;
 import org.springframework.web.client.RestTemplate;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class AiServiceImpl implements AiService {
   private final RestTemplate restTemplate;
 
@@ -56,9 +59,6 @@ public class AiServiceImpl implements AiService {
   }
 
   public byte[] callGeminiImage(AiWishRequest request) throws JsonProcessingException {
-
-    RestTemplate restTemplate = new RestTemplate();
-
     HttpHeaders headers = new HttpHeaders();
     headers.set("Authorization", "Bearer " + imageKey);
     headers.setContentType(MediaType.APPLICATION_JSON);
@@ -74,8 +74,18 @@ public class AiServiceImpl implements AiService {
 
     HttpEntity<String> entity = new HttpEntity<>(json, headers);
 
-    ResponseEntity<byte[]> response =
-        restTemplate.exchange(imageURL, HttpMethod.POST, entity, byte[].class);
+    ResponseEntity<byte[]> response;
+    try {
+      response = restTemplate.exchange(imageURL, HttpMethod.POST, entity, byte[].class);
+    } catch (HttpStatusCodeException ex) {
+      if (ex.getStatusCode() == HttpStatus.PAYMENT_REQUIRED) {
+        log.warn(
+            "Hugging Face image generation skipped due to insufficient credits or plan limits: {}",
+            ex.getResponseBodyAsString());
+        return null;
+      }
+      throw ex;
+    }
 
     return response.getBody();
   }

@@ -126,3 +126,18 @@ your configured `GMAIL_REFRESH_TOKEN` is no longer valid.
 3. Restart the backend service.
 
 The backend now logs a clear startup/runtime hint when this specific revoked/expired token condition is detected.
+
+## Hugging Face 402 troubleshooting
+
+If image generation returns:
+
+```text
+402 Payment Required
+{"error":"Credit balance is depleted ..."}
+```
+
+your Hugging Face Inference Provider credits/plan quota are exhausted.
+
+- Recharge credits or upgrade the account plan on Hugging Face.
+- Verify `HUGGINGFACE_IMAGE_KEY` and `HUGGINGFACE_IMAGE_URL` are set correctly.
+- Current backend behavior: logs a warning and continues sending emails **without** inline AI images when this specific 402 condition occurs.
