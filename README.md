@@ -104,3 +104,25 @@ This backend integrates with Gemini for AI wish generation and can be extended t
 ### Provider dashboard references
 - Gemini developer/API resources are managed via Google AI/Vertex tooling based on your account setup.
 - Hugging Face models and tokens can be managed at: https://huggingface.co/
+
+## Gmail OAuth troubleshooting
+
+If you see this error while sending emails:
+
+```text
+com.google.auth.oauth2.GoogleAuthException: ...
+"error": "invalid_grant",
+"error_description": "Token has been expired or revoked."
+```
+
+your configured `GMAIL_REFRESH_TOKEN` is no longer valid.
+
+### Fix steps
+1. Re-run Google OAuth consent for your Gmail app and generate a **new refresh token**.
+2. Update deployment environment variables:
+   - `GMAIL_CLIENT_ID`
+   - `GMAIL_CLIENT_SECRET`
+   - `GMAIL_REFRESH_TOKEN`
+3. Restart the backend service.
+
+The backend now logs a clear startup/runtime hint when this specific revoked/expired token condition is detected.
