@@ -31,4 +31,9 @@ public class EventTypeSeedController {
   public List<EnumSeedResponse> listActive() {
     return eventTypeSeedService.listActive();
   }
+
+  @GetMapping("/{id}")
+  public EnumSeedResponse getById(@PathVariable Long id) {
+    return eventTypeSeedService.getById(id);
+  }
 }

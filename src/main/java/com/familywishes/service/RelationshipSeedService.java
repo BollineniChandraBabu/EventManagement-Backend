@@ -10,4 +10,6 @@ public interface RelationshipSeedService {
   EnumSeedResponse update(String code, EnumSeedRequest request);
 
   List<EnumSeedResponse> listActive();
+
+  EnumSeedResponse getById(Long id);
 }

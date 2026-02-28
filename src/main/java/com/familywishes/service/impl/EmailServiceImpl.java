@@ -57,6 +57,7 @@ public class EmailServiceImpl implements EmailService {
       logEntry.setBody(html);
       logEntry.setRetryCount(logEntry.getRetryCount() + 1);
       logEntry.setErrorMessage(e.getMessage());
+      logEntry.setSentAt(LocalDateTime.now(ZoneId.of("Asia/Kolkata")));
     }
     logRepository.save(logEntry);
   }

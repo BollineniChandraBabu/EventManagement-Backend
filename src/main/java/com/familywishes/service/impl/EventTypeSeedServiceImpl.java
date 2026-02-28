@@ -7,6 +7,7 @@ import com.familywishes.exception.NotFoundException;
 import com.familywishes.repository.EventTypeSeedRepository;
 import com.familywishes.service.EventTypeSeedService;
 import java.util.List;
+import java.util.Objects;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -49,6 +50,12 @@ public class EventTypeSeedServiceImpl implements EventTypeSeedService {
     return eventTypeSeedRepository.findByActiveTrueOrderByDisplayNameAsc().stream()
         .map(this::toResponse)
         .toList();
+  }
+
+  @Override
+  public EnumSeedResponse getById(Long id) {
+    EventTypeSeed eventTypeSeed = eventTypeSeedRepository.findById(id).orElse(null);
+    return Objects.nonNull(eventTypeSeed) ? toResponse(eventTypeSeed) : null;
   }
 
   private EnumSeedResponse toResponse(EventTypeSeed seed) {

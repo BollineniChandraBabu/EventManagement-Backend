@@ -7,6 +7,7 @@ import com.familywishes.exception.NotFoundException;
 import com.familywishes.repository.RelationshipSeedRepository;
 import com.familywishes.service.RelationshipSeedService;
 import java.util.List;
+import java.util.Objects;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -49,6 +50,12 @@ public class RelationshipSeedServiceImpl implements RelationshipSeedService {
     return relationshipSeedRepository.findByActiveTrueOrderByDisplayNameAsc().stream()
         .map(this::toResponse)
         .toList();
+  }
+
+  @Override
+  public EnumSeedResponse getById(Long id) {
+    RelationshipSeed relationshipSeed = relationshipSeedRepository.findById(id).orElse(null);
+    return Objects.nonNull(relationshipSeed) ? toResponse(relationshipSeed) : null;
   }
 
   private EnumSeedResponse toResponse(RelationshipSeed seed) {

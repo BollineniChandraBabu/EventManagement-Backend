@@ -31,4 +31,9 @@ public class RelationshipSeedController {
   public List<EnumSeedResponse> listActive() {
     return relationshipSeedService.listActive();
   }
+
+  @GetMapping("/{id}")
+  public EnumSeedResponse getById(@PathVariable Long id) {
+    return relationshipSeedService.getById(id);
+  }
 }
