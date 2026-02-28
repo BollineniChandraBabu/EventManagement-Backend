@@ -21,7 +21,9 @@ public class EventTypeSeedServiceImpl implements EventTypeSeedService {
     String code = normalizeCode(request.code());
 
     EventTypeSeed seed =
-        eventTypeSeedRepository.findByCode(code).orElseGet(() -> EventTypeSeed.builder().code(code).build());
+        eventTypeSeedRepository
+            .findByCode(code)
+            .orElseGet(() -> EventTypeSeed.builder().code(code).build());
     seed.setDisplayName(request.displayName().trim());
     seed.setActive(request.active());
 
@@ -50,7 +52,8 @@ public class EventTypeSeedServiceImpl implements EventTypeSeedService {
   }
 
   private EnumSeedResponse toResponse(EventTypeSeed seed) {
-    return new EnumSeedResponse(seed.getId(), CATEGORY, seed.getCode(), seed.getDisplayName(), seed.isActive());
+    return new EnumSeedResponse(
+        seed.getId(), CATEGORY, seed.getCode(), seed.getDisplayName(), seed.isActive());
   }
 
   private String normalizeCode(String value) {

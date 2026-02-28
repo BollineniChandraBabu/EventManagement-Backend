@@ -211,7 +211,6 @@ public class GmailEmailServiceImpl implements GmailEmailService {
         logs.hasPrevious());
   }
 
-
   @Override
   public PagedResponse<EmailDtos.EmailStatusResponse> getOtpStatus(
       int page, int size, String searchKey, String sortBy, String sortDir) {
@@ -264,7 +263,8 @@ public class GmailEmailServiceImpl implements GmailEmailService {
             + ")</p><br/>"
             + request.body();
 
-    EmailLog logEntry = createPendingEmailLog(request.userEmail(), request.subject(), EmailType.EVENT);
+    EmailLog logEntry =
+        createPendingEmailLog(request.userEmail(), request.subject(), EmailType.EVENT);
     sendEmailWithAttachments(
         request.userEmail(), request.subject(), htmlBody, logEntry.getId(), null);
   }

@@ -53,11 +53,6 @@ public class WishesScheduler implements Job {
 
   private AiWishRequest buildRequest(String name, String eventType, String festivalName) {
     return new AiWishRequest(
-        name,
-        DEFAULT_RELATION,
-        eventType,
-        festivalName,
-        DEFAULT_TONE,
-        DEFAULT_LANGUAGE);
+        name, DEFAULT_RELATION, eventType, festivalName, DEFAULT_TONE, DEFAULT_LANGUAGE);
   }
 }

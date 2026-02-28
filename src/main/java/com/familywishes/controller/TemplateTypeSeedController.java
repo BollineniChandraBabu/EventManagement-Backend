@@ -22,7 +22,8 @@ public class TemplateTypeSeedController {
   }
 
   @PutMapping("/{code}")
-  public EnumSeedResponse update(@PathVariable String code, @Valid @RequestBody EnumSeedRequest request) {
+  public EnumSeedResponse update(
+      @PathVariable String code, @Valid @RequestBody EnumSeedRequest request) {
     return templateTypeSeedService.update(code, request);
   }
 

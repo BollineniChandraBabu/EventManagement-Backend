@@ -22,7 +22,8 @@ public class RelationshipSeedController {
   }
 
   @PutMapping("/{code}")
-  public EnumSeedResponse update(@PathVariable String code, @Valid @RequestBody EnumSeedRequest request) {
+  public EnumSeedResponse update(
+      @PathVariable String code, @Valid @RequestBody EnumSeedRequest request) {
     return relationshipSeedService.update(code, request);
   }
 

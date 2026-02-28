@@ -46,8 +46,9 @@ public class DashboardServiceImpl implements DashboardService {
       long upcomingEvents = eventRepository.countByEventDateGreaterThanEqualAndActiveTrue(today);
 
       long emailsSentToday =
-          emailLogRepository.countByStatusAndSentAtGreaterThanEqualAndSentAtLessThanAndEmailTypeNotIn(
-              EmailStatus.SENT, startOfDay, startOfNextDay, SENSITIVE_TYPES);
+          emailLogRepository
+              .countByStatusAndSentAtGreaterThanEqualAndSentAtLessThanAndEmailTypeNotIn(
+                  EmailStatus.SENT, startOfDay, startOfNextDay, SENSITIVE_TYPES);
       long failedEmails =
           emailLogRepository.countByStatusAndEmailTypeNotIn(EmailStatus.FAILED, SENSITIVE_TYPES);
 
@@ -59,11 +60,13 @@ public class DashboardServiceImpl implements DashboardService {
     long upcomingEvents =
         user == null
             ? 0L
-            : eventRepository.countByUser_IdAndEventDateGreaterThanEqualAndActiveTrue(user.getId(), today);
+            : eventRepository.countByUser_IdAndEventDateGreaterThanEqualAndActiveTrue(
+                user.getId(), today);
 
     long emailsSentToday =
-        emailLogRepository.countByRecipientEmailAndStatusAndSentAtGreaterThanEqualAndSentAtLessThanAndEmailTypeNotIn(
-            requesterEmail, EmailStatus.SENT, startOfDay, startOfNextDay, SENSITIVE_TYPES);
+        emailLogRepository
+            .countByRecipientEmailAndStatusAndSentAtGreaterThanEqualAndSentAtLessThanAndEmailTypeNotIn(
+                requesterEmail, EmailStatus.SENT, startOfDay, startOfNextDay, SENSITIVE_TYPES);
     long failedEmails =
         emailLogRepository.countByRecipientEmailAndStatusAndEmailTypeNotIn(
             requesterEmail, EmailStatus.FAILED, SENSITIVE_TYPES);
@@ -89,7 +92,8 @@ public class DashboardServiceImpl implements DashboardService {
               MessageStatus.SENT, startOfDay, startOfNextDay);
       long failedMessages = igMessageLogRepository.countByStatus(MessageStatus.FAILED);
 
-      return new DashboardResponse(totalInstaUsers, upcomingEvents, messagesSentToday, failedMessages);
+      return new DashboardResponse(
+          totalInstaUsers, upcomingEvents, messagesSentToday, failedMessages);
     }
 
     LocalDate today = LocalDate.now(ZoneId.of("Asia/Kolkata"));
@@ -97,7 +101,8 @@ public class DashboardServiceImpl implements DashboardService {
     long upcomingEvents =
         user == null
             ? 0L
-            : eventRepository.countByUser_IdAndEventDateGreaterThanEqualAndActiveTrue(user.getId(), today);
+            : eventRepository.countByUser_IdAndEventDateGreaterThanEqualAndActiveTrue(
+                user.getId(), today);
 
     return new DashboardResponse(user == null ? 0L : 1L, upcomingEvents, 0L, 0L);
   }
@@ -196,16 +201,21 @@ public class DashboardServiceImpl implements DashboardService {
 
     Map<LocalDate, Long> sentByDate =
         toDateCountMap(
-            emailLogRepository.getDailyCountsByStatusAndEmailTypeIn(start, EmailStatus.SENT, types));
+            emailLogRepository.getDailyCountsByStatusAndEmailTypeIn(
+                start, EmailStatus.SENT, types));
     Map<LocalDate, Long> failedByDate =
         toDateCountMap(
-            emailLogRepository.getDailyCountsByStatusAndEmailTypeIn(start, EmailStatus.FAILED, types));
+            emailLogRepository.getDailyCountsByStatusAndEmailTypeIn(
+                start, EmailStatus.FAILED, types));
 
     return buildGraphResponse(normalizedDays, startDate, sentByDate, failedByDate);
   }
 
   private DashboardGraphResponse buildGraphResponse(
-      int days, LocalDate startDate, Map<LocalDate, Long> sentByDate, Map<LocalDate, Long> failedByDate) {
+      int days,
+      LocalDate startDate,
+      Map<LocalDate, Long> sentByDate,
+      Map<LocalDate, Long> failedByDate) {
     List<DashboardGraphPoint> points =
         java.util.stream.IntStream.range(0, days)
             .mapToObj(startDate::plusDays)

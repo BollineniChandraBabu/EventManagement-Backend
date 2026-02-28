@@ -68,7 +68,11 @@ class GmailEmailServiceImplTest {
     when(eventTypeSeedRepository.findByCodeAndActiveTrue("ANNIVERSARY"))
         .thenReturn(
             Optional.of(
-                EventTypeSeed.builder().id(2L).code("ANNIVERSARY").displayName("Anniversary").build()));
+                EventTypeSeed.builder()
+                    .id(2L)
+                    .code("ANNIVERSARY")
+                    .displayName("Anniversary")
+                    .build()));
     when(emailLogRepository.save(any(EmailLog.class)))
         .thenAnswer(
             invocation -> {
@@ -78,12 +82,14 @@ class GmailEmailServiceImplTest {
             });
     doNothing()
         .when(serviceSpy)
-        .sendEmailWithAttachments(eq("user@example.com"), eq("Subject"), any(String.class), eq(100L), eq(null));
+        .sendEmailWithAttachments(
+            eq("user@example.com"), eq("Subject"), any(String.class), eq(100L), eq(null));
 
     serviceSpy.sendEmailNow(request);
 
     verify(emailLogRepository).save(any(EmailLog.class));
     verify(serviceSpy)
-        .sendEmailWithAttachments(eq("user@example.com"), eq("Subject"), any(String.class), eq(100L), eq(null));
+        .sendEmailWithAttachments(
+            eq("user@example.com"), eq("Subject"), any(String.class), eq(100L), eq(null));
   }
 }

@@ -22,7 +22,8 @@ public class EventTypeSeedController {
   }
 
   @PutMapping("/{code}")
-  public EnumSeedResponse update(@PathVariable String code, @Valid @RequestBody EnumSeedRequest request) {
+  public EnumSeedResponse update(
+      @PathVariable String code, @Valid @RequestBody EnumSeedRequest request) {
     return eventTypeSeedService.update(code, request);
   }
 

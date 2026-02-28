@@ -36,7 +36,14 @@ class SpecialEventSeedServiceImplTest {
   @Test
   void listShouldReturnPagedResponse() {
     SpecialEvent event =
-        SpecialEvent.builder().id(1L).eventName("Diwali").day(1).month(11).message("Happy Diwali").active(true).build();
+        SpecialEvent.builder()
+            .id(1L)
+            .eventName("Diwali")
+            .day(1)
+            .month(11)
+            .message("Happy Diwali")
+            .active(true)
+            .build();
 
     when(specialEventRepository.findAllBySearchKey(any(), any(PageRequest.class)))
         .thenReturn(new PageImpl<>(java.util.List.of(event), PageRequest.of(0, 10), 1));

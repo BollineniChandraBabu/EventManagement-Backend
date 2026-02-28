@@ -10,7 +10,8 @@ public interface SpecialEventSeedService {
 
   SpecialEventSeedResponse getById(Long id);
 
-  PagedResponse<SpecialEventSeedResponse> list(int page, int size, String searchKey, String sortBy, String sortDir);
+  PagedResponse<SpecialEventSeedResponse> list(
+      int page, int size, String searchKey, String sortBy, String sortDir);
 
   List<SpecialEventSeedResponse> listTodayActive(int day, int month);
 

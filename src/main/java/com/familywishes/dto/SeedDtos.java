@@ -7,9 +7,11 @@ import jakarta.validation.constraints.NotNull;
 
 public class SeedDtos {
 
-  public record EnumSeedRequest(@NotBlank String code, @NotBlank String displayName, @NotNull Boolean active) {}
+  public record EnumSeedRequest(
+      @NotBlank String code, @NotBlank String displayName, @NotNull Boolean active) {}
 
-  public record EnumSeedResponse(Long id, String category, String code, String displayName, boolean active) {}
+  public record EnumSeedResponse(
+      Long id, String category, String code, String displayName, boolean active) {}
 
   public record SpecialEventSeedRequest(
       @NotBlank String eventName,

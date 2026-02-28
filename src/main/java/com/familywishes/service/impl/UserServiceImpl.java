@@ -153,9 +153,12 @@ public class UserServiceImpl implements UserService {
             ? UserWishSettings.builder().user(user).build()
             : user.getWishSettings();
 
-    if (request.isGoodMorningEnabled() != null) settings.setGoodMorningEnabled(request.isGoodMorningEnabled());
-    if (request.isGoodNightEnabled() != null) settings.setGoodNightEnabled(request.isGoodNightEnabled());
-    if (request.isBirthdayEnabled() != null) settings.setBirthdayEnabled(request.isBirthdayEnabled());
+    if (request.isGoodMorningEnabled() != null)
+      settings.setGoodMorningEnabled(request.isGoodMorningEnabled());
+    if (request.isGoodNightEnabled() != null)
+      settings.setGoodNightEnabled(request.isGoodNightEnabled());
+    if (request.isBirthdayEnabled() != null)
+      settings.setBirthdayEnabled(request.isBirthdayEnabled());
 
     user.setWishSettings(settings);
     user = userRepository.save(user);

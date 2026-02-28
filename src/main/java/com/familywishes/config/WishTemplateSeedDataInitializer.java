@@ -21,7 +21,18 @@ public class WishTemplateSeedDataInitializer {
 
   @PostConstruct
   public void initialize() {
-    List.of("WIFE", "HUSBAND", "FRIEND", "MOTHER", "FATHER", "SISTER", "BROTHER", "SON", "DAUGHTER", "DAUGHTER_IN_LAW", "ADMIN")
+    List.of(
+            "WIFE",
+            "HUSBAND",
+            "FRIEND",
+            "MOTHER",
+            "FATHER",
+            "SISTER",
+            "BROTHER",
+            "SON",
+            "DAUGHTER",
+            "DAUGHTER_IN_LAW",
+            "ADMIN")
         .forEach(code -> createRelationshipIfMissing(code, titleCase(code)));
     List.of("ANNIVERSARY", "ENGAGEMENT", "FESTIVAL")
         .forEach(code -> createEventTypeIfMissing(code, titleCase(code)));

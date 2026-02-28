@@ -52,7 +52,8 @@ public class TemplateTypeSeedServiceImpl implements TemplateTypeSeedService {
   }
 
   private EnumSeedResponse toResponse(TemplateTypeSeed seed) {
-    return new EnumSeedResponse(seed.getId(), CATEGORY, seed.getCode(), seed.getDisplayName(), seed.isActive());
+    return new EnumSeedResponse(
+        seed.getId(), CATEGORY, seed.getCode(), seed.getDisplayName(), seed.isActive());
   }
 
   private String normalizeCode(String value) {

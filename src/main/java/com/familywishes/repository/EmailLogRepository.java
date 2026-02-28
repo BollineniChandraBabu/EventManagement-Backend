@@ -20,12 +20,18 @@ public interface EmailLogRepository extends JpaRepository<EmailLog, Long> {
       EmailStatus status, LocalDateTime startTime, LocalDateTime endTime);
 
   long countByStatusAndSentAtGreaterThanEqualAndSentAtLessThanAndEmailTypeIn(
-      EmailStatus status, LocalDateTime startTime, LocalDateTime endTime, List<EmailType> emailTypes);
+      EmailStatus status,
+      LocalDateTime startTime,
+      LocalDateTime endTime,
+      List<EmailType> emailTypes);
 
   long countByStatusAndEmailTypeIn(EmailStatus status, List<EmailType> emailTypes);
 
   long countByStatusAndSentAtGreaterThanEqualAndSentAtLessThanAndEmailTypeNotIn(
-      EmailStatus status, LocalDateTime startTime, LocalDateTime endTime, List<EmailType> emailTypes);
+      EmailStatus status,
+      LocalDateTime startTime,
+      LocalDateTime endTime,
+      List<EmailType> emailTypes);
 
   long countByStatusAndEmailTypeNotIn(EmailStatus status, List<EmailType> emailTypes);
 
@@ -112,7 +118,8 @@ public interface EmailLogRepository extends JpaRepository<EmailLog, Long> {
             GROUP BY DATE(e.sentAt)
             ORDER BY DATE(e.sentAt)
             """)
-  List<Object[]> getDailyCountsByStatus(@Param("start") LocalDateTime start, @Param("status") EmailStatus status);
+  List<Object[]> getDailyCountsByStatus(
+      @Param("start") LocalDateTime start, @Param("status") EmailStatus status);
 
   @Query(
       """
@@ -144,7 +151,6 @@ public interface EmailLogRepository extends JpaRepository<EmailLog, Long> {
       @Param("status") EmailStatus status,
       @Param("emailTypes") List<EmailType> emailTypes);
 
-
   @Query(
       """
             SELECT DATE(e.sentAt), COUNT(e)
@@ -161,5 +167,4 @@ public interface EmailLogRepository extends JpaRepository<EmailLog, Long> {
       @Param("status") EmailStatus status,
       @Param("recipientEmail") String recipientEmail,
       @Param("emailTypes") List<EmailType> emailTypes);
-
 }

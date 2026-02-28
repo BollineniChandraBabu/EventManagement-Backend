@@ -8,10 +8,10 @@ import com.familywishes.dto.UserDtos.UserRequest;
 import com.familywishes.dto.UserDtos.UserResponse;
 import com.familywishes.dto.UserDtos.WishSettingsUpdateRequest;
 import com.familywishes.entity.RelationshipSeed;
-import com.familywishes.exception.BadRequestException;
 import com.familywishes.entity.User;
 import com.familywishes.entity.UserWishSettings;
 import com.familywishes.entity.enums.Role;
+import com.familywishes.exception.BadRequestException;
 import com.familywishes.repository.RelationshipSeedRepository;
 import com.familywishes.repository.UserRepository;
 import java.time.LocalDate;
@@ -102,7 +102,8 @@ class UserServiceImplTest {
             new UsernamePasswordAuthenticationToken(
                 "ravi@example.com", "password", List.of(new SimpleGrantedAuthority("ROLE_USER"))));
 
-    when(userRepository.findByEmailAndDeletedFalse("ravi@example.com")).thenReturn(Optional.of(user));
+    when(userRepository.findByEmailAndDeletedFalse("ravi@example.com"))
+        .thenReturn(Optional.of(user));
     when(userRepository.save(any(User.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
     UserResponse response =
@@ -112,7 +113,6 @@ class UserServiceImplTest {
     assertTrue(response.isGoodNightEnabled());
     assertTrue(response.isBirthdayEnabled());
   }
-
 
   @Test
   void updateShouldRejectRoleChangeForNonAdmin() {
@@ -149,5 +149,4 @@ class UserServiceImplTest {
 
     assertThrows(BadRequestException.class, () -> userService.update(request));
   }
-
 }

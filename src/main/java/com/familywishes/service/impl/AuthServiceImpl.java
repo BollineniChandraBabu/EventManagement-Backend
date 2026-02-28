@@ -200,7 +200,6 @@ public class AuthServiceImpl implements AuthService {
     resetTokenRepository.invalidateAllByUserId(user.getId());
   }
 
-
   @Override
   @Transactional
   public void changePassword(ChangePasswordRequest request) {

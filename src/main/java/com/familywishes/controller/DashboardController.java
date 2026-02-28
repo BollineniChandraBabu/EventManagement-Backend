@@ -66,7 +66,8 @@ public class DashboardController {
 
   @GetMapping("/chart/mail/forgot-password")
   @PreAuthorize("hasRole('ADMIN')")
-  public DashboardGraphResponse forgotPasswordMailChart(@RequestParam(defaultValue = "7") int days) {
+  public DashboardGraphResponse forgotPasswordMailChart(
+      @RequestParam(defaultValue = "7") int days) {
     return dashboardService.getForgotPasswordChart(days);
   }
 

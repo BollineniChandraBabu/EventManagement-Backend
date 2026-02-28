@@ -34,12 +34,14 @@ class AiServiceImplTest {
   @BeforeEach
   void setUp() {
     aiService = new AiServiceImpl(restTemplate);
-    ReflectionTestUtils.setField(aiService, "pollinationsImageUrl", "https://gen.pollinations.ai/image/");
+    ReflectionTestUtils.setField(
+        aiService, "pollinationsImageUrl", "https://gen.pollinations.ai/image/");
     ReflectionTestUtils.setField(aiService, "pollinationsApiKey", "secret-key");
   }
 
   @Test
-  void callGeminiImageShouldReturnNullWhenPollinationsRequestFails() throws JsonProcessingException {
+  void callGeminiImageShouldReturnNullWhenPollinationsRequestFails()
+      throws JsonProcessingException {
     AiWishRequest request = new AiWishRequest("John", "Family", "Birthday", "", "Warm", "EN");
     HttpHeaders headers = new HttpHeaders();
 
@@ -51,7 +53,8 @@ class AiServiceImplTest {
             "{\"error\":\"invalid prompt\"}".getBytes(),
             null);
 
-    when(restTemplate.exchange(anyString(), eq(HttpMethod.GET), any(HttpEntity.class), eq(byte[].class)))
+    when(restTemplate.exchange(
+            anyString(), eq(HttpMethod.GET), any(HttpEntity.class), eq(byte[].class)))
         .thenThrow(badRequest);
 
     byte[] image = aiService.callGeminiImage(request);
@@ -65,12 +68,14 @@ class AiServiceImplTest {
     AiWishRequest request = new AiWishRequest("John", "Family", "Birthday", "", "Warm", "EN");
     byte[] expected = new byte[] {1, 2, 3};
 
-    when(restTemplate.exchange(anyString(), eq(HttpMethod.GET), any(HttpEntity.class), eq(byte[].class)))
+    when(restTemplate.exchange(
+            anyString(), eq(HttpMethod.GET), any(HttpEntity.class), eq(byte[].class)))
         .thenReturn(ResponseEntity.ok(expected));
 
     byte[] image = aiService.callGeminiImage(request);
 
     assertArrayEquals(expected, image);
-    verify(restTemplate).exchange(anyString(), eq(HttpMethod.GET), any(HttpEntity.class), eq(byte[].class));
+    verify(restTemplate)
+        .exchange(anyString(), eq(HttpMethod.GET), any(HttpEntity.class), eq(byte[].class));
   }
 }

@@ -4,11 +4,11 @@ import com.familywishes.dto.CommonDtos.PagedResponse;
 import com.familywishes.dto.EmailDtos.EmailStatusResponse;
 import com.familywishes.dto.EmailDtos.SendEmailNowRequest;
 import com.familywishes.service.GmailEmailService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
-import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -27,7 +27,6 @@ public class EmailController {
   public void test(Authentication authentication) {
     emailService.sendTestEmail(authentication.getName());
   }
-
 
   @PostMapping("/send-now")
   @PreAuthorize("hasRole('ADMIN')")
