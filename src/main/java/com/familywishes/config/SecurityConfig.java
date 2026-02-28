@@ -36,6 +36,7 @@ public class SecurityConfig {
                         "/swagger-ui.html",
                         "/health",
                         "/actuator/**",
+                        "/oauth2callback",
                         "/instagram/**")
                     .permitAll()
                     .anyRequest()
