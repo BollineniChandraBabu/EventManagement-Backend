@@ -5,6 +5,7 @@ import com.familywishes.entity.OtpCode;
 import com.familywishes.entity.PasswordResetToken;
 import com.familywishes.entity.RefreshToken;
 import com.familywishes.entity.User;
+import com.familywishes.entity.enums.Role;
 import com.familywishes.exception.BadRequestException;
 import com.familywishes.exception.NotFoundException;
 import com.familywishes.repository.*;
@@ -63,6 +64,50 @@ public class AuthServiceImpl implements AuthService {
             .expiresAt(LocalDateTime.now(ZoneId.of("Asia/Kolkata")).plusDays(7))
             .revoked(false)
             .build());
+    return new AuthResponse(
+        access, refresh, "Bearer", user.getRole().name(), jwtService.getAccessTokenTtlSeconds());
+  }
+
+  @Override
+  @Transactional(readOnly = true)
+  public AuthResponse adminLoginAsUser(AdminLoginAsUserRequest request) {
+    Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+    if (authentication == null || !authentication.isAuthenticated()) {
+      throw new BadRequestException("Authenticated user not found");
+    }
+
+    User adminUser =
+        userRepository
+            .findByEmailAndDeletedFalse(authentication.getName())
+            .orElseThrow(() -> new NotFoundException("User not found"));
+
+    if (adminUser.getRole() != Role.ROLE_ADMIN) {
+      throw new BadRequestException("Only admin can login as user");
+    }
+
+    User user =
+        userRepository
+            .findByEmailAndDeletedFalse(request.email())
+            .orElseThrow(() -> new NotFoundException("User not found"));
+
+    if (user.getRole() == Role.ROLE_ADMIN) {
+      throw new BadRequestException("Admin cannot login as another admin");
+    }
+
+    if (!user.isActive()) {
+      throw new BadRequestException("User account is inactive");
+    }
+
+    String access = jwtService.generateAccessToken(user);
+    String refresh = jwtService.generateRefreshToken(user);
+    refreshTokenRepository.save(
+        RefreshToken.builder()
+            .token(refresh)
+            .user(user)
+            .expiresAt(LocalDateTime.now(ZoneId.of("Asia/Kolkata")).plusDays(7))
+            .revoked(false)
+            .build());
+
     return new AuthResponse(
         access, refresh, "Bearer", user.getRole().name(), jwtService.getAccessTokenTtlSeconds());
   }

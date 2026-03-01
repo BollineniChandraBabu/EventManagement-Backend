@@ -6,6 +6,8 @@ import jakarta.validation.constraints.NotBlank;
 public class AuthDtos {
   public record LoginRequest(@Email String email, @NotBlank String password) {}
 
+  public record AdminLoginAsUserRequest(@Email String email) {}
+
   public record AuthResponse(
       String accessToken, String refreshToken, String tokenType, String role, long expiresIn) {}
 

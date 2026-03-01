@@ -1,0 +1,97 @@
+package com.familywishes.service.impl;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.when;
+
+import com.familywishes.dto.AuthDtos.AdminLoginAsUserRequest;
+import com.familywishes.dto.AuthDtos.AuthResponse;
+import com.familywishes.entity.RefreshToken;
+import com.familywishes.entity.User;
+import com.familywishes.entity.enums.Role;
+import com.familywishes.exception.BadRequestException;
+import com.familywishes.repository.OtpCodeRepository;
+import com.familywishes.repository.PasswordResetTokenRepository;
+import com.familywishes.repository.RefreshTokenRepository;
+import com.familywishes.repository.UserRepository;
+import com.familywishes.security.JwtService;
+import com.familywishes.service.GmailEmailService;
+import java.util.List;
+import java.util.Optional;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.crypto.password.PasswordEncoder;
+
+@ExtendWith(MockitoExtension.class)
+class AuthServiceImplTest {
+
+  @Mock private AuthenticationManager authManager;
+  @Mock private UserRepository userRepository;
+  @Mock private JwtService jwtService;
+  @Mock private RefreshTokenRepository refreshTokenRepository;
+  @Mock private OtpCodeRepository otpCodeRepository;
+  @Mock private PasswordResetTokenRepository resetTokenRepository;
+  @Mock private PasswordEncoder passwordEncoder;
+  @Mock private GmailEmailService emailService;
+
+  @InjectMocks private AuthServiceImpl authService;
+
+  @AfterEach
+  void tearDown() {
+    SecurityContextHolder.clearContext();
+  }
+
+  @Test
+  void adminLoginAsUserShouldGenerateTokensForUserAccount() {
+    User admin = User.builder().id(1L).email("admin@example.com").role(Role.ROLE_ADMIN).build();
+    User normalUser = User.builder().id(2L).email("user@example.com").role(Role.ROLE_USER).active(true).build();
+
+    SecurityContextHolder.getContext()
+        .setAuthentication(
+            new UsernamePasswordAuthenticationToken(
+                "admin@example.com", "password", List.of(new SimpleGrantedAuthority("ROLE_ADMIN"))));
+
+    when(userRepository.findByEmailAndDeletedFalse("admin@example.com")).thenReturn(Optional.of(admin));
+    when(userRepository.findByEmailAndDeletedFalse("user@example.com"))
+        .thenReturn(Optional.of(normalUser));
+    when(jwtService.generateAccessToken(normalUser)).thenReturn("access-token");
+    when(jwtService.generateRefreshToken(normalUser)).thenReturn("refresh-token");
+    when(jwtService.getAccessTokenTtlSeconds()).thenReturn(900L);
+    when(refreshTokenRepository.save(any(RefreshToken.class)))
+        .thenAnswer(invocation -> invocation.getArgument(0));
+
+    AuthResponse response = authService.adminLoginAsUser(new AdminLoginAsUserRequest("user@example.com"));
+
+    assertEquals("access-token", response.accessToken());
+    assertEquals("refresh-token", response.refreshToken());
+    assertEquals("ROLE_USER", response.role());
+  }
+
+  @Test
+  void adminLoginAsUserShouldRejectTargetAdminAccount() {
+    User admin = User.builder().id(1L).email("admin@example.com").role(Role.ROLE_ADMIN).build();
+    User targetAdmin = User.builder().id(3L).email("other-admin@example.com").role(Role.ROLE_ADMIN).build();
+
+    SecurityContextHolder.getContext()
+        .setAuthentication(
+            new UsernamePasswordAuthenticationToken(
+                "admin@example.com", "password", List.of(new SimpleGrantedAuthority("ROLE_ADMIN"))));
+
+    when(userRepository.findByEmailAndDeletedFalse("admin@example.com")).thenReturn(Optional.of(admin));
+    when(userRepository.findByEmailAndDeletedFalse("other-admin@example.com"))
+        .thenReturn(Optional.of(targetAdmin));
+
+    assertThrows(
+        BadRequestException.class,
+        () -> authService.adminLoginAsUser(new AdminLoginAsUserRequest("other-admin@example.com")));
+  }
+}

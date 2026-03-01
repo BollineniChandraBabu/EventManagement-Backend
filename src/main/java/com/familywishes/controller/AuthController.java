@@ -4,6 +4,7 @@ import com.familywishes.dto.AuthDtos.*;
 import com.familywishes.service.AuthService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -20,6 +21,11 @@ public class AuthController {
   @PostMapping("/refresh")
   public AuthResponse refresh(@Valid @RequestBody RefreshRequest request) {
     return authService.refresh(request);
+  }
+  @PostMapping("/admin/login-as-user")
+  @PreAuthorize("hasRole('ADMIN')")
+  public AuthResponse adminLoginAsUser(@Valid @RequestBody AdminLoginAsUserRequest request) {
+    return authService.adminLoginAsUser(request);
   }
 
   @PostMapping("/otp/send")
