@@ -53,18 +53,23 @@ class AuthServiceImplTest {
   @Test
   void adminLoginAsUserShouldGenerateTokensForUserAccount() {
     User admin = User.builder().id(1L).email("admin@example.com").role(Role.ROLE_ADMIN).build();
-    User normalUser = User.builder().id(2L).email("user@example.com").role(Role.ROLE_USER).active(true).build();
+    User normalUser =
+        User.builder().id(2L).email("user@example.com").role(Role.ROLE_USER).active(true).build();
 
     SecurityContextHolder.getContext()
         .setAuthentication(
             new UsernamePasswordAuthenticationToken(
-                "admin@example.com", "password", List.of(new SimpleGrantedAuthority("ROLE_ADMIN"))));
+                "admin@example.com",
+                "password",
+                List.of(new SimpleGrantedAuthority("ROLE_ADMIN"))));
 
-    when(userRepository.findByEmailAndDeletedFalse("admin@example.com")).thenReturn(Optional.of(admin));
+    when(userRepository.findByEmailAndDeletedFalse("admin@example.com"))
+        .thenReturn(Optional.of(admin));
     when(userRepository.findByEmailAndDeletedFalse("user@example.com"))
         .thenReturn(Optional.of(normalUser));
-    when(jwtService.generateAccessToken(normalUser)).thenReturn("access-token");
-    when(jwtService.generateRefreshToken(normalUser)).thenReturn("refresh-token");
+    when(jwtService.generateAccessToken(normalUser, "admin@example.com")).thenReturn("access-token");
+    when(jwtService.generateRefreshToken(normalUser, "admin@example.com"))
+        .thenReturn("refresh-token");
     when(jwtService.getAccessTokenTtlSeconds()).thenReturn(900L);
     when(refreshTokenRepository.save(any(RefreshToken.class)))
         .thenAnswer(invocation -> invocation.getArgument(0));
@@ -79,19 +84,56 @@ class AuthServiceImplTest {
   @Test
   void adminLoginAsUserShouldRejectTargetAdminAccount() {
     User admin = User.builder().id(1L).email("admin@example.com").role(Role.ROLE_ADMIN).build();
-    User targetAdmin = User.builder().id(3L).email("other-admin@example.com").role(Role.ROLE_ADMIN).build();
+    User targetAdmin =
+        User.builder().id(3L).email("other-admin@example.com").role(Role.ROLE_ADMIN).build();
 
     SecurityContextHolder.getContext()
         .setAuthentication(
             new UsernamePasswordAuthenticationToken(
-                "admin@example.com", "password", List.of(new SimpleGrantedAuthority("ROLE_ADMIN"))));
+                "admin@example.com",
+                "password",
+                List.of(new SimpleGrantedAuthority("ROLE_ADMIN"))));
 
-    when(userRepository.findByEmailAndDeletedFalse("admin@example.com")).thenReturn(Optional.of(admin));
+    when(userRepository.findByEmailAndDeletedFalse("admin@example.com"))
+        .thenReturn(Optional.of(admin));
     when(userRepository.findByEmailAndDeletedFalse("other-admin@example.com"))
         .thenReturn(Optional.of(targetAdmin));
 
     assertThrows(
         BadRequestException.class,
         () -> authService.adminLoginAsUser(new AdminLoginAsUserRequest("other-admin@example.com")));
+  }
+
+  @Test
+  void switchBackToAdminShouldReturnAdminTokensForImpersonatedSession() {
+    User admin = User.builder().id(1L).email("admin@example.com").role(Role.ROLE_ADMIN).active(true).build();
+
+    when(jwtService.isValid("impersonated-access-token")).thenReturn(true);
+    when(jwtService.extractImpersonatedBy("impersonated-access-token"))
+        .thenReturn("admin@example.com");
+    when(userRepository.findByEmailAndDeletedFalse("admin@example.com"))
+        .thenReturn(Optional.of(admin));
+    when(jwtService.generateAccessToken(admin)).thenReturn("admin-access-token");
+    when(jwtService.generateRefreshToken(admin)).thenReturn("admin-refresh-token");
+    when(jwtService.getAccessTokenTtlSeconds()).thenReturn(900L);
+    when(refreshTokenRepository.save(any(RefreshToken.class)))
+        .thenAnswer(invocation -> invocation.getArgument(0));
+
+    AuthResponse response =
+        authService.switchBackToAdmin("Bearer impersonated-access-token");
+
+    assertEquals("admin-access-token", response.accessToken());
+    assertEquals("admin-refresh-token", response.refreshToken());
+    assertEquals("ROLE_ADMIN", response.role());
+  }
+
+  @Test
+  void switchBackToAdminShouldRejectNonImpersonatedSession() {
+    when(jwtService.isValid("plain-access-token")).thenReturn(true);
+    when(jwtService.extractImpersonatedBy("plain-access-token")).thenReturn(null);
+
+    assertThrows(
+        BadRequestException.class,
+        () -> authService.switchBackToAdmin("Bearer plain-access-token"));
   }
 }

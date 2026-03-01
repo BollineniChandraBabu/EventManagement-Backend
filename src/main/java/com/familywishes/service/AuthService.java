@@ -7,6 +7,8 @@ public interface AuthService {
 
   AuthResponse adminLoginAsUser(AdminLoginAsUserRequest request);
 
+  AuthResponse switchBackToAdmin(String authorizationHeader);
+
   AuthResponse refresh(RefreshRequest request);
 
   void sendOtp(OtpSendRequest request);

@@ -7,6 +7,8 @@ import io.jsonwebtoken.security.Keys;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.util.Date;
+import java.util.HashMap;
+import java.util.Map;
 import javax.crypto.SecretKey;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -20,22 +22,39 @@ public class JwtService {
   private String secret;
 
   public String generateAccessToken(User user) {
-    return generate(user.getEmail(), user.getRole().name(), ACCESS_TOKEN_TTL_SECONDS);
+    return generate(user.getEmail(), user.getRole().name(), ACCESS_TOKEN_TTL_SECONDS, Map.of());
+  }
+
+  public String generateAccessToken(User user, String impersonatedBy) {
+    Map<String, Object> extraClaims = new HashMap<>();
+    if (impersonatedBy != null && !impersonatedBy.isBlank()) {
+      extraClaims.put("impersonatedBy", impersonatedBy);
+    }
+    return generate(user.getEmail(), user.getRole().name(), ACCESS_TOKEN_TTL_SECONDS, extraClaims);
   }
 
   public String generateRefreshToken(User user) {
-    return generate(user.getEmail(), "REFRESH", REFRESH_TOKEN_TTL_SECONDS);
+    return generate(user.getEmail(), "REFRESH", REFRESH_TOKEN_TTL_SECONDS, Map.of());
+  }
+
+  public String generateRefreshToken(User user, String impersonatedBy) {
+    Map<String, Object> extraClaims = new HashMap<>();
+    if (impersonatedBy != null && !impersonatedBy.isBlank()) {
+      extraClaims.put("impersonatedBy", impersonatedBy);
+    }
+    return generate(user.getEmail(), "REFRESH", REFRESH_TOKEN_TTL_SECONDS, extraClaims);
   }
 
   public long getAccessTokenTtlSeconds() {
     return ACCESS_TOKEN_TTL_SECONDS;
   }
 
-  private String generate(String subject, String scope, long ttlSec) {
+  private String generate(String subject, String scope, long ttlSec, Map<String, Object> claims) {
     Instant now = Instant.now();
     return Jwts.builder()
         .subject(subject)
         .claim("scope", scope)
+        .claims(claims)
         .issuedAt(Date.from(now))
         .expiration(Date.from(now.plusSeconds(ttlSec)))
         .signWith(getKey())
@@ -44,6 +63,11 @@ public class JwtService {
 
   public String extractSubject(String token) {
     return parse(token).getSubject();
+  }
+
+
+  public String extractImpersonatedBy(String token) {
+    return parse(token).get("impersonatedBy", String.class);
   }
 
   public boolean isValid(String token) {

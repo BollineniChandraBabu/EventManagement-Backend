@@ -28,6 +28,13 @@ public class AuthController {
     return authService.adminLoginAsUser(request);
   }
 
+  @PostMapping("/admin/switch-back")
+  @PreAuthorize("isAuthenticated()")
+  public AuthResponse switchBackToAdmin(
+      @RequestHeader("Authorization") String authorizationHeader) {
+    return authService.switchBackToAdmin(authorizationHeader);
+  }
+
   @PostMapping("/otp/send")
   public void sendOtp(@Valid @RequestBody OtpSendRequest request) {
     authService.sendOtp(request);

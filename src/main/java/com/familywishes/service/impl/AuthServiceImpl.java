@@ -55,8 +55,8 @@ public class AuthServiceImpl implements AuthService {
         userRepository
             .findByEmailAndDeletedFalse(request.email())
             .orElseThrow(() -> new NotFoundException("User not found"));
-    String access = jwtService.generateAccessToken(user);
-    String refresh = jwtService.generateRefreshToken(user);
+    String access = jwtService.generateAccessToken(user, adminUser.getEmail());
+    String refresh = jwtService.generateRefreshToken(user, adminUser.getEmail());
     refreshTokenRepository.save(
         RefreshToken.builder()
             .token(refresh)
@@ -98,8 +98,8 @@ public class AuthServiceImpl implements AuthService {
       throw new BadRequestException("User account is inactive");
     }
 
-    String access = jwtService.generateAccessToken(user);
-    String refresh = jwtService.generateRefreshToken(user);
+    String access = jwtService.generateAccessToken(user, adminUser.getEmail());
+    String refresh = jwtService.generateRefreshToken(user, adminUser.getEmail());
     refreshTokenRepository.save(
         RefreshToken.builder()
             .token(refresh)
@@ -110,6 +110,54 @@ public class AuthServiceImpl implements AuthService {
 
     return new AuthResponse(
         access, refresh, "Bearer", user.getRole().name(), jwtService.getAccessTokenTtlSeconds());
+  }
+
+  @Override
+  @Transactional(readOnly = true)
+  public AuthResponse switchBackToAdmin(String authorizationHeader) {
+    if (authorizationHeader == null || !authorizationHeader.startsWith("Bearer ")) {
+      throw new BadRequestException("Missing or invalid authorization header");
+    }
+
+    String token = authorizationHeader.substring(7);
+    if (!jwtService.isValid(token)) {
+      throw new BadRequestException("Invalid access token");
+    }
+
+    String impersonatedBy = jwtService.extractImpersonatedBy(token);
+    if (impersonatedBy == null || impersonatedBy.isBlank()) {
+      throw new BadRequestException("Switch-back is allowed only for impersonated sessions");
+    }
+
+    User adminUser =
+        userRepository
+            .findByEmailAndDeletedFalse(impersonatedBy)
+            .orElseThrow(() -> new NotFoundException("Admin user not found"));
+
+    if (adminUser.getRole() != Role.ROLE_ADMIN) {
+      throw new BadRequestException("Original account is not an admin");
+    }
+
+    if (!adminUser.isActive()) {
+      throw new BadRequestException("Admin account is inactive");
+    }
+
+    String access = jwtService.generateAccessToken(adminUser);
+    String refresh = jwtService.generateRefreshToken(adminUser);
+    refreshTokenRepository.save(
+        RefreshToken.builder()
+            .token(refresh)
+            .user(adminUser)
+            .expiresAt(LocalDateTime.now(ZoneId.of("Asia/Kolkata")).plusDays(7))
+            .revoked(false)
+            .build());
+
+    return new AuthResponse(
+        access,
+        refresh,
+        "Bearer",
+        adminUser.getRole().name(),
+        jwtService.getAccessTokenTtlSeconds());
   }
 
   @Override
