@@ -39,6 +39,9 @@ public class AiServiceImpl implements AiService {
   @Value("${app.pollinations.image.model:imagen-4}")
   private String pollinationsImageModel;
 
+  @Value("${app.pollinations.balance.url:https://gen.pollinations.ai/account/balance}")
+  private String pollinationsBalanceUrl;
+
   @Override
   public AiWishResponse generate(AiWishRequest request) throws JsonProcessingException {
     String prompt = getWishPrompt(request);
@@ -89,6 +92,28 @@ public class AiServiceImpl implements AiService {
           ex.getStatusCode().value(),
           ex.getResponseBodyAsString());
       return null;
+    }
+  }
+
+  @Override
+  public Map<String, Object> getPollinationsBalance() {
+    HttpHeaders headers = new HttpHeaders();
+    if (StringUtils.hasText(pollinationsApiKey)) {
+      headers.setBearerAuth(pollinationsApiKey);
+    }
+
+    HttpEntity<Void> entity = new HttpEntity<>(headers);
+
+    try {
+      ResponseEntity<Map> response =
+          restTemplate.exchange(pollinationsBalanceUrl, HttpMethod.GET, entity, Map.class);
+      return response.getBody();
+    } catch (HttpStatusCodeException ex) {
+      log.warn(
+          "Pollinations balance fetch failed with status {}: {}",
+          ex.getStatusCode().value(),
+          ex.getResponseBodyAsString());
+      throw new BadRequestException("Unable to fetch pollinations balance");
     }
   }
 
