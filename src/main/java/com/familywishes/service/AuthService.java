@@ -5,6 +5,10 @@ import com.familywishes.dto.AuthDtos.*;
 public interface AuthService {
   AuthResponse login(LoginRequest request);
 
+  AuthResponse adminLoginAsUser(AdminLoginAsUserRequest request);
+
+  AuthResponse switchBackToAdmin(String authorizationHeader);
+
   AuthResponse refresh(RefreshRequest request);
 
   void sendOtp(OtpSendRequest request);
