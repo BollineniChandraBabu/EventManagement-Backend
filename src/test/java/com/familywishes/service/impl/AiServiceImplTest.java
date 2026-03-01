@@ -1,7 +1,9 @@
 package com.familywishes.service.impl;
 
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
@@ -9,7 +11,9 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.familywishes.dto.AiWishRequest;
+import com.familywishes.exception.BadRequestException;
 import com.fasterxml.jackson.core.JsonProcessingException;
+import java.util.Map;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -37,6 +41,8 @@ class AiServiceImplTest {
     ReflectionTestUtils.setField(
         aiService, "pollinationsImageUrl", "https://gen.pollinations.ai/image/");
     ReflectionTestUtils.setField(aiService, "pollinationsApiKey", "secret-key");
+    ReflectionTestUtils.setField(
+        aiService, "pollinationsBalanceUrl", "https://gen.pollinations.ai/account/balance");
   }
 
   @Test
@@ -77,5 +83,39 @@ class AiServiceImplTest {
     assertArrayEquals(expected, image);
     verify(restTemplate)
         .exchange(anyString(), eq(HttpMethod.GET), any(HttpEntity.class), eq(byte[].class));
+  }
+
+  @Test
+  void getPollinationsBalanceShouldReturnBalanceWhenProviderRespondsSuccessfully() {
+    Map<String, Object> expected = Map.of("credits", 50);
+
+    when(restTemplate.exchange(
+            anyString(), eq(HttpMethod.GET), any(HttpEntity.class), eq(Map.class)))
+        .thenReturn(ResponseEntity.ok(expected));
+
+    Map<String, Object> balance = aiService.getPollinationsBalance();
+
+    assertEquals(expected, balance);
+    verify(restTemplate).exchange(
+        anyString(), eq(HttpMethod.GET), any(HttpEntity.class), eq(Map.class));
+  }
+
+  @Test
+  void getPollinationsBalanceShouldThrowBadRequestExceptionWhenProviderFails() {
+    HttpHeaders headers = new HttpHeaders();
+
+    HttpClientErrorException unauthorized =
+        HttpClientErrorException.create(
+            HttpStatus.UNAUTHORIZED,
+            "Unauthorized",
+            headers,
+            "{\"error\":\"invalid token\"}".getBytes(),
+            null);
+
+    when(restTemplate.exchange(
+            anyString(), eq(HttpMethod.GET), any(HttpEntity.class), eq(Map.class)))
+        .thenThrow(unauthorized);
+
+    assertThrows(BadRequestException.class, () -> aiService.getPollinationsBalance());
   }
 }
