@@ -55,8 +55,8 @@ public class AuthServiceImpl implements AuthService {
         userRepository
             .findByEmailAndDeletedFalse(request.email())
             .orElseThrow(() -> new NotFoundException("User not found"));
-    String access = jwtService.generateAccessToken(user, adminUser.getEmail());
-    String refresh = jwtService.generateRefreshToken(user, adminUser.getEmail());
+    String access = jwtService.generateAccessToken(user, user.getEmail());
+    String refresh = jwtService.generateRefreshToken(user, user.getEmail());
     refreshTokenRepository.save(
         RefreshToken.builder()
             .token(refresh)
@@ -93,11 +93,9 @@ public class AuthServiceImpl implements AuthService {
     if (user.getRole() == Role.ROLE_ADMIN) {
       throw new BadRequestException("Admin cannot login as another admin");
     }
-
     if (!user.isActive()) {
       throw new BadRequestException("User account is inactive");
     }
-
     String access = jwtService.generateAccessToken(user, adminUser.getEmail());
     String refresh = jwtService.generateRefreshToken(user, adminUser.getEmail());
     refreshTokenRepository.save(
@@ -107,7 +105,6 @@ public class AuthServiceImpl implements AuthService {
             .expiresAt(LocalDateTime.now(ZoneId.of("Asia/Kolkata")).plusDays(7))
             .revoked(false)
             .build());
-
     return new AuthResponse(
         access, refresh, "Bearer", user.getRole().name(), jwtService.getAccessTokenTtlSeconds());
   }

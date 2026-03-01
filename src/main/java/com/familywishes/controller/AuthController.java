@@ -22,6 +22,7 @@ public class AuthController {
   public AuthResponse refresh(@Valid @RequestBody RefreshRequest request) {
     return authService.refresh(request);
   }
+
   @PostMapping("/admin/login-as-user")
   @PreAuthorize("hasRole('ADMIN')")
   public AuthResponse adminLoginAsUser(@Valid @RequestBody AdminLoginAsUserRequest request) {

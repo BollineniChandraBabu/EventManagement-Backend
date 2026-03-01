@@ -65,7 +65,6 @@ public class JwtService {
     return parse(token).getSubject();
   }
 
-
   public String extractImpersonatedBy(String token) {
     return parse(token).get("impersonatedBy", String.class);
   }

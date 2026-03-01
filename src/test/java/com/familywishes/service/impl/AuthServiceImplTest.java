@@ -67,14 +67,16 @@ class AuthServiceImplTest {
         .thenReturn(Optional.of(admin));
     when(userRepository.findByEmailAndDeletedFalse("user@example.com"))
         .thenReturn(Optional.of(normalUser));
-    when(jwtService.generateAccessToken(normalUser, "admin@example.com")).thenReturn("access-token");
+    when(jwtService.generateAccessToken(normalUser, "admin@example.com"))
+        .thenReturn("access-token");
     when(jwtService.generateRefreshToken(normalUser, "admin@example.com"))
         .thenReturn("refresh-token");
     when(jwtService.getAccessTokenTtlSeconds()).thenReturn(900L);
     when(refreshTokenRepository.save(any(RefreshToken.class)))
         .thenAnswer(invocation -> invocation.getArgument(0));
 
-    AuthResponse response = authService.adminLoginAsUser(new AdminLoginAsUserRequest("user@example.com"));
+    AuthResponse response =
+        authService.adminLoginAsUser(new AdminLoginAsUserRequest("user@example.com"));
 
     assertEquals("access-token", response.accessToken());
     assertEquals("refresh-token", response.refreshToken());
@@ -106,7 +108,8 @@ class AuthServiceImplTest {
 
   @Test
   void switchBackToAdminShouldReturnAdminTokensForImpersonatedSession() {
-    User admin = User.builder().id(1L).email("admin@example.com").role(Role.ROLE_ADMIN).active(true).build();
+    User admin =
+        User.builder().id(1L).email("admin@example.com").role(Role.ROLE_ADMIN).active(true).build();
 
     when(jwtService.isValid("impersonated-access-token")).thenReturn(true);
     when(jwtService.extractImpersonatedBy("impersonated-access-token"))
@@ -119,8 +122,7 @@ class AuthServiceImplTest {
     when(refreshTokenRepository.save(any(RefreshToken.class)))
         .thenAnswer(invocation -> invocation.getArgument(0));
 
-    AuthResponse response =
-        authService.switchBackToAdmin("Bearer impersonated-access-token");
+    AuthResponse response = authService.switchBackToAdmin("Bearer impersonated-access-token");
 
     assertEquals("admin-access-token", response.accessToken());
     assertEquals("admin-refresh-token", response.refreshToken());
