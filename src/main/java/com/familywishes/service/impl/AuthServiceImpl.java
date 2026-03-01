@@ -69,7 +69,7 @@ public class AuthServiceImpl implements AuthService {
   }
 
   @Override
-  @Transactional(readOnly = true)
+  @Transactional
   public AuthResponse adminLoginAsUser(AdminLoginAsUserRequest request) {
     Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
     if (authentication == null || !authentication.isAuthenticated()) {
@@ -110,7 +110,7 @@ public class AuthServiceImpl implements AuthService {
   }
 
   @Override
-  @Transactional(readOnly = true)
+  @Transactional
   public AuthResponse switchBackToAdmin(String authorizationHeader) {
     if (authorizationHeader == null || !authorizationHeader.startsWith("Bearer ")) {
       throw new BadRequestException("Missing or invalid authorization header");

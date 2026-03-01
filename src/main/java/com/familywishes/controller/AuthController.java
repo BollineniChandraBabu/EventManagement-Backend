@@ -29,7 +29,7 @@ public class AuthController {
     return authService.adminLoginAsUser(request);
   }
 
-  @PostMapping("/admin/switch-back")
+  @GetMapping("/admin/switch-back")
   @PreAuthorize("isAuthenticated()")
   public AuthResponse switchBackToAdmin(
       @RequestHeader("Authorization") String authorizationHeader) {
