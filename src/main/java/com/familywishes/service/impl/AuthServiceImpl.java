@@ -19,6 +19,7 @@ import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -47,14 +48,49 @@ public class AuthServiceImpl implements AuthService {
   @Value("${app.password-reset.ttl-minutes:30}")
   private int passwordResetTtlMinutes;
 
+  @Value("${app.login.failed-attempt-threshold:5}")
+  private int failedLoginAttemptThreshold;
+
+  private static final String CONTACT_ADMIN_MESSAGE =
+      "Too many failed login attempts. Please contact the Administrator.";
+
   @Override
+  @Transactional
   public AuthResponse login(LoginRequest request) {
-    authManager.authenticate(
-        new UsernamePasswordAuthenticationToken(request.email(), request.password()));
     User user =
         userRepository
             .findByEmailAndDeletedFalse(request.email())
             .orElseThrow(() -> new NotFoundException("User not found"));
+
+    if (user.getFailedLoginAttempts() >= failedLoginAttemptThreshold) {
+      throw new BadRequestException(CONTACT_ADMIN_MESSAGE);
+    }
+
+    try {
+      authManager.authenticate(
+          new UsernamePasswordAuthenticationToken(request.email(), request.password()));
+    } catch (BadCredentialsException ex) {
+      int failedAttempts = user.getFailedLoginAttempts() + 1;
+      user.setFailedLoginAttempts(failedAttempts);
+      userRepository.save(user);
+
+      if (failedAttempts >= failedLoginAttemptThreshold) {
+        emailService.sendEmailWithAttachments(
+            user.getEmail(),
+            "Account Security Alert",
+            buildFailedLoginThresholdEmailBody(),
+            null,
+            null);
+        throw new BadRequestException(CONTACT_ADMIN_MESSAGE);
+      }
+      throw new BadRequestException("Invalid email or password");
+    }
+
+    if (user.getFailedLoginAttempts() > 0) {
+      user.setFailedLoginAttempts(0);
+      userRepository.save(user);
+    }
+
     String access = jwtService.generateAccessToken(user, user.getEmail());
     String refresh = jwtService.generateRefreshToken(user, user.getEmail());
     refreshTokenRepository.save(
@@ -66,6 +102,18 @@ public class AuthServiceImpl implements AuthService {
             .build());
     return new AuthResponse(
         access, refresh, "Bearer", user.getRole().name(), jwtService.getAccessTokenTtlSeconds());
+  }
+
+  private String buildFailedLoginThresholdEmailBody() {
+    return """
+            <div style='font-family:Arial,sans-serif;line-height:1.5;color:#111827'>
+              <h3 style='margin-bottom:8px'>Account Temporarily Locked</h3>
+              <p style='margin:0 0 12px 0'>We detected multiple unsuccessful login attempts on your account.</p>
+              <p style='margin:0 0 12px 0'><b>Your account sign-in has been restricted for security reasons.</b></p>
+              <p style='margin:0 0 12px 0'>Please contact the Administrator to restore access.</p>
+              <p style='margin:0'>Thanks and regards,<br/>Family Wishes Team</p>
+            </div>
+            """;
   }
 
   @Override

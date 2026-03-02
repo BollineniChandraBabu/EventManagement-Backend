@@ -41,6 +41,10 @@ public class User {
   private boolean deleted = false;
 
   @Column(nullable = false)
+  @Builder.Default
+  private int failedLoginAttempts = 0;
+
+  @Column(nullable = false)
   private LocalDateTime createdAt;
 
   @ManyToOne(fetch = FetchType.EAGER)

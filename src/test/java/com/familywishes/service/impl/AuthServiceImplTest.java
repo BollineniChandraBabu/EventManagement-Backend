@@ -3,10 +3,13 @@ package com.familywishes.service.impl;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.familywishes.dto.AuthDtos.AdminLoginAsUserRequest;
 import com.familywishes.dto.AuthDtos.AuthResponse;
+import com.familywishes.dto.AuthDtos.LoginRequest;
 import com.familywishes.entity.RefreshToken;
 import com.familywishes.entity.User;
 import com.familywishes.entity.enums.Role;
@@ -26,6 +29,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -48,6 +52,86 @@ class AuthServiceImplTest {
   @AfterEach
   void tearDown() {
     SecurityContextHolder.clearContext();
+  }
+
+  @Test
+  void loginShouldIncrementFailedAttemptsWhenPasswordIsWrong() {
+    User user =
+        User.builder()
+            .id(4L)
+            .email("user@example.com")
+            .password("encoded")
+            .role(Role.ROLE_USER)
+            .failedLoginAttempts(1)
+            .build();
+
+    when(userRepository.findByEmailAndDeletedFalse("user@example.com")).thenReturn(Optional.of(user));
+    when(authManager.authenticate(any(UsernamePasswordAuthenticationToken.class)))
+        .thenThrow(new BadCredentialsException("bad credentials"));
+
+    assertThrows(
+        BadRequestException.class,
+        () ->
+            authService.login(
+                new LoginRequest("user@example.com", "wrong")));
+
+    assertEquals(2, user.getFailedLoginAttempts());
+    verify(userRepository).save(user);
+    verify(emailService, never())
+        .sendEmailWithAttachments(any(String.class), any(String.class), any(String.class), any(), any());
+  }
+
+  @Test
+  void loginShouldSendEmailAndBlockWhenThresholdIsReached() {
+    User user =
+        User.builder()
+            .id(5L)
+            .email("user@example.com")
+            .password("encoded")
+            .role(Role.ROLE_USER)
+            .failedLoginAttempts(4)
+            .build();
+
+    when(userRepository.findByEmailAndDeletedFalse("user@example.com")).thenReturn(Optional.of(user));
+    when(authManager.authenticate(any(UsernamePasswordAuthenticationToken.class)))
+        .thenThrow(new BadCredentialsException("bad credentials"));
+
+    BadRequestException exception =
+        assertThrows(
+            BadRequestException.class,
+            () ->
+                authService.login(
+                    new LoginRequest("user@example.com", "wrong")));
+
+    assertEquals("Too many failed login attempts. Please contact the Administrator.", exception.getMessage());
+    assertEquals(5, user.getFailedLoginAttempts());
+    verify(emailService)
+        .sendEmailWithAttachments(
+            any(String.class), any(String.class), any(String.class), any(), any());
+  }
+
+  @Test
+  void loginShouldBlockImmediatelyWhenUserAlreadyReachedThreshold() {
+    User user =
+        User.builder()
+            .id(6L)
+            .email("user@example.com")
+            .password("encoded")
+            .role(Role.ROLE_USER)
+            .failedLoginAttempts(5)
+            .build();
+
+    when(userRepository.findByEmailAndDeletedFalse("user@example.com")).thenReturn(Optional.of(user));
+
+    BadRequestException exception =
+        assertThrows(
+            BadRequestException.class,
+            () ->
+                authService.login(
+                    new LoginRequest("user@example.com", "password")));
+
+    assertEquals("Too many failed login attempts. Please contact the Administrator.", exception.getMessage());
+    verify(authManager, never()).authenticate(any(UsernamePasswordAuthenticationToken.class));
   }
 
   @Test
