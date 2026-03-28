@@ -5,7 +5,6 @@ import com.familywishes.entity.enums.EmailType;
 import jakarta.persistence.*;
 import java.time.LocalDateTime;
 import lombok.*;
-import org.hibernate.annotations.JdbcTypeCode;
 
 @Entity
 @Table(name = "email_logs")
@@ -44,9 +43,8 @@ public class EmailLog {
 
   private LocalDateTime sentAt;
 
-  @JdbcTypeCode(java.sql.Types.VARBINARY)
-  @Column(name = "image_data")
-  private byte[] imageData;
+  @Column(name = "image_url", columnDefinition = "TEXT")
+  private String imageUrl;
 
   @PrePersist
   @PreUpdate
