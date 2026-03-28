@@ -7,6 +7,8 @@ Production-ready Spring Boot 3.x (Java 17) backend for family wish automation.
 - OTP login and forgot/reset password
 - Role-based user management
 - Event management + admin-managed festival seed table for scheduler templates
+- Calendarific festival sync (monthly)
+- Festival-to-Instagram-user mapping with auto-send scheduler
 - Gemini API wish generation
 - Quartz daily scheduler
 - SMTP email sending with retry and status tracking
@@ -21,6 +23,17 @@ Production-ready Spring Boot 3.x (Java 17) backend for family wish automation.
 - `DELETE /api/seed/special-events/{id}` (admin)
 
 These APIs manage data in the `seed_special_events` table used by the festival scheduler.
+
+## Festival APIs
+- `GET /api/festivals?month=MM` (authenticated, defaults to current IST month)
+- `POST /api/festival-wish-mappings` (admin, upsert mapping of festival -> Instagram user)
+- `GET /api/festival-wish-mappings` (admin)
+- `DELETE /api/festival-wish-mappings/{id}` (admin)
+
+Festival sync job:
+- Runs monthly via cron (`0 0 2 1 * ?`) and re-syncs Calendarific festival data for all months.
+- Existing rows are upserted by deterministic external event id.
+- Rows no longer present in latest sync are marked inactive.
 
 ### Do you need both `Event` and `SpecialEvent`?
 - `Event` is user-scoped and used by the daily email/AI wishes flow.
@@ -43,6 +56,9 @@ gradle clean bootJar
 - `MAIL_USERNAME`
 - `MAIL_PASSWORD`
 - `DB_URL`, `DB_USER`, `DB_PASS` for production profile
+- `CALENDARIFIC_API_KEY`
+- `CALENDARIFIC_COUNTRY` (default `IN`)
+- `CALENDARIFIC_API_URL` (default `https://calendarific.com/api/v2/holidays`)
 
 ## Database reference
 - Primary PostgreSQL database is hosted on Neon.

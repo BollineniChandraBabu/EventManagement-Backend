@@ -2,6 +2,7 @@ package com.familywishes.repository;
 
 import com.familywishes.entity.SpecialEvent;
 import java.util.List;
+import java.util.Optional;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -11,6 +12,10 @@ import org.springframework.data.repository.query.Param;
 public interface SpecialEventRepository extends JpaRepository<SpecialEvent, Long> {
 
   List<SpecialEvent> findByDayAndMonthAndActiveTrue(int day, int month);
+
+  List<SpecialEvent> findByMonthOrderByDayAscEventNameAsc(int month);
+
+  Optional<SpecialEvent> findByExternalEventId(String externalEventId);
 
   @Query(
       """

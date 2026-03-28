@@ -19,6 +19,8 @@ public class SpecialEvent {
   private String eventName;
   private int day;
   private int month;
+  private Integer year;
+  private String externalEventId;
 
   @Column(length = 1000)
   private String message;
