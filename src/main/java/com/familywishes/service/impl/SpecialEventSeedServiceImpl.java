@@ -7,6 +7,7 @@ import com.familywishes.entity.SpecialEvent;
 import com.familywishes.exception.NotFoundException;
 import com.familywishes.repository.SpecialEventRepository;
 import com.familywishes.service.SpecialEventSeedService;
+import java.time.LocalDate;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -24,8 +25,7 @@ public class SpecialEventSeedServiceImpl implements SpecialEventSeedService {
     SpecialEvent event =
         SpecialEvent.builder()
             .eventName(request.eventName())
-            .day(request.day())
-            .month(request.month())
+            .eventDate(request.eventDate())
             .message(request.message())
             .active(request.active())
             .build();
@@ -63,8 +63,8 @@ public class SpecialEventSeedServiceImpl implements SpecialEventSeedService {
   }
 
   @Override
-  public List<SpecialEventSeedResponse> listTodayActive(int day, int month) {
-    return specialEventRepository.findByDayAndMonthAndActiveTrue(day, month).stream()
+  public List<SpecialEventSeedResponse> listTodayActive(LocalDate eventDate) {
+    return specialEventRepository.findByEventDateAndActiveTrue(eventDate).stream()
         .map(this::toResponse)
         .toList();
   }
@@ -77,8 +77,7 @@ public class SpecialEventSeedServiceImpl implements SpecialEventSeedService {
             .orElseThrow(() -> new NotFoundException("Special event seed not found"));
 
     event.setEventName(request.eventName());
-    event.setDay(request.day());
-    event.setMonth(request.month());
+    event.setEventDate(request.eventDate());
     event.setMessage(request.message());
     event.setActive(request.active());
 
@@ -97,8 +96,7 @@ public class SpecialEventSeedServiceImpl implements SpecialEventSeedService {
     return new SpecialEventSeedResponse(
         event.getId(),
         event.getEventName(),
-        event.getDay(),
-        event.getMonth(),
+        event.getEventDate(),
         event.getMessage(),
         event.isActive());
   }

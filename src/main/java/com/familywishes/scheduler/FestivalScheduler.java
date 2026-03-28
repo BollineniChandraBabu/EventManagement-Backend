@@ -1,65 +1,61 @@
 package com.familywishes.scheduler;
 
-import com.familywishes.entity.InstagramUser;
-import com.familywishes.entity.MessageLog;
-import com.familywishes.entity.MessageStatus;
-import com.familywishes.entity.SpecialEvent;
-import com.familywishes.repository.IGMessageLogRepository;
-import com.familywishes.repository.InstagramUserRepository;
-import com.familywishes.repository.SpecialEventRepository;
+import com.familywishes.entity.FestivalWishMapping;
+import com.familywishes.repository.FestivalWishMappingRepository;
+import com.familywishes.service.GmailEmailService;
 import com.familywishes.service.SchedulerTrackingService;
-import com.familywishes.service.impl.MessageDispatcher;
-import com.familywishes.util.TimeUtil;
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
-import org.springframework.scheduling.annotation.Scheduled;
+import lombok.extern.slf4j.Slf4j;
+import org.quartz.Job;
+import org.quartz.JobExecutionContext;
 import org.springframework.stereotype.Component;
 
 @Component
 @RequiredArgsConstructor
-public class FestivalScheduler {
+@Slf4j
+public class FestivalScheduler implements Job {
 
-  private final SpecialEventRepository eventRepo;
-  private final InstagramUserRepository userRepo;
-  private final IGMessageLogRepository logRepo;
-  private final MessageDispatcher dispatcher;
-  private final TimeUtil timeUtil;
+  private final FestivalWishMappingRepository mappingRepository;
+  private final GmailEmailService gmailEmailService;
   private final SchedulerTrackingService schedulerTrackingService;
 
-  @Scheduled(cron = "0 30 7 * * ?", zone = "${scheduler.time-zone}")
-  public void sendFestivalWishes() {
-    schedulerTrackingService.track(
-        "instagramFestivalScheduler",
-        () -> {
-          LocalDate today = LocalDate.now(ZoneId.of("Asia/Kolkata"));
+  @Override
+  public void execute(JobExecutionContext context) {
+    schedulerTrackingService.track("festivalWishScheduler", this::sendFestivalWishes);
+  }
 
-          List<SpecialEvent> events =
-              eventRepo.findByDayAndMonthAndActiveTrue(
-                  today.getDayOfMonth(), today.getMonthValue());
+  void sendFestivalWishes() {
+    LocalDate today = LocalDate.now(ZoneId.of("Asia/Kolkata"));
 
-          if (events.isEmpty()) return;
+    List<FestivalWishMapping> mappings =
+        mappingRepository.findBySpecialEvent_EventDateAndActiveTrue(today);
 
-          List<InstagramUser> users = userRepo.findAll();
+    if (mappings.isEmpty()) {
+      return;
+    }
 
-          for (SpecialEvent event : events) {
-            for (InstagramUser user : users) {
+    for (FestivalWishMapping mapping : mappings) {
+      if (today.equals(mapping.getLastWishSentOn())) {
+        continue;
+      }
 
-              if (timeUtil.canSend(user.getLastUserMessageTime())) {
+      String body =
+          mapping.getCustomMessage() != null && !mapping.getCustomMessage().isBlank()
+              ? mapping.getCustomMessage()
+              : mapping.getSpecialEvent().getMessage();
 
-                MessageLog log = new MessageLog();
-                log.setInstagramUserId(user.getInstagramUserId());
-                log.setMessage(event.getMessage());
-                log.setStatus(MessageStatus.PENDING);
-                log.setCreatedAt(LocalDateTime.now(ZoneId.of("Asia/Kolkata")));
+      gmailEmailService.sendEmailWithAttachments(
+          mapping.getUser().getEmail(), "Happy " + mapping.getSpecialEvent().getEventName(), body, null, null);
 
-                logRepo.save(log);
-                dispatcher.sendAsync(log);
-              }
-            }
-          }
-        });
+      mapping.setLastWishSentOn(today);
+      mappingRepository.save(mapping);
+      log.info(
+          "Festival wish sent for event {} to user {}",
+          mapping.getSpecialEvent().getEventName(),
+          mapping.getUser().getEmail());
+    }
   }
 }
