@@ -43,6 +43,7 @@ public class GmailEmailServiceImpl implements GmailEmailService {
   private final EventTypeSeedRepository eventTypeSeedRepository;
 
   private final Gmail gmail;
+  private final SupabaseStorageService supabaseStorageService;
 
   @Value("${gmail.from-email}")
   private String senderEmail;
@@ -72,7 +73,8 @@ public class GmailEmailServiceImpl implements GmailEmailService {
 
     try {
 
-      MimeMessage mimeMessage = createMimeMessage(to, subject, html, image);
+      byte[] imageForEmail = resolveImageForEmail(logEntry, image);
+      MimeMessage mimeMessage = createMimeMessage(to, subject, html, imageForEmail);
 
       ByteArrayOutputStream buffer = new ByteArrayOutputStream();
 
@@ -87,7 +89,9 @@ public class GmailEmailServiceImpl implements GmailEmailService {
       gmail.users().messages().send("me", message).execute();
 
       logEntry.setBody(html);
-      logEntry.setImageData(image);
+      if (image != null) {
+        logEntry.setImageUrl(supabaseStorageService.uploadEmailImage(image, logEntry.getEmailType()));
+      }
       logEntry.setStatus(EmailStatus.SENT);
 
       logEntry.setSentAt(LocalDateTime.now(ZoneId.of("Asia/Kolkata")));
@@ -101,13 +105,24 @@ public class GmailEmailServiceImpl implements GmailEmailService {
       logEntry.setStatus(EmailStatus.FAILED);
 
       logEntry.setBody(html);
-      logEntry.setImageData(image);
+      if (image != null) {
+        logEntry.setImageUrl(supabaseStorageService.uploadEmailImage(image, logEntry.getEmailType()));
+      }
       logEntry.setRetryCount(logEntry.getRetryCount() + 1);
 
       logEntry.setErrorMessage(e.getMessage());
     }
 
     logRepository.save(logEntry);
+  }
+
+
+  private byte[] resolveImageForEmail(EmailLog logEntry, byte[] incomingImage) {
+    if (incomingImage != null && incomingImage.length > 0) {
+      return incomingImage;
+    }
+
+    return supabaseStorageService.downloadImage(logEntry.getImageUrl());
   }
 
   // ==========================
@@ -170,7 +185,7 @@ public class GmailEmailServiceImpl implements GmailEmailService {
                     log.getSubject(),
                     log.getBody(),
                     log.getId(),
-                    log.getImageData()));
+                    null));
   }
 
   // ==========================
@@ -275,7 +290,7 @@ public class GmailEmailServiceImpl implements GmailEmailService {
         log.getRecipientEmail(),
         log.getSubject(),
         log.getBody(),
-        log.getImageData(),
+        log.getImageUrl(),
         log.getStatus().name(),
         log.getEmailType() == null ? EmailType.EVENT.name() : log.getEmailType().name(),
         log.getSentAt());

@@ -25,6 +25,7 @@ import org.springframework.web.client.RestTemplate;
 public class BrevoEmailServiceImpl implements BrevoEmailService {
   private final EmailLogRepository logRepository;
   private final RestTemplate restTemplate;
+  private final SupabaseStorageService supabaseStorageService;
 
   @Value("${brevo.api.key}")
   private String brevoApiKey;
@@ -89,6 +90,9 @@ public class BrevoEmailServiceImpl implements BrevoEmailService {
       ResponseEntity<String> response = restTemplate.postForEntity(brevoUrl, request, String.class);
       // SUCCESS
       logEntry.setBody(html);
+      if (image != null) {
+        logEntry.setImageUrl(supabaseStorageService.uploadEmailImage(image, logEntry.getEmailType()));
+      }
       logEntry.setStatus(EmailStatus.SENT);
       logEntry.setSentAt(LocalDateTime.now(ZoneId.of("Asia/Kolkata")));
       log.info("Email sent: {}", response.getBody());
@@ -96,6 +100,9 @@ public class BrevoEmailServiceImpl implements BrevoEmailService {
       log.error("mail send failed", e);
       logEntry.setStatus(EmailStatus.FAILED);
       logEntry.setBody(html);
+      if (image != null) {
+        logEntry.setImageUrl(supabaseStorageService.uploadEmailImage(image, logEntry.getEmailType()));
+      }
       logEntry.setRetryCount(logEntry.getRetryCount() + 1);
       logEntry.setErrorMessage(e.getMessage());
     }
@@ -128,7 +135,7 @@ public class BrevoEmailServiceImpl implements BrevoEmailService {
                   emailLog.getRecipientEmail(),
                   emailLog.getSubject(),
                   emailLog.getBody(),
-                  emailLog.getImageData(),
+                  emailLog.getImageUrl(),
                   emailLog.getStatus().name(),
                   emailLog.getEmailType() == null
                       ? EmailType.EVENT.name()
