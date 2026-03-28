@@ -3,12 +3,12 @@ package com.familywishes.service.impl;
 import com.familywishes.dto.FestivalDtos.FestivalWishMappingRequest;
 import com.familywishes.dto.FestivalDtos.FestivalWishMappingResponse;
 import com.familywishes.entity.FestivalWishMapping;
-import com.familywishes.entity.InstagramUser;
 import com.familywishes.entity.SpecialEvent;
+import com.familywishes.entity.User;
 import com.familywishes.exception.NotFoundException;
 import com.familywishes.repository.FestivalWishMappingRepository;
-import com.familywishes.repository.InstagramUserRepository;
 import com.familywishes.repository.SpecialEventRepository;
+import com.familywishes.repository.UserRepository;
 import com.familywishes.service.FestivalWishMappingService;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
@@ -20,7 +20,7 @@ public class FestivalWishMappingServiceImpl implements FestivalWishMappingServic
 
   private final FestivalWishMappingRepository mappingRepository;
   private final SpecialEventRepository specialEventRepository;
-  private final InstagramUserRepository instagramUserRepository;
+  private final UserRepository userRepository;
 
   @Override
   public FestivalWishMappingResponse upsert(FestivalWishMappingRequest request) {
@@ -29,18 +29,16 @@ public class FestivalWishMappingServiceImpl implements FestivalWishMappingServic
             .findById(request.specialEventId())
             .orElseThrow(() -> new NotFoundException("Festival not found"));
 
-    InstagramUser instagramUser =
-        instagramUserRepository
-            .findById(request.instagramUserId())
-            .orElseThrow(() -> new NotFoundException("Instagram user not found"));
+    User user =
+        userRepository.findById(request.userId()).orElseThrow(() -> new NotFoundException("User not found"));
 
     FestivalWishMapping mapping =
         mappingRepository
-            .findBySpecialEvent_IdAndInstagramUser_Id(request.specialEventId(), request.instagramUserId())
+            .findBySpecialEvent_IdAndUser_Id(request.specialEventId(), request.userId())
             .orElseGet(FestivalWishMapping::new);
 
     mapping.setSpecialEvent(specialEvent);
-    mapping.setInstagramUser(instagramUser);
+    mapping.setUser(user);
     mapping.setCustomMessage(request.customMessage());
     mapping.setActive(request.active());
 
@@ -65,8 +63,8 @@ public class FestivalWishMappingServiceImpl implements FestivalWishMappingServic
         mapping.getId(),
         mapping.getSpecialEvent().getId(),
         mapping.getSpecialEvent().getEventName(),
-        mapping.getInstagramUser().getId(),
-        mapping.getInstagramUser().getName(),
+        mapping.getUser().getId(),
+        mapping.getUser().getName(),
         mapping.getCustomMessage(),
         mapping.isActive());
   }

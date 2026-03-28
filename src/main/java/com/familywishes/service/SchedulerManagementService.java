@@ -6,8 +6,6 @@ import com.familywishes.dto.SchedulerDtos.SchedulerTriggerResponse;
 import com.familywishes.exception.NotFoundException;
 import com.familywishes.scheduler.BirthdayScheduler;
 import com.familywishes.scheduler.EmailAlertScheduler;
-import com.familywishes.scheduler.FestivalScheduler;
-import com.familywishes.scheduler.FestivalSyncScheduler;
 import com.familywishes.scheduler.RetryScheduler;
 import java.time.Instant;
 import java.time.ZoneId;
@@ -35,8 +33,6 @@ public class SchedulerManagementService {
   private final Scheduler quartzScheduler;
   private final SchedulerTrackingService trackingService;
   private final BirthdayScheduler birthdayScheduler;
-  private final FestivalScheduler festivalScheduler;
-  private final FestivalSyncScheduler festivalSyncScheduler;
   private final RetryScheduler retryScheduler;
   private final EmailAlertScheduler emailAlertScheduler;
 
@@ -53,13 +49,6 @@ public class SchedulerManagementService {
         "instagramBirthdayScheduler",
         new ManualSchedulerDefinition(
             birthdayScheduler::sendBirthdayWishes, "0 0 7 * * ?", schedulerZone));
-    jobs.put(
-        "instagramFestivalScheduler",
-        new ManualSchedulerDefinition(
-            festivalScheduler::sendFestivalWishes, "0 30 7 * * ?", schedulerZone));
-    jobs.put(
-        "festivalMonthlySyncScheduler",
-        new ManualSchedulerDefinition(festivalSyncScheduler::syncFestivals, "0 0 2 1 * ?", schedulerZone));
     jobs.put(
         "instagramRetryScheduler",
         new ManualSchedulerDefinition(

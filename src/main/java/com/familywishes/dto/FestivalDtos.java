@@ -9,7 +9,7 @@ public class FestivalDtos {
 
   public record FestivalWishMappingRequest(
       @NotNull Long specialEventId,
-      @NotNull Long instagramUserId,
+      @NotNull Long userId,
       String customMessage,
       @NotNull Boolean active) {}
 
@@ -17,8 +17,8 @@ public class FestivalDtos {
       Long id,
       Long specialEventId,
       String festivalName,
-      Long instagramUserId,
-      String instagramUserName,
+      Long userId,
+      String userName,
       String customMessage,
       boolean active) {}
 }

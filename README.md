@@ -8,7 +8,7 @@ Production-ready Spring Boot 3.x (Java 17) backend for family wish automation.
 - Role-based user management
 - Event management + admin-managed festival seed table for scheduler templates
 - Calendarific festival sync (monthly)
-- Festival-to-Instagram-user mapping with auto-send scheduler
+- Festival-to-user mapping with auto-send scheduler
 - Gemini API wish generation
 - Quartz daily scheduler
 - SMTP email sending with retry and status tracking
@@ -26,7 +26,7 @@ These APIs manage data in the `seed_special_events` table used by the festival s
 
 ## Festival APIs
 - `GET /api/festivals?month=MM` (authenticated, defaults to current IST month)
-- `POST /api/festival-wish-mappings` (admin, upsert mapping of festival -> Instagram user)
+- `POST /api/festival-wish-mappings` (admin, upsert mapping of festival -> user)
 - `GET /api/festival-wish-mappings` (admin)
 - `DELETE /api/festival-wish-mappings/{id}` (admin)
 

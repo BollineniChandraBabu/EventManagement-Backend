@@ -109,4 +109,44 @@ public class WishesSchedulerConfig {
                 .withMisfireHandlingInstructionFireAndProceed())
         .build();
   }
+
+  @Bean
+  public JobDetail festivalWishJobDetail() {
+    return JobBuilder.newJob(FestivalScheduler.class)
+        .withIdentity("festivalWishScheduler")
+        .storeDurably()
+        .build();
+  }
+
+  @Bean
+  public Trigger festivalWishTrigger() {
+    return TriggerBuilder.newTrigger()
+        .forJob(festivalWishJobDetail())
+        .withIdentity("festivalWishTrigger")
+        .withSchedule(
+            CronScheduleBuilder.cronSchedule("0 30 7 * * ?")
+                .inTimeZone(TimeZone.getTimeZone("Asia/Kolkata"))
+                .withMisfireHandlingInstructionFireAndProceed())
+        .build();
+  }
+
+  @Bean
+  public JobDetail festivalSyncJobDetail() {
+    return JobBuilder.newJob(FestivalSyncScheduler.class)
+        .withIdentity("festivalMonthlySyncScheduler")
+        .storeDurably()
+        .build();
+  }
+
+  @Bean
+  public Trigger festivalSyncTrigger() {
+    return TriggerBuilder.newTrigger()
+        .forJob(festivalSyncJobDetail())
+        .withIdentity("festivalMonthlySyncTrigger")
+        .withSchedule(
+            CronScheduleBuilder.cronSchedule("0 0 2 1 * ?")
+                .inTimeZone(TimeZone.getTimeZone("Asia/Kolkata"))
+                .withMisfireHandlingInstructionFireAndProceed())
+        .build();
+  }
 }

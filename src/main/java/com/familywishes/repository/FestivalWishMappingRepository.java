@@ -10,5 +10,5 @@ public interface FestivalWishMappingRepository extends JpaRepository<FestivalWis
 
   List<FestivalWishMapping> findBySpecialEvent_EventDateAndActiveTrue(LocalDate eventDate);
 
-  Optional<FestivalWishMapping> findBySpecialEvent_IdAndInstagramUser_Id(Long specialEventId, Long instagramUserId);
+  Optional<FestivalWishMapping> findBySpecialEvent_IdAndUser_Id(Long specialEventId, Long userId);
 }

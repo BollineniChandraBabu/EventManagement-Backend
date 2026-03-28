@@ -1,6 +1,7 @@
 package com.familywishes.entity;
 
 import jakarta.persistence.*;
+import java.time.LocalDate;
 import lombok.*;
 
 @Entity
@@ -9,7 +10,7 @@ import lombok.*;
     uniqueConstraints =
         @UniqueConstraint(
             name = "uk_festival_user_mapping",
-            columnNames = {"special_event_id", "instagram_user_id"}))
+            columnNames = {"special_event_id", "user_id"}))
 @Getter
 @Setter
 @Builder
@@ -26,11 +27,13 @@ public class FestivalWishMapping {
   private SpecialEvent specialEvent;
 
   @ManyToOne(fetch = FetchType.LAZY)
-  @JoinColumn(name = "instagram_user_id", nullable = false)
-  private InstagramUser instagramUser;
+  @JoinColumn(name = "user_id", nullable = false)
+  private User user;
 
   @Column(length = 1000)
   private String customMessage;
+
+  private LocalDate lastWishSentOn;
 
   @Builder.Default private boolean active = true;
 }
