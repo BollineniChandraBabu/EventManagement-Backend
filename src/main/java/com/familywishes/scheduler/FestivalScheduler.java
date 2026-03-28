@@ -34,8 +34,7 @@ public class FestivalScheduler {
           LocalDate today = LocalDate.now(ZoneId.of("Asia/Kolkata"));
 
           List<FestivalWishMapping> mappings =
-              mappingRepository.findBySpecialEvent_DayAndSpecialEvent_MonthAndActiveTrue(
-                  today.getDayOfMonth(), today.getMonthValue());
+              mappingRepository.findBySpecialEvent_EventDateAndActiveTrue(today);
 
           if (mappings.isEmpty()) return;
 

@@ -1,6 +1,7 @@
 package com.familywishes.entity;
 
 import jakarta.persistence.*;
+import java.time.LocalDate;
 import lombok.*;
 
 @Entity
@@ -17,9 +18,7 @@ public class SpecialEvent {
   private Long id;
 
   private String eventName;
-  private int day;
-  private int month;
-  private Integer year;
+  private LocalDate eventDate;
   private String externalEventId;
 
   @Column(length = 1000)

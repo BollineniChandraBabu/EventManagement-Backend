@@ -1,10 +1,11 @@
 package com.familywishes.dto;
 
 import jakarta.validation.constraints.NotNull;
+import java.time.LocalDate;
 
 public class FestivalDtos {
 
-  public record FestivalResponse(Long id, String eventName, int day, int month, Integer year, boolean active) {}
+  public record FestivalResponse(Long id, String eventName, LocalDate eventDate, boolean active) {}
 
   public record FestivalWishMappingRequest(
       @NotNull Long specialEventId,

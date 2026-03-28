@@ -4,6 +4,7 @@ import com.familywishes.dto.FestivalDtos.FestivalResponse;
 import com.familywishes.entity.SpecialEvent;
 import com.familywishes.repository.SpecialEventRepository;
 import com.familywishes.service.FestivalService;
+import java.time.LocalDate;
 import java.time.Year;
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -40,8 +41,8 @@ public class FestivalServiceImpl implements FestivalService {
   private String calendarificCountry;
 
   @Override
-  public List<FestivalResponse> listByMonth(int month) {
-    return specialEventRepository.findByMonthOrderByDayAscEventNameAsc(month).stream()
+  public List<FestivalResponse> listByMonth(Integer month) {
+    return specialEventRepository.findByMonth(month).stream()
         .map(this::toFestivalResponse)
         .toList();
   }
@@ -56,20 +57,18 @@ public class FestivalServiceImpl implements FestivalService {
     int year = Year.now().getValue();
     Set<String> seenExternalIds = new HashSet<>();
 
-    for (int month = 1; month <= 12; month++) {
-      try {
-        List<Map<String, Object>> holidays = fetchHolidays(year, month);
-        upsertFestivals(year, month, holidays, seenExternalIds);
-      } catch (Exception ex) {
-        log.error("Calendarific sync failed for month {}", month, ex);
-      }
+    try {
+      List<Map<String, Object>> holidays = fetchHolidays(year);
+      upsertFestivals(holidays, seenExternalIds);
+    } catch (Exception ex) {
+      log.error("Calendarific sync failed", ex);
     }
 
     List<SpecialEvent> allEvents = specialEventRepository.findAll();
     for (SpecialEvent event : allEvents) {
       if (event.getExternalEventId() != null
-          && event.getYear() != null
-          && event.getYear() == year
+          && event.getEventDate() != null
+          && event.getEventDate().getYear() == year
           && !seenExternalIds.contains(event.getExternalEventId())) {
         event.setActive(false);
       }
@@ -77,13 +76,12 @@ public class FestivalServiceImpl implements FestivalService {
     specialEventRepository.saveAll(allEvents);
   }
 
-  private List<Map<String, Object>> fetchHolidays(int year, int month) {
+  private List<Map<String, Object>> fetchHolidays(int year) {
     String url =
         UriComponentsBuilder.fromHttpUrl(calendarificUrl)
             .queryParam("api_key", calendarificApiKey)
             .queryParam("country", calendarificCountry)
             .queryParam("year", year)
-            .queryParam("month", month)
             .toUriString();
 
     ResponseEntity<Map<String, Object>> response =
@@ -120,17 +118,17 @@ public class FestivalServiceImpl implements FestivalService {
     return result;
   }
 
-  private void upsertFestivals(
-      int year, int month, List<Map<String, Object>> holidays, Set<String> seenExternalIds) {
+  private void upsertFestivals(List<Map<String, Object>> holidays, Set<String> seenExternalIds) {
     for (Map<String, Object> holiday : holidays) {
       String name = String.valueOf(holiday.getOrDefault("name", "Festival"));
+      String urlId = String.valueOf(holiday.getOrDefault("urlid", ""));
 
-      Integer day = extractDay(holiday);
-      if (day == null) {
+      LocalDate eventDate = extractDate(holiday);
+      if (eventDate == null) {
         continue;
       }
 
-      String externalEventId = buildExternalEventId(year, month, day, name);
+      String externalEventId = buildExternalEventId(urlId, eventDate, name);
       seenExternalIds.add(externalEventId);
 
       Optional<SpecialEvent> existing = specialEventRepository.findByExternalEventId(externalEventId);
@@ -138,9 +136,7 @@ public class FestivalServiceImpl implements FestivalService {
       SpecialEvent specialEvent = existing.orElseGet(SpecialEvent::new);
       specialEvent.setExternalEventId(externalEventId);
       specialEvent.setEventName(name);
-      specialEvent.setDay(day);
-      specialEvent.setMonth(month);
-      specialEvent.setYear(year);
+      specialEvent.setEventDate(eventDate);
       if (!StringUtils.hasText(specialEvent.getMessage())) {
         specialEvent.setMessage("Happy " + name + "! Wishing you joy and prosperity.");
       }
@@ -149,41 +145,44 @@ public class FestivalServiceImpl implements FestivalService {
     }
   }
 
-  private Integer extractDay(Map<String, Object> holiday) {
+  private LocalDate extractDate(Map<String, Object> holiday) {
     Object dateNode = holiday.get("date");
     if (!(dateNode instanceof Map<?, ?> dateMap)) {
       return null;
     }
 
-    Object datetimeNode = dateMap.get("datetime");
-    if (!(datetimeNode instanceof Map<?, ?> datetimeMap)) {
-      return null;
-    }
-
-    Object dayNode = datetimeMap.get("day");
-    if (dayNode instanceof Number n) {
-      return n.intValue();
+    Object isoNode = dateMap.get("iso");
+    if (isoNode != null) {
+      try {
+        return LocalDate.parse(String.valueOf(isoNode));
+      } catch (Exception ex) {
+        return null;
+      }
     }
 
     try {
-      return Integer.parseInt(String.valueOf(dayNode));
+      Object datetimeNode = dateMap.get("datetime");
+      if (!(datetimeNode instanceof Map<?, ?> datetimeMap)) {
+        return null;
+      }
+
+      int year = Integer.parseInt(String.valueOf(datetimeMap.get("year")));
+      int month = Integer.parseInt(String.valueOf(datetimeMap.get("month")));
+      int day = Integer.parseInt(String.valueOf(datetimeMap.get("day")));
+      return LocalDate.of(year, month, day);
     } catch (Exception ex) {
       return null;
     }
   }
 
-  private String buildExternalEventId(int year, int month, int day, String name) {
-    return year
+  private String buildExternalEventId(String urlId, LocalDate date, String name) {
+    String slugSource = StringUtils.hasText(urlId) ? urlId : name;
+    return date
         + "-"
-        + month
-        + "-"
-        + day
-        + "-"
-        + name.toLowerCase().replaceAll("[^a-z0-9]+", "-").replaceAll("(^-|-$)", "");
+        + slugSource.toLowerCase().replaceAll("[^a-z0-9/]+", "-").replace('/', '-');
   }
 
   private FestivalResponse toFestivalResponse(SpecialEvent event) {
-    return new FestivalResponse(
-        event.getId(), event.getEventName(), event.getDay(), event.getMonth(), event.getYear(), event.isActive());
+    return new FestivalResponse(event.getId(), event.getEventName(), event.getEventDate(), event.isActive());
   }
 }
