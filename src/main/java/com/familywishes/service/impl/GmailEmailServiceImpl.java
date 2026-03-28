@@ -290,7 +290,7 @@ public class GmailEmailServiceImpl implements GmailEmailService {
         log.getRecipientEmail(),
         log.getSubject(),
         log.getBody(),
-        log.getImageUrl(),
+        supabaseStorageService.downloadImage(log.getImageUrl()),
         log.getStatus().name(),
         log.getEmailType() == null ? EmailType.EVENT.name() : log.getEmailType().name(),
         log.getSentAt());
