@@ -22,7 +22,7 @@ public interface SpecialEventRepository extends JpaRepository<SpecialEvent, Long
             """)
   List<SpecialEvent> findByMonth(@Param("month") Integer month);
 
-  Optional<SpecialEvent> findByExternalEventId(String externalEventId);
+  Optional<SpecialEvent> findByEventNameIgnoreCase(String eventName);
 
   @Query(
       """

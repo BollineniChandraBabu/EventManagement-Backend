@@ -10,7 +10,6 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.Set;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -55,21 +54,20 @@ public class FestivalServiceImpl implements FestivalService {
     }
 
     int year = Year.now().getValue();
-    Set<String> seenExternalIds = new HashSet<>();
+    Set<String> seenFestivalNames = new HashSet<>();
 
     try {
       List<Map<String, Object>> holidays = fetchHolidays(year);
-      upsertFestivals(holidays, seenExternalIds);
+      upsertFestivals(holidays, seenFestivalNames);
     } catch (Exception ex) {
       log.error("Calendarific sync failed", ex);
     }
 
     List<SpecialEvent> allEvents = specialEventRepository.findAll();
     for (SpecialEvent event : allEvents) {
-      if (event.getExternalEventId() != null
-          && event.getEventDate() != null
+      if (event.getEventDate() != null
           && event.getEventDate().getYear() == year
-          && !seenExternalIds.contains(event.getExternalEventId())) {
+          && !seenFestivalNames.contains(normalizeFestivalName(event.getEventName()))) {
         event.setActive(false);
       }
     }
@@ -118,23 +116,21 @@ public class FestivalServiceImpl implements FestivalService {
     return result;
   }
 
-  private void upsertFestivals(List<Map<String, Object>> holidays, Set<String> seenExternalIds) {
+  private void upsertFestivals(List<Map<String, Object>> holidays, Set<String> seenFestivalNames) {
     for (Map<String, Object> holiday : holidays) {
       String name = String.valueOf(holiday.getOrDefault("name", "Festival"));
-      String urlId = String.valueOf(holiday.getOrDefault("urlid", ""));
+      String normalizedName = normalizeFestivalName(name);
 
       LocalDate eventDate = extractDate(holiday);
       if (eventDate == null) {
         continue;
       }
+      if (!seenFestivalNames.add(normalizedName)) {
+        continue;
+      }
 
-      String externalEventId = buildExternalEventId(urlId, eventDate, name);
-      seenExternalIds.add(externalEventId);
-
-      Optional<SpecialEvent> existing = specialEventRepository.findByExternalEventId(externalEventId);
-
-      SpecialEvent specialEvent = existing.orElseGet(SpecialEvent::new);
-      specialEvent.setExternalEventId(externalEventId);
+      SpecialEvent specialEvent =
+          specialEventRepository.findByEventNameIgnoreCase(name).orElseGet(SpecialEvent::new);
       specialEvent.setEventName(name);
       specialEvent.setEventDate(eventDate);
       if (!StringUtils.hasText(specialEvent.getMessage())) {
@@ -175,11 +171,8 @@ public class FestivalServiceImpl implements FestivalService {
     }
   }
 
-  private String buildExternalEventId(String urlId, LocalDate date, String name) {
-    String slugSource = StringUtils.hasText(urlId) ? urlId : name;
-    return date
-        + "-"
-        + slugSource.toLowerCase().replaceAll("[^a-z0-9/]+", "-").replace('/', '-');
+  private String normalizeFestivalName(String name) {
+    return StringUtils.hasText(name) ? name.trim().toLowerCase() : "";
   }
 
   private FestivalResponse toFestivalResponse(SpecialEvent event) {

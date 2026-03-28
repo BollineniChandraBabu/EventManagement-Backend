@@ -32,7 +32,7 @@ These APIs manage data in the `seed_special_events` table used by the festival s
 
 Festival sync job:
 - Runs monthly via cron (`0 0 2 1 * ?`) and re-syncs Calendarific festival data for all months.
-- Existing rows are upserted by deterministic external event id.
+- Existing rows are upserted by festival name and their dates are updated every year.
 - Rows no longer present in latest sync are marked inactive.
 
 ### Do you need both `Event` and `SpecialEvent`?
