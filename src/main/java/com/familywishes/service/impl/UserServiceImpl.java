@@ -66,7 +66,9 @@ public class UserServiceImpl implements UserService {
           user.getRelationShip().getCode(),
           user.getWishSettings().isGoodMorningEnabled(),
           user.getWishSettings().isGoodNightEnabled(),
-          user.getWishSettings().isBirthdayEnabled());
+          user.getWishSettings().isBirthdayEnabled(),
+          user.isOnline(),
+          user.getLastSeenAt());
     } else {
       return new UserResponse(
           user.getId(),
@@ -78,7 +80,9 @@ public class UserServiceImpl implements UserService {
           user.getRelationShip().getCode(),
           false,
           false,
-          false);
+          false,
+          user.isOnline(),
+          user.getLastSeenAt());
     }
   }
 
