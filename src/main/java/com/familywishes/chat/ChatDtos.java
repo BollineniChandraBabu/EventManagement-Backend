@@ -1,0 +1,53 @@
+package com.familywishes.chat;
+
+import jakarta.validation.constraints.NotNull;
+import java.time.LocalDateTime;
+import java.util.List;
+
+public class ChatDtos {
+
+  public record ChatUserResponse(Long userId, String name, String email, boolean online, LocalDateTime lastSeenAt) {}
+
+  public record SendMessageRequest(@NotNull Long receiverId, String messageText) {}
+
+  public record MessageResponse(
+      Long messageId,
+      Long conversationId,
+      Long senderId,
+      Long receiverId,
+      String messageText,
+      String attachmentKey,
+      String attachmentFileName,
+      String attachmentContentType,
+      LocalDateTime sentAt,
+      LocalDateTime seenAt,
+      boolean mine) {}
+
+  public record ConversationResponse(
+      Long conversationId,
+      Long otherUserId,
+      String otherUserName,
+      String otherUserEmail,
+      boolean otherUserOnline,
+      LocalDateTime otherUserLastSeenAt,
+      String lastMessage,
+      LocalDateTime lastMessageAt,
+      long unreadCount) {}
+
+  public record MessagePageResponse(List<MessageResponse> items, int page, int size, boolean hasNext) {}
+
+  public record GlobalMessageResponse(
+      Long messageId,
+      Long conversationId,
+      Long senderId,
+      String senderName,
+      Long receiverId,
+      String receiverName,
+      String messageText,
+      String attachmentFileName,
+      LocalDateTime sentAt,
+      LocalDateTime seenAt) {}
+
+  public record GlobalMessagePageResponse(
+      List<GlobalMessageResponse> items, int page, int size, boolean hasNext) {}
+}

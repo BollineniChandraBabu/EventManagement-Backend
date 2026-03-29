@@ -5,6 +5,7 @@ import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 
 public class UserDtos {
   public record UserRequest(
@@ -30,5 +31,7 @@ public class UserDtos {
       String relationShip,
       boolean isGoodMorningEnabled,
       boolean isGoodNightEnabled,
-      boolean isBirthdayEnabled) {}
+      boolean isBirthdayEnabled,
+      boolean online,
+      LocalDateTime lastSeenAt) {}
 }

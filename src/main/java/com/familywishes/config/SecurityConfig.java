@@ -39,7 +39,8 @@ public class SecurityConfig {
                         "/google/**",
                         "/oauth2callback",
                         "/gmail/**",
-                        "/instagram/**")
+                        "/instagram/**",
+                        "/ws-chat/**")
                     .permitAll()
                     .anyRequest()
                     .authenticated())

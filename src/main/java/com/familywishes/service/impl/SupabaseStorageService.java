@@ -8,6 +8,7 @@ import java.util.UUID;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
 import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
 import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;
 import software.amazon.awssdk.core.sync.RequestBody;
@@ -58,6 +59,34 @@ public class SupabaseStorageService {
 
     s3Client.putObject(request, RequestBody.fromBytes(imageData));
     return objectKey;
+  }
+
+
+  public String uploadChatAttachment(MultipartFile file) {
+    if (file == null || file.isEmpty()) {
+      return null;
+    }
+
+    try {
+      String original =
+          file.getOriginalFilename() == null ? "attachment" : file.getOriginalFilename();
+      String safeName = original.replaceAll("[^a-zA-Z0-9._-]", "_");
+      String datePrefix = LocalDate.now().format(DateTimeFormatter.ISO_DATE);
+      String objectKey = "Chat/" + datePrefix + "/" + UUID.randomUUID() + "-" + safeName;
+
+      PutObjectRequest request =
+          PutObjectRequest.builder()
+              .bucket(bucket)
+              .key(objectKey)
+              .contentType(file.getContentType())
+              .build();
+
+      s3Client.putObject(request, RequestBody.fromBytes(file.getBytes()));
+      return objectKey;
+    } catch (Exception ex) {
+      log.error("Failed to upload chat attachment", ex);
+      return null;
+    }
   }
 
   public byte[] downloadImage(String objectKey) {

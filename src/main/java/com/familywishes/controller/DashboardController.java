@@ -1,5 +1,7 @@
 package com.familywishes.controller;
 
+import com.familywishes.chat.ChatDtos;
+import com.familywishes.chat.ChatService;
 import com.familywishes.dto.DashboardDtos.DashboardGraphResponse;
 import com.familywishes.dto.DashboardDtos.DashboardResponse;
 import com.familywishes.service.DashboardService;
@@ -17,6 +19,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RequiredArgsConstructor
 public class DashboardController {
   private final DashboardService dashboardService;
+  private final ChatService chatService;
 
   @GetMapping(value = "/mail")
   public DashboardResponse getMailDashboard(Authentication authentication) {
@@ -69,6 +72,19 @@ public class DashboardController {
   public DashboardGraphResponse forgotPasswordMailChart(
       @RequestParam(defaultValue = "7") int days) {
     return dashboardService.getForgotPasswordChart(days);
+  }
+
+  @GetMapping("/chat/messages")
+  public ChatDtos.GlobalMessagePageResponse chatMessages(
+      @RequestParam(defaultValue = "0") int page,
+      @RequestParam(defaultValue = "50") int size,
+      @RequestParam(defaultValue = "") String searchKey) {
+    return chatService.listAllMessages(page, size, searchKey);
+  }
+
+  @GetMapping("/chat/users/active")
+  public java.util.List<ChatDtos.ChatUserResponse> activeChatUsers() {
+    return chatService.listActiveUsers();
   }
 
   private boolean isAdmin(Authentication authentication) {

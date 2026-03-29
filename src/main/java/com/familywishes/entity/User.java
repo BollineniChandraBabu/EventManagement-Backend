@@ -56,6 +56,12 @@ public class User {
 
   @Column private LocalDate lastBirthdayWishSent;
 
+  @Column(nullable = false)
+  @Builder.Default
+  private boolean online = false;
+
+  @Column private LocalDateTime lastSeenAt;
+
   @OneToOne(mappedBy = "user", cascade = CascadeType.ALL)
   private UserWishSettings wishSettings;
 
