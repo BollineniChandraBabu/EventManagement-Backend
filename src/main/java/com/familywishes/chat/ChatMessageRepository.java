@@ -127,6 +127,7 @@ public class ChatMessageRepository {
                CASE WHEN c.user_a_id = :me THEN c.user_b_id ELSE c.user_a_id END AS other_user_id,
                m.message_text,
                m.sent_at,
+               m.seen_at,
                (
                  SELECT count(1)
                    FROM chat_messages um
@@ -136,7 +137,7 @@ public class ChatMessageRepository {
                ) AS unread_count
           FROM chat_conversations c
           JOIN LATERAL (
-            SELECT message_text, sent_at
+            SELECT message_text, sent_at, seen_at
               FROM chat_messages
              WHERE conversation_id = c.id
              ORDER BY sent_at DESC
@@ -146,6 +147,31 @@ public class ChatMessageRepository {
          ORDER BY m.sent_at DESC
         """,
         Map.of("me", me));
+  }
+
+  public DeleteMessageResponse deleteLastSentMessage(Long conversationId, Long senderId, LocalDateTime deletedAt) {
+    List<DeleteMessageResponse> deleted =
+        chatJdbc.query(
+            """
+            DELETE FROM chat_messages
+             WHERE id = (
+               SELECT id
+                 FROM chat_messages
+                WHERE conversation_id = :conversationId
+                  AND sender_id = :senderId
+                ORDER BY sent_at DESC, id DESC
+                LIMIT 1
+             )
+             RETURNING id, conversation_id
+            """,
+            new MapSqlParameterSource()
+                .addValue("conversationId", conversationId)
+                .addValue("senderId", senderId),
+            (rs, rowNum) ->
+                new DeleteMessageResponse(
+                    rs.getLong("id"), rs.getLong("conversation_id"), deletedAt));
+
+    return deleted.isEmpty() ? null : deleted.get(0);
   }
 
   public String findAttachmentKeyByMessageIdForUser(Long messageId, Long userId) {

@@ -187,6 +187,7 @@ public class ChatServiceImpl implements ChatService {
                   other.getLastSeenAt(),
                   (String) row.get("message_text"),
                   toLocalDateTime(row.get("sent_at")),
+                  toLocalDateTime(row.get("seen_at")),
                   ((Number) row.get("unread_count")).longValue());
             })
         .toList();
@@ -279,6 +280,28 @@ public class ChatServiceImpl implements ChatService {
       throw new NotFoundException("Attachment not found");
     }
     return data;
+  }
+
+  @Override
+  @Transactional
+  public DeleteMessageResponse deleteLastSentMessage(Long otherUserId) {
+    User me = currentUser();
+    User other =
+        userRepository
+            .findById(otherUserId)
+            .filter(u -> !u.isDeleted() && u.isActive())
+            .orElseThrow(() -> new NotFoundException("User not found"));
+
+    Long conversationId = resolveConversationId(me.getId(), other.getId());
+    LocalDateTime deletedAt = nowIst();
+    DeleteMessageResponse deleted =
+        chatMessageRepository.deleteLastSentMessage(conversationId, me.getId(), deletedAt);
+    if (deleted == null) {
+      throw new NotFoundException("No sent message found to delete");
+    }
+
+    realtimePublisher.publishMessageDeleted(deleted.conversationId(), deleted.messageId(), me.getId());
+    return deleted;
   }
 
   private Long resolveConversationId(Long user1, Long user2) {
