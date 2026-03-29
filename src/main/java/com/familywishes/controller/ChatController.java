@@ -54,6 +54,17 @@ public class ChatController {
     return chatService.downloadAttachment(messageId);
   }
 
+  @DeleteMapping("/messages/last/{otherUserId}")
+  public ChatDtos.DeleteMessageResponse deleteLastSentMessage(@PathVariable Long otherUserId) {
+    return chatService.deleteLastSentMessage(otherUserId);
+  }
+
+  @PatchMapping("/messages/{messageId}")
+  public ChatDtos.MessageResponse editMessage(
+      @PathVariable Long messageId, @RequestBody @Valid ChatDtos.EditMessageRequest payload) {
+    return chatService.editMessage(messageId, payload);
+  }
+
   @PostMapping("/presence/heartbeat")
   public void heartbeat() {
     chatService.heartbeat();

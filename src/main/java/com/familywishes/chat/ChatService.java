@@ -30,4 +30,8 @@ public interface ChatService {
   void markConversationSeen(Long viewerId, Long otherUserId);
 
   byte[] downloadAttachment(Long messageId);
+
+  DeleteMessageResponse deleteLastSentMessage(Long otherUserId);
+
+  MessageResponse editMessage(Long messageId, EditMessageRequest request);
 }

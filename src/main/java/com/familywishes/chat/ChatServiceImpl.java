@@ -187,6 +187,7 @@ public class ChatServiceImpl implements ChatService {
                   other.getLastSeenAt(),
                   (String) row.get("message_text"),
                   toLocalDateTime(row.get("sent_at")),
+                  toLocalDateTime(row.get("seen_at")),
                   ((Number) row.get("unread_count")).longValue());
             })
         .toList();
@@ -279,6 +280,72 @@ public class ChatServiceImpl implements ChatService {
       throw new NotFoundException("Attachment not found");
     }
     return data;
+  }
+
+  @Override
+  @Transactional
+  public DeleteMessageResponse deleteLastSentMessage(Long otherUserId) {
+    User me = currentUser();
+    User other =
+        userRepository
+            .findById(otherUserId)
+            .filter(u -> !u.isDeleted() && u.isActive())
+            .orElseThrow(() -> new NotFoundException("User not found"));
+
+    Long conversationId = resolveConversationId(me.getId(), other.getId());
+    ChatMessageRepository.MessageMeta lastSent =
+        chatMessageRepository.findLastSentMessageMeta(conversationId, me.getId());
+    if (lastSent == null) {
+      throw new NotFoundException("No sent message found to delete");
+    }
+
+    LocalDateTime deletableFrom = nowIst().minusMinutes(15);
+    if (lastSent.sentAt() == null || lastSent.sentAt().isBefore(deletableFrom)) {
+      throw new BadRequestException("Message can be deleted only within 15 minutes of sending");
+    }
+
+    LocalDateTime deletedAt = nowIst();
+    DeleteMessageResponse deleted =
+        chatMessageRepository.deleteLastSentMessage(
+            conversationId, me.getId(), deletableFrom, deletedAt);
+    if (deleted == null) {
+      throw new NotFoundException("No sent message found to delete");
+    }
+
+    realtimePublisher.publishMessageDeleted(deleted.conversationId(), deleted.messageId(), me.getId());
+    return deleted;
+  }
+
+  @Override
+  @Transactional
+  public MessageResponse editMessage(Long messageId, EditMessageRequest request) {
+    User me = currentUser();
+    String text = request.messageText() == null ? "" : request.messageText().trim();
+    if (text.isBlank()) {
+      throw new BadRequestException("Message text is required");
+    }
+
+    ChatMessageRepository.MessageMeta meta =
+        chatMessageRepository.findMessageMetaForParticipant(messageId, me.getId());
+    if (meta == null) {
+      throw new NotFoundException("Message not found");
+    }
+    if (!me.getId().equals(meta.senderId())) {
+      throw new BadRequestException("Only sender can edit this message");
+    }
+
+    LocalDateTime editableFrom = nowIst().minusMinutes(15);
+    if (meta.sentAt() == null || meta.sentAt().isBefore(editableFrom)) {
+      throw new BadRequestException("Message can be edited only within 15 minutes of sending");
+    }
+
+    MessageResponse updated = chatMessageRepository.updateMessageText(messageId, me.getId(), text, me.getId());
+    if (updated == null) {
+      throw new NotFoundException("Message not found");
+    }
+
+    realtimePublisher.publishMessageEdited(updated, me.getId());
+    return updated;
   }
 
   private Long resolveConversationId(Long user1, Long user2) {
