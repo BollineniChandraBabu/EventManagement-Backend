@@ -1,5 +1,6 @@
 package com.familywishes.chat;
 
+import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -9,6 +10,8 @@ public class ChatDtos {
   public record ChatUserResponse(Long userId, String name, String email, boolean online, LocalDateTime lastSeenAt) {}
 
   public record SendMessageRequest(@NotNull Long receiverId, String messageText) {}
+
+  public record EditMessageRequest(@NotBlank String messageText) {}
 
   public record MessageResponse(
       Long messageId,

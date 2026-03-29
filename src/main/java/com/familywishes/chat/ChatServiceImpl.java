@@ -304,6 +304,38 @@ public class ChatServiceImpl implements ChatService {
     return deleted;
   }
 
+  @Override
+  @Transactional
+  public MessageResponse editMessage(Long messageId, EditMessageRequest request) {
+    User me = currentUser();
+    String text = request.messageText() == null ? "" : request.messageText().trim();
+    if (text.isBlank()) {
+      throw new BadRequestException("Message text is required");
+    }
+
+    ChatMessageRepository.MessageMeta meta =
+        chatMessageRepository.findMessageMetaForParticipant(messageId, me.getId());
+    if (meta == null) {
+      throw new NotFoundException("Message not found");
+    }
+    if (!me.getId().equals(meta.senderId())) {
+      throw new BadRequestException("Only sender can edit this message");
+    }
+
+    LocalDateTime editableFrom = nowIst().minusMinutes(15);
+    if (meta.sentAt() == null || meta.sentAt().isBefore(editableFrom)) {
+      throw new BadRequestException("Message can be edited only within 15 minutes of sending");
+    }
+
+    MessageResponse updated = chatMessageRepository.updateMessageText(messageId, me.getId(), text, me.getId());
+    if (updated == null) {
+      throw new NotFoundException("Message not found");
+    }
+
+    realtimePublisher.publishMessageEdited(updated, me.getId());
+    return updated;
+  }
+
   private Long resolveConversationId(Long user1, Long user2) {
     long a = Math.min(user1, user2);
     long b = Math.max(user1, user2);
