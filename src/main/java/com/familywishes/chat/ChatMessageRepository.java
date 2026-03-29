@@ -16,6 +16,8 @@ import org.springframework.stereotype.Repository;
 @RequiredArgsConstructor
 public class ChatMessageRepository {
 
+  public record MessageMeta(Long messageId, Long conversationId, Long senderId, LocalDateTime sentAt) {}
+
   @Qualifier("supabaseChatJdbc")
   private final NamedParameterJdbcTemplate chatJdbc;
 
@@ -127,6 +129,7 @@ public class ChatMessageRepository {
                CASE WHEN c.user_a_id = :me THEN c.user_b_id ELSE c.user_a_id END AS other_user_id,
                m.message_text,
                m.sent_at,
+               m.seen_at,
                (
                  SELECT count(1)
                    FROM chat_messages um
@@ -136,7 +139,7 @@ public class ChatMessageRepository {
                ) AS unread_count
           FROM chat_conversations c
           JOIN LATERAL (
-            SELECT message_text, sent_at
+            SELECT message_text, sent_at, seen_at
               FROM chat_messages
              WHERE conversation_id = c.id
              ORDER BY sent_at DESC
@@ -146,6 +149,109 @@ public class ChatMessageRepository {
          ORDER BY m.sent_at DESC
         """,
         Map.of("me", me));
+  }
+
+  public DeleteMessageResponse deleteLastSentMessage(
+      Long conversationId, Long senderId, LocalDateTime minSentAt, LocalDateTime deletedAt) {
+    List<DeleteMessageResponse> deleted =
+        chatJdbc.query(
+            """
+            DELETE FROM chat_messages
+             WHERE id = (
+               SELECT id
+                 FROM chat_messages
+                WHERE conversation_id = :conversationId
+                  AND sender_id = :senderId
+                  AND sent_at >= :minSentAt
+                ORDER BY sent_at DESC, id DESC
+                LIMIT 1
+             )
+             RETURNING id, conversation_id
+            """,
+            new MapSqlParameterSource()
+                .addValue("conversationId", conversationId)
+                .addValue("senderId", senderId)
+                .addValue("minSentAt", Timestamp.valueOf(minSentAt)),
+            (rs, rowNum) ->
+                new DeleteMessageResponse(
+                    rs.getLong("id"), rs.getLong("conversation_id"), deletedAt));
+
+    return deleted.isEmpty() ? null : deleted.get(0);
+  }
+
+  public MessageMeta findLastSentMessageMeta(Long conversationId, Long senderId) {
+    List<MessageMeta> rows =
+        chatJdbc.query(
+            """
+            SELECT id, conversation_id, sender_id, sent_at
+              FROM chat_messages
+             WHERE conversation_id = :conversationId
+               AND sender_id = :senderId
+             ORDER BY sent_at DESC, id DESC
+             LIMIT 1
+            """,
+            Map.of("conversationId", conversationId, "senderId", senderId),
+            (rs, rowNum) ->
+                new MessageMeta(
+                    rs.getLong("id"),
+                    rs.getLong("conversation_id"),
+                    rs.getLong("sender_id"),
+                    rs.getTimestamp("sent_at") == null ? null : rs.getTimestamp("sent_at").toLocalDateTime()));
+    return rows.isEmpty() ? null : rows.get(0);
+  }
+
+  public MessageMeta findMessageMetaForParticipant(Long messageId, Long userId) {
+    List<MessageMeta> rows =
+        chatJdbc.query(
+            """
+            SELECT id, conversation_id, sender_id, sent_at
+              FROM chat_messages
+             WHERE id = :messageId
+               AND (sender_id = :userId OR receiver_id = :userId)
+            """,
+            Map.of("messageId", messageId, "userId", userId),
+            (rs, rowNum) ->
+                new MessageMeta(
+                    rs.getLong("id"),
+                    rs.getLong("conversation_id"),
+                    rs.getLong("sender_id"),
+                    rs.getTimestamp("sent_at") == null ? null : rs.getTimestamp("sent_at").toLocalDateTime()));
+
+    return rows.isEmpty() ? null : rows.get(0);
+  }
+
+  public MessageResponse updateMessageText(Long messageId, Long senderId, String messageText, Long me) {
+    List<MessageResponse> rows =
+        chatJdbc.query(
+            """
+            UPDATE chat_messages
+               SET message_text = :messageText
+             WHERE id = :messageId
+               AND sender_id = :senderId
+             RETURNING id, conversation_id, sender_id, receiver_id, message_text, attachment_key,
+                       attachment_file_name, attachment_content_type, sent_at, seen_at
+            """,
+            new MapSqlParameterSource()
+                .addValue("messageId", messageId)
+                .addValue("senderId", senderId)
+                .addValue("messageText", messageText),
+            (rs, rowNum) -> {
+              Long sender = rs.getLong("sender_id");
+              return new MessageResponse(
+                  rs.getLong("id"),
+                  rs.getLong("conversation_id"),
+                  sender,
+                  rs.getLong("receiver_id"),
+                  rs.getString("message_text"),
+                  rs.getString("attachment_key"),
+                  rs.getString("attachment_file_name"),
+                  rs.getString("attachment_content_type"),
+                  rs.getTimestamp("sent_at") == null ? null : rs.getTimestamp("sent_at").toLocalDateTime(),
+                  rs.getTimestamp("seen_at") == null ? null : rs.getTimestamp("seen_at").toLocalDateTime(),
+                  sender.equals(me));
+            });
+
+    return rows.isEmpty() ? null : rows.get(0);
   }
 
   public String findAttachmentKeyByMessageIdForUser(Long messageId, Long userId) {
