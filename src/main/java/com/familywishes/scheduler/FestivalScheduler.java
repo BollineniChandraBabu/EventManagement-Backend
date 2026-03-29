@@ -1,16 +1,23 @@
 package com.familywishes.scheduler;
 
+import com.familywishes.dto.AiWishRequest;
+import com.familywishes.dto.AiWishResponse;
 import com.familywishes.entity.FestivalWishMapping;
+import com.familywishes.entity.User;
 import com.familywishes.repository.FestivalWishMappingRepository;
+import com.familywishes.service.AiService;
 import com.familywishes.service.GmailEmailService;
 import com.familywishes.service.SchedulerTrackingService;
 import java.time.LocalDate;
 import java.time.ZoneId;
 import java.util.List;
+
+import com.fasterxml.jackson.core.JsonProcessingException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.quartz.Job;
 import org.quartz.JobExecutionContext;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 @Component
@@ -21,13 +28,17 @@ public class FestivalScheduler implements Job {
   private final FestivalWishMappingRepository mappingRepository;
   private final GmailEmailService gmailEmailService;
   private final SchedulerTrackingService schedulerTrackingService;
+  private final AiService aiService;
+
+  @Value("${alert.email.to}")
+  private String alertEmail;
 
   @Override
   public void execute(JobExecutionContext context) {
     schedulerTrackingService.track("festivalWishScheduler", this::sendFestivalWishes);
   }
 
-  void sendFestivalWishes() {
+  private void sendFestivalWishes() {
     LocalDate today = LocalDate.now(ZoneId.of("Asia/Kolkata"));
 
     List<FestivalWishMapping> mappings =
@@ -42,13 +53,11 @@ public class FestivalScheduler implements Job {
         continue;
       }
 
-      String body =
-          mapping.getCustomMessage() != null && !mapping.getCustomMessage().isBlank()
-              ? mapping.getCustomMessage()
-              : mapping.getSpecialEvent().getMessage();
-
-      gmailEmailService.sendEmailWithAttachments(
-          mapping.getUser().getEmail(), "Happy " + mapping.getSpecialEvent().getEventName(), body, null, null);
+      try {
+        sendFestivalWish(mapping);
+      } catch (Exception e) {
+        sendErrorEmail(mapping.getUser(), e);
+      }
 
       mapping.setLastWishSentOn(today);
       mappingRepository.save(mapping);
@@ -57,5 +66,25 @@ public class FestivalScheduler implements Job {
           mapping.getSpecialEvent().getEventName(),
           mapping.getUser().getEmail());
     }
+  }
+
+  private void sendFestivalWish(FestivalWishMapping festivalWishMapping) throws JsonProcessingException {
+    AiWishRequest request =
+            new AiWishRequest(
+                    festivalWishMapping.getUser().getName(), festivalWishMapping.getUser().getRelationShip().getCode(), "", festivalWishMapping.getSpecialEvent().getEventName(), "Emotional", "EN");
+    AiWishResponse ai = aiService.generate(request);
+    byte[] image = aiService.callGeminiImage(request);
+    gmailEmailService.sendEmailWithAttachments(
+            festivalWishMapping.getUser().getEmail(), ai.subject(), ai.htmlMessage(), null, image);
+    log.info("Birthday wish sent to {}", festivalWishMapping.getUser().getEmail());
+  }
+
+  private void sendErrorEmail(User user, Exception e) {
+    gmailEmailService.sendEmailWithAttachments(
+            alertEmail,
+            "Festival Job Failed",
+            "Failed for user: " + user.getEmail() + "<br>Error: " + e.getMessage(),
+            null,
+            null);
   }
 }
