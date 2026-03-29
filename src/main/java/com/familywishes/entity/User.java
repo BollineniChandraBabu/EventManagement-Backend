@@ -56,14 +56,17 @@ public class User {
 
   @Column private LocalDate lastBirthdayWishSent;
 
-  @Column(nullable = false)
   @Builder.Default
-  private boolean online = false;
+  private Boolean online = false;
 
   @Column private LocalDateTime lastSeenAt;
 
   @OneToOne(mappedBy = "user", cascade = CascadeType.ALL)
   private UserWishSettings wishSettings;
+
+  public boolean isOnline() {
+    return Boolean.TRUE.equals(online);
+  }
 
   @PrePersist
   void init() {
