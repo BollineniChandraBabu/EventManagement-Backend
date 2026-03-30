@@ -21,6 +21,8 @@ public class UserDtos {
   public record WishSettingsUpdateRequest(
       Boolean isGoodMorningEnabled, Boolean isGoodNightEnabled, Boolean isBirthdayEnabled) {}
 
+  public record UserStatusUpdateRequest(@NotNull Boolean active) {}
+
   public record UserResponse(
       Long id,
       String name,

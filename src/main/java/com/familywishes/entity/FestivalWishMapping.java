@@ -3,6 +3,7 @@ package com.familywishes.entity;
 import jakarta.persistence.*;
 import java.time.LocalDate;
 import lombok.*;
+import lombok.experimental.SuperBuilder;
 
 @Entity
 @Table(
@@ -13,10 +14,10 @@ import lombok.*;
             columnNames = {"special_event_id", "user_id"}))
 @Getter
 @Setter
-@Builder
+@SuperBuilder
 @NoArgsConstructor
 @AllArgsConstructor
-public class FestivalWishMapping {
+public class FestivalWishMapping extends ActivatableEntity {
 
   @Id
   @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -35,5 +36,4 @@ public class FestivalWishMapping {
 
   private LocalDate lastWishSentOn;
 
-  @Builder.Default private boolean active = true;
 }

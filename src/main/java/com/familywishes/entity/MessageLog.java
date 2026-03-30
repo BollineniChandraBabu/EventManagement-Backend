@@ -8,7 +8,7 @@ import lombok.RequiredArgsConstructor;
 @Entity
 @RequiredArgsConstructor
 @Data
-public class MessageLog {
+public class MessageLog extends AuditableEntity {
 
   @Id
   @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -19,14 +19,15 @@ public class MessageLog {
   @Column(length = 1000)
   private String message;
 
-  @Enumerated(EnumType.STRING)
+  @Column(nullable = false, columnDefinition = "SMALLINT")
+  @Enumerated(EnumType.ORDINAL)
   private MessageStatus status;
 
-  @Enumerated(EnumType.STRING)
+  @Column(nullable = false, columnDefinition = "SMALLINT")
+  @Enumerated(EnumType.ORDINAL)
   private MessageType messageType;
 
   private int retryCount;
-  private LocalDateTime createdAt;
   private LocalDateTime lastAttemptTime;
   private String errorMessage;
 }

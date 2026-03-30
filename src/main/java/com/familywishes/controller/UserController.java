@@ -57,4 +57,11 @@ public class UserController {
   public void deactivate(@PathVariable Long id) {
     userService.deactivate(id);
   }
+
+  @PatchMapping("/{id}/status")
+  @PreAuthorize("hasRole('ADMIN')")
+  public UserResponse updateStatus(
+      @PathVariable Long id, @Valid @RequestBody UserStatusUpdateRequest request) {
+    return userService.updateStatus(id, request.active());
+  }
 }

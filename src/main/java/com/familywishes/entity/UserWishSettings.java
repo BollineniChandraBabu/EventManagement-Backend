@@ -1,5 +1,6 @@
 package com.familywishes.entity;
 
+import com.familywishes.entity.converter.BooleanToZeroOneConverter;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -10,16 +11,22 @@ import lombok.*;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class UserWishSettings {
+public class UserWishSettings extends AuditableEntity {
 
   @Id
   @GeneratedValue(strategy = GenerationType.IDENTITY)
   private Long id;
 
+  @Column(nullable = false, columnDefinition = "SMALLINT")
+  @Convert(converter = BooleanToZeroOneConverter.class)
   private boolean goodMorningEnabled;
 
+  @Column(nullable = false, columnDefinition = "SMALLINT")
+  @Convert(converter = BooleanToZeroOneConverter.class)
   private boolean goodNightEnabled;
 
+  @Column(nullable = false, columnDefinition = "SMALLINT")
+  @Convert(converter = BooleanToZeroOneConverter.class)
   private boolean birthdayEnabled;
 
   @OneToOne

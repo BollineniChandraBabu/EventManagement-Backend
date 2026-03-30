@@ -1,17 +1,19 @@
 package com.familywishes.entity;
 
+import com.familywishes.entity.converter.BooleanToZeroOneConverter;
 import jakarta.persistence.*;
 import java.time.LocalDate;
 import lombok.*;
+import lombok.experimental.SuperBuilder;
 
 @Entity
 @Table(name = "events")
 @Getter
 @Setter
-@Builder
+@SuperBuilder
 @NoArgsConstructor
 @AllArgsConstructor
-public class Event {
+public class Event extends ActivatableEntity {
   @Id
   @GeneratedValue(strategy = GenerationType.IDENTITY)
   private Long id;
@@ -23,14 +25,12 @@ public class Event {
   private String festivalName;
   @Column private LocalDate eventDate;
 
-  @Column(nullable = false)
+  @Column(nullable = false, columnDefinition = "SMALLINT")
+  @Convert(converter = BooleanToZeroOneConverter.class)
   private boolean recurring;
 
   @ManyToOne(fetch = FetchType.EAGER)
   @JoinColumn(name = "user_id", nullable = false)
   private User user;
 
-  @Column(nullable = false)
-  @Builder.Default
-  private boolean active = true;
 }

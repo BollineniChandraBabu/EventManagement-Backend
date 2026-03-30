@@ -1,20 +1,21 @@
 package com.familywishes.entity;
 
+import com.familywishes.entity.converter.BooleanToZeroOneConverter;
 import com.familywishes.entity.enums.Role;
 import jakarta.persistence.*;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.time.ZoneId;
 import lombok.*;
+import lombok.experimental.SuperBuilder;
 
 @Entity
 @Table(name = "users")
 @Getter
 @Setter
-@Builder
+@SuperBuilder
 @NoArgsConstructor
 @AllArgsConstructor
-public class User {
+public class User extends ActivatableEntity {
   @Id
   @GeneratedValue(strategy = GenerationType.IDENTITY)
   private Long id;
@@ -28,24 +29,18 @@ public class User {
   @Column(nullable = false)
   private String password;
 
-  @Enumerated(EnumType.STRING)
-  @Column(nullable = false)
+  @Enumerated(EnumType.ORDINAL)
+  @Column(nullable = false, columnDefinition = "SMALLINT")
   private Role role;
 
-  @Column(nullable = false)
-  @Builder.Default
-  private boolean active = true;
-
-  @Column(nullable = false)
+  @Column(nullable = false, columnDefinition = "SMALLINT")
+  @Convert(converter = BooleanToZeroOneConverter.class)
   @Builder.Default
   private boolean deleted = false;
 
   @Column(nullable = false)
   @Builder.Default
   private int failedLoginAttempts = 0;
-
-  @Column(nullable = false)
-  private LocalDateTime createdAt;
 
   @ManyToOne(fetch = FetchType.EAGER)
   @JoinColumn(name = "relationship_seed_id", nullable = false)
@@ -56,6 +51,8 @@ public class User {
 
   @Column private LocalDate lastBirthdayWishSent;
 
+  @Column(columnDefinition = "SMALLINT")
+  @Convert(converter = BooleanToZeroOneConverter.class)
   @Builder.Default
   private Boolean online = false;
 
@@ -68,8 +65,4 @@ public class User {
     return Boolean.TRUE.equals(online);
   }
 
-  @PrePersist
-  void init() {
-    if (createdAt == null) createdAt = LocalDateTime.now(ZoneId.of("Asia/Kolkata"));
-  }
 }
