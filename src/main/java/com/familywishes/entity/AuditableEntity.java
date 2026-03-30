@@ -7,6 +7,7 @@ import jakarta.persistence.PreUpdate;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import lombok.Getter;
+import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.experimental.SuperBuilder;
 
@@ -14,6 +15,7 @@ import lombok.experimental.SuperBuilder;
 @Getter
 @Setter
 @SuperBuilder
+@NoArgsConstructor
 public abstract class AuditableEntity {
 
   @Column(nullable = false, updatable = false)
