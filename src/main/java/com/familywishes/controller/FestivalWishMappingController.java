@@ -1,10 +1,10 @@
 package com.familywishes.controller;
 
+import com.familywishes.dto.CommonDtos.PagedResponse;
 import com.familywishes.dto.FestivalDtos.FestivalWishMappingRequest;
 import com.familywishes.dto.FestivalDtos.FestivalWishMappingResponse;
 import com.familywishes.service.FestivalWishMappingService;
 import jakarta.validation.Valid;
-import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
@@ -23,8 +23,13 @@ public class FestivalWishMappingController {
   }
 
   @GetMapping
-  public List<FestivalWishMappingResponse> list() {
-    return festivalWishMappingService.list();
+  public PagedResponse<FestivalWishMappingResponse> list(
+      @RequestParam(defaultValue = "0") int page,
+      @RequestParam(defaultValue = "10") int size,
+      @RequestParam(defaultValue = "") String searchKey,
+      @RequestParam(defaultValue = "id") String sortBy,
+      @RequestParam(defaultValue = "desc") String sortDir) {
+    return festivalWishMappingService.list(page, size, searchKey, sortBy, sortDir);
   }
 
   @DeleteMapping("/{id}")

@@ -30,4 +30,21 @@ public interface UserRepository extends JpaRepository<User, Long> {
                   )
             """)
   Page<User> findAllActiveUsers(@Param("searchKey") String searchKey, Pageable pageable);
+
+  @Query(
+      """
+      SELECT u FROM User u
+      WHERE u.deleted = false
+        AND u.active = true
+        AND u.id <> :excludeUserId
+        AND (:onlyOnline = false OR u.online = true)
+        AND (:searchKey = ''
+             OR LOWER(u.name) LIKE LOWER(CONCAT('%', :searchKey, '%'))
+             OR LOWER(u.email) LIKE LOWER(CONCAT('%', :searchKey, '%')))
+      """)
+  Page<User> findChatUsers(
+      @Param("excludeUserId") Long excludeUserId,
+      @Param("onlyOnline") boolean onlyOnline,
+      @Param("searchKey") String searchKey,
+      Pageable pageable);
 }

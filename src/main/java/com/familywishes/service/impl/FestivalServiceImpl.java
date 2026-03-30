@@ -1,5 +1,6 @@
 package com.familywishes.service.impl;
 
+import com.familywishes.dto.CommonDtos.PagedResponse;
 import com.familywishes.dto.FestivalDtos.FestivalResponse;
 import com.familywishes.entity.SpecialEvent;
 import com.familywishes.repository.SpecialEventRepository;
@@ -13,6 +14,8 @@ import java.util.Map;
 import java.util.Set;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.HttpMethod;
@@ -44,6 +47,28 @@ public class FestivalServiceImpl implements FestivalService {
     return specialEventRepository.findByMonth(month).stream()
         .map(this::toFestivalResponse)
         .toList();
+  }
+
+  @Override
+  public PagedResponse<FestivalResponse> listByMonth(
+      Integer month, int page, int size, String searchKey, String sortBy, String sortDir) {
+    String normalizedSortBy = resolveSortBy(sortBy);
+    Sort sort =
+        "desc".equalsIgnoreCase(sortDir)
+            ? Sort.by(normalizedSortBy).descending()
+            : Sort.by(normalizedSortBy).ascending();
+    var pageResult =
+        specialEventRepository.findByMonthAndSearchKey(
+            month, searchKey == null ? "" : searchKey.trim(), PageRequest.of(page, size, sort));
+
+    return new PagedResponse<>(
+        pageResult.getContent().stream().map(this::toFestivalResponse).toList(),
+        pageResult.getNumber(),
+        pageResult.getSize(),
+        pageResult.getTotalElements(),
+        pageResult.getTotalPages(),
+        pageResult.hasNext(),
+        pageResult.hasPrevious());
   }
 
   @Override
@@ -177,5 +202,12 @@ public class FestivalServiceImpl implements FestivalService {
 
   private FestivalResponse toFestivalResponse(SpecialEvent event) {
     return new FestivalResponse(event.getId(), event.getEventName(), event.getEventDate(), event.isActive());
+  }
+
+  private String resolveSortBy(String sortBy) {
+    return switch (sortBy) {
+      case "id", "eventName", "eventDate", "active", "createdAt", "updatedAt" -> sortBy;
+      default -> "eventDate";
+    };
   }
 }

@@ -17,6 +17,17 @@ import org.springframework.stereotype.Repository;
 public class ChatMessageRepository {
 
   public record MessageMeta(Long messageId, Long conversationId, Long senderId, LocalDateTime sentAt) {}
+  public record ConversationSummary(
+      Long conversationId,
+      Long otherUserId,
+      String otherUserName,
+      String otherUserEmail,
+      boolean otherUserOnline,
+      LocalDateTime otherUserLastSeenAt,
+      String messageText,
+      LocalDateTime sentAt,
+      LocalDateTime seenAt,
+      long unreadCount) {}
 
   @Qualifier("supabaseChatJdbc")
   private final NamedParameterJdbcTemplate chatJdbc;
@@ -122,11 +133,67 @@ public class ChatMessageRepository {
         });
   }
 
-  public List<Map<String, Object>> findConversationSummaries(Long me) {
-    return chatJdbc.queryForList(
+  public List<ConversationSummary> findConversationSummaries(Long me) {
+    return chatJdbc.query(
         """
         SELECT c.id AS conversation_id,
                CASE WHEN c.user_a_id = :me THEN c.user_b_id ELSE c.user_a_id END AS other_user_id,
+               ou.name AS other_user_name,
+               ou.email AS other_user_email,
+               ou.online AS other_user_online,
+               ou.last_seen_at AS other_user_last_seen_at,
+               m.message_text,
+               m.sent_at,
+               m.seen_at,
+               (
+                 SELECT count(1)
+                   FROM chat_messages um
+                  WHERE um.conversation_id = c.id
+                   AND um.receiver_id = :me
+                   AND um.seen_at IS NULL
+               ) AS unread_count
+          FROM chat_conversations c
+          JOIN users ou
+            ON ou.id = CASE WHEN c.user_a_id = :me THEN c.user_b_id ELSE c.user_a_id END
+           AND ou.deleted = false
+          JOIN LATERAL (
+            SELECT message_text, sent_at, seen_at
+              FROM chat_messages
+             WHERE conversation_id = c.id
+             ORDER BY sent_at DESC
+             LIMIT 1
+          ) m ON true
+         WHERE c.user_a_id = :me OR c.user_b_id = :me
+         ORDER BY m.sent_at DESC
+        """,
+        Map.of("me", me),
+        (rs, rowNum) ->
+            new ConversationSummary(
+                rs.getLong("conversation_id"),
+                rs.getLong("other_user_id"),
+                rs.getString("other_user_name"),
+                rs.getString("other_user_email"),
+                rs.getBoolean("other_user_online"),
+                rs.getTimestamp("other_user_last_seen_at") == null
+                    ? null
+                    : rs.getTimestamp("other_user_last_seen_at").toLocalDateTime(),
+                rs.getString("message_text"),
+                rs.getTimestamp("sent_at") == null ? null : rs.getTimestamp("sent_at").toLocalDateTime(),
+                rs.getTimestamp("seen_at") == null ? null : rs.getTimestamp("seen_at").toLocalDateTime(),
+                rs.getLong("unread_count")));
+  }
+
+  public List<ConversationSummary> findConversationSummaries(
+      Long me, int page, int size, String searchKey) {
+    String normalizedSearch = searchKey == null ? "" : searchKey.trim();
+    return chatJdbc.query(
+        """
+        SELECT c.id AS conversation_id,
+               CASE WHEN c.user_a_id = :me THEN c.user_b_id ELSE c.user_a_id END AS other_user_id,
+               ou.name AS other_user_name,
+               ou.email AS other_user_email,
+               ou.online AS other_user_online,
+               ou.last_seen_at AS other_user_last_seen_at,
                m.message_text,
                m.sent_at,
                m.seen_at,
@@ -138,6 +205,9 @@ public class ChatMessageRepository {
                     AND um.seen_at IS NULL
                ) AS unread_count
           FROM chat_conversations c
+          JOIN users ou
+            ON ou.id = CASE WHEN c.user_a_id = :me THEN c.user_b_id ELSE c.user_a_id END
+           AND ou.deleted = false
           JOIN LATERAL (
             SELECT message_text, sent_at, seen_at
               FROM chat_messages
@@ -145,10 +215,62 @@ public class ChatMessageRepository {
              ORDER BY sent_at DESC
              LIMIT 1
           ) m ON true
-         WHERE c.user_a_id = :me OR c.user_b_id = :me
+         WHERE (c.user_a_id = :me OR c.user_b_id = :me)
+           AND (:search = ''
+                OR LOWER(COALESCE(ou.name, '')) LIKE LOWER(CONCAT('%', :search, '%'))
+                OR LOWER(COALESCE(ou.email, '')) LIKE LOWER(CONCAT('%', :search, '%'))
+                OR LOWER(COALESCE(m.message_text, '')) LIKE LOWER(CONCAT('%', :search, '%')))
          ORDER BY m.sent_at DESC
+         LIMIT :limit OFFSET :offset
         """,
-        Map.of("me", me));
+        new MapSqlParameterSource()
+            .addValue("me", me)
+            .addValue("search", normalizedSearch)
+            .addValue("limit", size)
+            .addValue("offset", page * size),
+        (rs, rowNum) ->
+            new ConversationSummary(
+                rs.getLong("conversation_id"),
+                rs.getLong("other_user_id"),
+                rs.getString("other_user_name"),
+                rs.getString("other_user_email"),
+                rs.getBoolean("other_user_online"),
+                rs.getTimestamp("other_user_last_seen_at") == null
+                    ? null
+                    : rs.getTimestamp("other_user_last_seen_at").toLocalDateTime(),
+                rs.getString("message_text"),
+                rs.getTimestamp("sent_at") == null ? null : rs.getTimestamp("sent_at").toLocalDateTime(),
+                rs.getTimestamp("seen_at") == null ? null : rs.getTimestamp("seen_at").toLocalDateTime(),
+                rs.getLong("unread_count")));
+  }
+
+  public long countConversationSummaries(Long me, String searchKey) {
+    String normalizedSearch = searchKey == null ? "" : searchKey.trim();
+    Long count =
+        chatJdbc.queryForObject(
+            """
+            SELECT count(1)
+              FROM chat_conversations c
+              JOIN users ou
+                ON ou.id = CASE WHEN c.user_a_id = :me THEN c.user_b_id ELSE c.user_a_id END
+               AND ou.deleted = false
+              JOIN LATERAL (
+                SELECT message_text, sent_at
+                  FROM chat_messages
+                 WHERE conversation_id = c.id
+                 ORDER BY sent_at DESC
+                 LIMIT 1
+              ) m ON true
+             WHERE (c.user_a_id = :me OR c.user_b_id = :me)
+               AND (:search = ''
+                    OR LOWER(COALESCE(ou.name, '')) LIKE LOWER(CONCAT('%', :search, '%'))
+                    OR LOWER(COALESCE(ou.email, '')) LIKE LOWER(CONCAT('%', :search, '%'))
+                    OR LOWER(COALESCE(m.message_text, '')) LIKE LOWER(CONCAT('%', :search, '%'))
+                   )
+            """,
+            new MapSqlParameterSource().addValue("me", me).addValue("search", normalizedSearch),
+            Long.class);
+    return count == null ? 0L : count;
   }
 
   public DeleteMessageResponse deleteLastSentMessage(
@@ -290,14 +412,20 @@ public class ChatMessageRepository {
         SELECT m.id,
                m.conversation_id,
                m.sender_id,
+               s.name AS sender_name,
                m.receiver_id,
+               r.name AS receiver_name,
                m.message_text,
                m.attachment_file_name,
                m.sent_at,
                m.seen_at
           FROM chat_messages m
+          JOIN users s ON s.id = m.sender_id
+          JOIN users r ON r.id = m.receiver_id
          WHERE (:search = ''
                 OR LOWER(COALESCE(m.message_text, '')) LIKE LOWER(CONCAT('%', :search, '%'))
+                OR LOWER(COALESCE(s.name, '')) LIKE LOWER(CONCAT('%', :search, '%'))
+                OR LOWER(COALESCE(r.name, '')) LIKE LOWER(CONCAT('%', :search, '%'))
                 OR CAST(m.sender_id AS TEXT) LIKE CONCAT('%', :search, '%')
                 OR CAST(m.receiver_id AS TEXT) LIKE CONCAT('%', :search, '%'))
          ORDER BY m.sent_at DESC
@@ -312,9 +440,9 @@ public class ChatMessageRepository {
                 rs.getLong("id"),
                 rs.getLong("conversation_id"),
                 rs.getLong("sender_id"),
-                null,
+                rs.getString("sender_name"),
                 rs.getLong("receiver_id"),
-                null,
+                rs.getString("receiver_name"),
                 rs.getString("message_text"),
                 rs.getString("attachment_file_name"),
                 rs.getTimestamp("sent_at") == null ? null : rs.getTimestamp("sent_at").toLocalDateTime(),

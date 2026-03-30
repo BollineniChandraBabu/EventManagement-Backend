@@ -256,7 +256,7 @@ public class GmailEmailServiceImpl implements GmailEmailService {
 
   @Override
   public void sendTestEmail(String to) {
-    sendEmailWithAttachments(to, "Test Email", "<h3>Family Wishes Gmail API test</h3>", null, null);
+    sendEmailWithAttachments(to, "Test Email", "<h3>Golden Greetings Gmail API test</h3>", null, null);
   }
 
   @Override

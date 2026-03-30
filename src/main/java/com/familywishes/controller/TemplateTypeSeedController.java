@@ -1,10 +1,10 @@
 package com.familywishes.controller;
 
+import com.familywishes.dto.CommonDtos.PagedResponse;
 import com.familywishes.dto.SeedDtos.EnumSeedRequest;
 import com.familywishes.dto.SeedDtos.EnumSeedResponse;
 import com.familywishes.service.TemplateTypeSeedService;
 import jakarta.validation.Valid;
-import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
@@ -28,7 +28,12 @@ public class TemplateTypeSeedController {
   }
 
   @GetMapping
-  public List<EnumSeedResponse> listActive() {
-    return templateTypeSeedService.listActive();
+  public PagedResponse<EnumSeedResponse> list(
+      @RequestParam(defaultValue = "0") int page,
+      @RequestParam(defaultValue = "10") int size,
+      @RequestParam(defaultValue = "") String searchKey,
+      @RequestParam(defaultValue = "displayName") String sortBy,
+      @RequestParam(defaultValue = "asc") String sortDir) {
+    return templateTypeSeedService.list(page, size, searchKey, sortBy, sortDir);
   }
 }

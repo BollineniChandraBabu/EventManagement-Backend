@@ -15,12 +15,12 @@ public class OpenApiConfig {
     return new OpenAPI()
         .info(
             new Info()
-                .title("Family Wishes API")
+                .title("Golden Greetings API")
                 .description("Production-ready backend APIs for family wish automation")
                 .version("v1")
                 .contact(
                     new Contact()
-                        .name("Family Wishes Support")
+                        .name("Golden Greetings Support")
                         .email("chandrababubollineni416@gmail.com"))
                 .license(new License().name("Proprietary")));
   }
