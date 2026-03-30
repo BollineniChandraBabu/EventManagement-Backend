@@ -3,15 +3,16 @@ package com.familywishes.entity;
 import jakarta.persistence.*;
 import java.time.LocalDate;
 import lombok.*;
+import lombok.experimental.SuperBuilder;
 
 @Entity
 @Table(name = "seed_special_events")
 @Getter
 @Setter
-@Builder
+@SuperBuilder
 @NoArgsConstructor
 @AllArgsConstructor
-public class SpecialEvent {
+public class SpecialEvent extends ActivatableEntity {
 
   @Id
   @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -23,5 +24,4 @@ public class SpecialEvent {
   @Column(length = 1000)
   private String message;
 
-  @Builder.Default private boolean active = true;
 }

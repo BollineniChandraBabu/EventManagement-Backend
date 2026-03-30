@@ -171,10 +171,16 @@ public class UserServiceImpl implements UserService {
 
   @Override
   public void deactivate(Long id) {
+    updateStatus(id, false);
+  }
+
+  @Override
+  public UserResponse updateStatus(Long id, boolean active) {
     User user =
         userRepository.findById(id).orElseThrow(() -> new NotFoundException("User not found"));
-    user.setActive(false);
-    userRepository.save(user);
+    user.setActive(active);
+    user = userRepository.save(user);
+    return getUserResponse(user);
   }
 
   private RelationshipSeed resolveRelationship(String relationship) {

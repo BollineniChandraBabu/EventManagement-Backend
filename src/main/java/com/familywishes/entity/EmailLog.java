@@ -13,7 +13,7 @@ import lombok.*;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class EmailLog {
+public class EmailLog extends AuditableEntity {
   @Id
   @GeneratedValue(strategy = GenerationType.IDENTITY)
   private Long id;
@@ -24,12 +24,12 @@ public class EmailLog {
   @Column(nullable = false)
   private String subject;
 
-  @Enumerated(EnumType.STRING)
-  @Column(nullable = false)
+  @Enumerated(EnumType.ORDINAL)
+  @Column(nullable = false, columnDefinition = "SMALLINT")
   private EmailStatus status;
 
-  @Enumerated(EnumType.STRING)
-  @Column
+  @Enumerated(EnumType.ORDINAL)
+  @Column(columnDefinition = "SMALLINT")
   private EmailType emailType;
 
   @Column(nullable = false)

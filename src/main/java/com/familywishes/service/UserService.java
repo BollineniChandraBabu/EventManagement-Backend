@@ -18,4 +18,6 @@ public interface UserService {
   UserResponse updateCurrentUserWishSettings(WishSettingsUpdateRequest request);
 
   void deactivate(Long id);
+
+  UserResponse updateStatus(Long id, boolean active);
 }
