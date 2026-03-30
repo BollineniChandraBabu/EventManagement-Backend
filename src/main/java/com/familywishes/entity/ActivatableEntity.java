@@ -4,6 +4,7 @@ import com.familywishes.entity.converter.BooleanToZeroOneConverter;
 import jakarta.persistence.Column;
 import jakarta.persistence.Convert;
 import jakarta.persistence.MappedSuperclass;
+import lombok.Builder;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.experimental.SuperBuilder;
@@ -16,6 +17,6 @@ public abstract class ActivatableEntity extends AuditableEntity {
 
   @Column(nullable = false, columnDefinition = "SMALLINT")
   @Convert(converter = BooleanToZeroOneConverter.class)
-  @SuperBuilder.Default
+  @Builder.Default
   private boolean active = true;
 }

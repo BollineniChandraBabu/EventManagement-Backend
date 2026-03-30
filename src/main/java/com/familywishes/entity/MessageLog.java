@@ -3,11 +3,13 @@ package com.familywishes.entity;
 import jakarta.persistence.*;
 import java.time.LocalDateTime;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 import lombok.RequiredArgsConstructor;
 
 @Entity
 @RequiredArgsConstructor
 @Data
+@EqualsAndHashCode(callSuper = true)
 public class MessageLog extends AuditableEntity {
 
   @Id
