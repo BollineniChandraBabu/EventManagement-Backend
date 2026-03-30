@@ -16,7 +16,7 @@ import org.springframework.context.annotation.Configuration;
 @Slf4j
 public class GmailConfig {
 
-  private static final String APPLICATION_NAME = "Family Wishes";
+  private static final String APPLICATION_NAME = "Golden Greetings";
 
   @Value("${gmail.client-id}")
   private String clientId;

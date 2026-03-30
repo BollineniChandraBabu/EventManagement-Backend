@@ -64,7 +64,7 @@ public class GoodMorningScheduler implements Job {
   }
 
   private void sendErrorEmail(Exception e) {
-    String subject = "🚨 Family Wishes Scheduler Failed";
+    String subject = "🚨 Golden Greetings Scheduler Failed";
     String body = "<h3>Error in Good Morning Job</h3>" + "<p>" + e.getMessage() + "</p>";
 
     emailService.sendEmailWithAttachments(alertEmail, subject, body, null, null);

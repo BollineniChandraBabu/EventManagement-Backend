@@ -1,5 +1,6 @@
 package com.familywishes.service.impl;
 
+import com.familywishes.dto.CommonDtos.PagedResponse;
 import com.familywishes.dto.SeedDtos.EnumSeedRequest;
 import com.familywishes.dto.SeedDtos.EnumSeedResponse;
 import com.familywishes.entity.EventTypeSeed;
@@ -9,6 +10,8 @@ import com.familywishes.service.EventTypeSeedService;
 import java.util.List;
 import java.util.Objects;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -53,6 +56,27 @@ public class EventTypeSeedServiceImpl implements EventTypeSeedService {
   }
 
   @Override
+  public PagedResponse<EnumSeedResponse> list(
+      int page, int size, String searchKey, String sortBy, String sortDir) {
+    String normalizedSortBy = resolveSortBy(sortBy);
+    Sort sort =
+        "desc".equalsIgnoreCase(sortDir)
+            ? Sort.by(normalizedSortBy).descending()
+            : Sort.by(normalizedSortBy).ascending();
+    var pageResult =
+        eventTypeSeedRepository.findAllBySearchKey(
+            searchKey == null ? "" : searchKey.trim(), PageRequest.of(page, size, sort));
+    return new PagedResponse<>(
+        pageResult.getContent().stream().map(this::toResponse).toList(),
+        pageResult.getNumber(),
+        pageResult.getSize(),
+        pageResult.getTotalElements(),
+        pageResult.getTotalPages(),
+        pageResult.hasNext(),
+        pageResult.hasPrevious());
+  }
+
+  @Override
   public EnumSeedResponse getById(Long id) {
     EventTypeSeed eventTypeSeed = eventTypeSeedRepository.findById(id).orElse(null);
     return Objects.nonNull(eventTypeSeed) ? toResponse(eventTypeSeed) : null;
@@ -65,5 +89,12 @@ public class EventTypeSeedServiceImpl implements EventTypeSeedService {
 
   private String normalizeCode(String value) {
     return value.trim().toUpperCase();
+  }
+
+  private String resolveSortBy(String sortBy) {
+    return switch (sortBy) {
+      case "displayName", "code", "id", "createdAt", "updatedAt", "active" -> sortBy;
+      default -> "displayName";
+    };
   }
 }

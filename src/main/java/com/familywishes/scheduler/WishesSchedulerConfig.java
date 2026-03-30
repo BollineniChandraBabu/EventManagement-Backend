@@ -2,11 +2,18 @@ package com.familywishes.scheduler;
 
 import java.util.TimeZone;
 import org.quartz.*;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 @Configuration
 public class WishesSchedulerConfig {
+  @Value("${app.chat.unread-mail.cron:0 0 2 * * ?}")
+  private String unreadChatMailCron;
+
+  @Value("${scheduler.time-zone:Asia/Kolkata}")
+  private String schedulerTimeZone;
+
   @Bean
   JobDetail wishesJobDetail() {
     return JobBuilder.newJob(WishesScheduler.class)
@@ -147,6 +154,26 @@ public class WishesSchedulerConfig {
             CronScheduleBuilder.cronSchedule("0 0 2 1 * ?")
                 .inTimeZone(TimeZone.getTimeZone("Asia/Kolkata"))
                 .withMisfireHandlingInstructionFireAndProceed())
+        .build();
+  }
+
+  @Bean
+  public JobDetail unreadChatEmailJobDetail() {
+    return JobBuilder.newJob(com.familywishes.chat.UnreadChatEmailScheduler.class)
+        .withIdentity("unreadChatEmailJob")
+        .storeDurably()
+        .build();
+  }
+
+  @Bean
+  public Trigger unreadChatEmailTrigger() {
+    return TriggerBuilder.newTrigger()
+        .forJob(unreadChatEmailJobDetail())
+        .withIdentity("unreadChatEmailTrigger")
+        .withSchedule(
+            CronScheduleBuilder.cronSchedule(unreadChatMailCron)
+                .inTimeZone(TimeZone.getTimeZone(schedulerTimeZone))
+                .withMisfireHandlingInstructionDoNothing())
         .build();
   }
 }

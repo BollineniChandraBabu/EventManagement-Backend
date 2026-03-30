@@ -2,8 +2,8 @@ package com.familywishes.controller;
 
 import com.familywishes.chat.ChatDtos;
 import com.familywishes.chat.ChatService;
+import com.familywishes.dto.CommonDtos.PagedResponse;
 import jakarta.validation.Valid;
-import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.*;
@@ -17,18 +17,31 @@ public class ChatController {
   private final ChatService chatService;
 
   @GetMapping("/users")
-  public List<ChatDtos.ChatUserResponse> users() {
-    return chatService.listAvailableUsers();
+  public PagedResponse<ChatDtos.ChatUserResponse> users(
+      @RequestParam(defaultValue = "0") int page,
+      @RequestParam(defaultValue = "20") int size,
+      @RequestParam(defaultValue = "") String searchKey,
+      @RequestParam(defaultValue = "name") String sortBy,
+      @RequestParam(defaultValue = "asc") String sortDir) {
+    return chatService.listAvailableUsers(page, size, searchKey, sortBy, sortDir);
   }
 
   @GetMapping("/users/active")
-  public List<ChatDtos.ChatUserResponse> activeUsers() {
-    return chatService.listActiveUsers();
+  public PagedResponse<ChatDtos.ChatUserResponse> activeUsers(
+      @RequestParam(defaultValue = "0") int page,
+      @RequestParam(defaultValue = "20") int size,
+      @RequestParam(defaultValue = "") String searchKey,
+      @RequestParam(defaultValue = "name") String sortBy,
+      @RequestParam(defaultValue = "asc") String sortDir) {
+    return chatService.listActiveUsers(page, size, searchKey, sortBy, sortDir);
   }
 
   @GetMapping("/conversations")
-  public List<ChatDtos.ConversationResponse> conversations() {
-    return chatService.listConversations();
+  public PagedResponse<ChatDtos.ConversationResponse> conversations(
+      @RequestParam(defaultValue = "0") int page,
+      @RequestParam(defaultValue = "20") int size,
+      @RequestParam(defaultValue = "") String searchKey) {
+    return chatService.listConversations(page, size, searchKey, "lastMessageAt", "desc");
   }
 
   @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)

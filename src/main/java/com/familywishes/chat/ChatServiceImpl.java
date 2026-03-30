@@ -2,6 +2,7 @@ package com.familywishes.chat;
 
 import static com.familywishes.chat.ChatDtos.*;
 
+import com.familywishes.dto.CommonDtos.PagedResponse;
 import com.familywishes.entity.User;
 import com.familywishes.exception.BadRequestException;
 import com.familywishes.exception.NotFoundException;
@@ -9,9 +10,12 @@ import com.familywishes.repository.UserRepository;
 import com.familywishes.service.impl.SupabaseStorageService;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
+import java.util.Comparator;
 import java.util.List;
-import java.util.Map;
+import java.util.function.Predicate;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -38,6 +42,33 @@ public class ChatServiceImpl implements ChatService {
   }
 
   @Override
+  public PagedResponse<ChatUserResponse> listAvailableUsers(
+      int page, int size, String searchKey, String sortBy, String sortDir) {
+    User me = currentUser();
+    Sort sort = resolveUserSort(sortBy, sortDir);
+    var pageResult =
+        userRepository.findChatUsers(
+            me.getId(),
+            false,
+            searchKey == null ? "" : searchKey.trim(),
+            PageRequest.of(Math.max(page, 0), Math.max(size, 1), sort));
+
+    return new PagedResponse<>(
+        pageResult.getContent().stream()
+            .map(
+                u ->
+                    new ChatUserResponse(
+                        u.getId(), u.getName(), u.getEmail(), u.isOnline(), u.getLastSeenAt()))
+            .toList(),
+        pageResult.getNumber(),
+        pageResult.getSize(),
+        pageResult.getTotalElements(),
+        pageResult.getTotalPages(),
+        pageResult.hasNext(),
+        pageResult.hasPrevious());
+  }
+
+  @Override
   public List<ChatUserResponse> listActiveUsers() {
     User me = currentUser();
     return userRepository.findAll().stream()
@@ -47,6 +78,33 @@ public class ChatServiceImpl implements ChatService {
                 new ChatUserResponse(
                     u.getId(), u.getName(), u.getEmail(), u.isOnline(), u.getLastSeenAt()))
         .toList();
+  }
+
+  @Override
+  public PagedResponse<ChatUserResponse> listActiveUsers(
+      int page, int size, String searchKey, String sortBy, String sortDir) {
+    User me = currentUser();
+    Sort sort = resolveUserSort(sortBy, sortDir);
+    var pageResult =
+        userRepository.findChatUsers(
+            me.getId(),
+            true,
+            searchKey == null ? "" : searchKey.trim(),
+            PageRequest.of(Math.max(page, 0), Math.max(size, 1), sort));
+
+    return new PagedResponse<>(
+        pageResult.getContent().stream()
+            .map(
+                u ->
+                    new ChatUserResponse(
+                        u.getId(), u.getName(), u.getEmail(), u.isOnline(), u.getLastSeenAt()))
+            .toList(),
+        pageResult.getNumber(),
+        pageResult.getSize(),
+        pageResult.getTotalElements(),
+        pageResult.getTotalPages(),
+        pageResult.hasNext(),
+        pageResult.hasPrevious());
   }
 
   @Override
@@ -175,46 +233,53 @@ public class ChatServiceImpl implements ChatService {
 
     return chatMessageRepository.findConversationSummaries(me.getId()).stream()
         .map(
-            row -> {
-              Long otherId = ((Number) row.get("other_user_id")).longValue();
-              User other = userRepository.findById(otherId).orElseThrow();
-              return new ConversationResponse(
-                  ((Number) row.get("conversation_id")).longValue(),
-                  otherId,
-                  other.getName(),
-                  other.getEmail(),
-                  other.isOnline(),
-                  other.getLastSeenAt(),
-                  (String) row.get("message_text"),
-                  toLocalDateTime(row.get("sent_at")),
-                  toLocalDateTime(row.get("seen_at")),
-                  ((Number) row.get("unread_count")).longValue());
-            })
+            row ->
+                new ConversationResponse(
+                    row.conversationId(),
+                    row.otherUserId(),
+                    row.otherUserName(),
+                    row.otherUserEmail(),
+                    row.otherUserOnline(),
+                    row.otherUserLastSeenAt(),
+                    row.messageText(),
+                    row.sentAt(),
+                    row.seenAt(),
+                    row.unreadCount()))
         .toList();
+  }
+
+  @Override
+  public PagedResponse<ConversationResponse> listConversations(
+      int page, int size, String searchKey, String sortBy, String sortDir) {
+    User me = currentUser();
+    int safePage = Math.max(page, 0);
+    int safeSize = Math.max(size, 1);
+    List<ConversationResponse> content =
+        chatMessageRepository.findConversationSummaries(me.getId(), safePage, safeSize, searchKey).stream()
+            .map(
+                row ->
+                    new ConversationResponse(
+                        row.conversationId(),
+                        row.otherUserId(),
+                        row.otherUserName(),
+                        row.otherUserEmail(),
+                        row.otherUserOnline(),
+                        row.otherUserLastSeenAt(),
+                        row.messageText(),
+                        row.sentAt(),
+                        row.seenAt(),
+                        row.unreadCount()))
+            .toList();
+    long total = chatMessageRepository.countConversationSummaries(me.getId(), searchKey);
+    int totalPages = (int) Math.ceil((double) total / safeSize);
+    return new PagedResponse<>(
+        content, safePage, safeSize, total, totalPages, safePage + 1 < totalPages, safePage > 0);
   }
 
   @Override
   public GlobalMessagePageResponse listAllMessages(int page, int size, String searchKey) {
     List<GlobalMessageResponse> items = chatMessageRepository.findGlobalMessages(page, size, searchKey);
-
-    List<GlobalMessageResponse> enriched =
-        items.stream()
-            .map(
-                item ->
-                    new GlobalMessageResponse(
-                        item.messageId(),
-                        item.conversationId(),
-                        item.senderId(),
-                        userRepository.findById(item.senderId()).map(User::getName).orElse("Unknown"),
-                        item.receiverId(),
-                        userRepository.findById(item.receiverId()).map(User::getName).orElse("Unknown"),
-                        item.messageText(),
-                        item.attachmentFileName(),
-                        item.sentAt(),
-                        item.seenAt()))
-            .toList();
-
-    return new GlobalMessagePageResponse(enriched, page, size, enriched.size() == size);
+    return new GlobalMessagePageResponse(items, page, size, items.size() == size);
   }
 
   @Override
@@ -358,19 +423,6 @@ public class ChatServiceImpl implements ChatService {
     return chatMessageRepository.createConversation(a, b, nowIst());
   }
 
-  private LocalDateTime toLocalDateTime(Object value) {
-    if (value == null) {
-      return null;
-    }
-    if (value instanceof java.sql.Timestamp timestamp) {
-      return timestamp.toLocalDateTime();
-    }
-    if (value instanceof LocalDateTime localDateTime) {
-      return localDateTime;
-    }
-    return ((java.sql.Date) value).toLocalDate().atStartOfDay();
-  }
-
   private LocalDateTime nowIst() {
     return LocalDateTime.now(ZoneId.of("Asia/Kolkata"));
   }
@@ -391,5 +443,37 @@ public class ChatServiceImpl implements ChatService {
     return userRepository
         .findByEmailAndDeletedFalse(authentication.getName())
         .orElseThrow(() -> new NotFoundException("User not found"));
+  }
+
+  private Sort resolveUserSort(String sortBy, String sortDir) {
+    String normalizedSortBy =
+        switch (sortBy) {
+          case "email", "online", "lastSeenAt", "id", "createdAt", "updatedAt", "name" -> sortBy;
+          case "userId" -> "id";
+          default -> "name";
+        };
+    return "desc".equalsIgnoreCase(sortDir)
+        ? Sort.by(normalizedSortBy).descending()
+        : Sort.by(normalizedSortBy).ascending();
+  }
+
+  private <T> PagedResponse<T> page(
+      List<T> source, int page, int size, Predicate<T> filter, Comparator<T> comparator) {
+    List<T> filteredSorted = source.stream().filter(filter).sorted(comparator).toList();
+    int safePage = Math.max(page, 0);
+    int safeSize = Math.max(size, 1);
+    int fromIndex = Math.min(safePage * safeSize, filteredSorted.size());
+    int toIndex = Math.min(fromIndex + safeSize, filteredSorted.size());
+    List<T> content = filteredSorted.subList(fromIndex, toIndex);
+    int totalPages = (int) Math.ceil((double) filteredSorted.size() / safeSize);
+
+    return new PagedResponse<>(
+        content,
+        safePage,
+        safeSize,
+        filteredSorted.size(),
+        totalPages,
+        safePage + 1 < totalPages,
+        safePage > 0 && totalPages > 0);
   }
 }

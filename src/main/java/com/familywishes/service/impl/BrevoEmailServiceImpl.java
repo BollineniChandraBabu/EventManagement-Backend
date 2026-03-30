@@ -173,6 +173,6 @@ public class BrevoEmailServiceImpl implements BrevoEmailService {
 
   @Override
   public void sendTestEmail(String to) {
-    sendEmailWithAttachments(to, "Test Email", "<h3>Family Wishes test email</h3>", null, null);
+    sendEmailWithAttachments(to, "Test Email", "<h3>Golden Greetings test email</h3>", null, null);
   }
 }

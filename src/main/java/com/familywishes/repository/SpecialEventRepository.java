@@ -21,6 +21,17 @@ public interface SpecialEventRepository extends JpaRepository<SpecialEvent, Long
 """, nativeQuery = true)
   List<SpecialEvent> findByMonth(@Param("month") Integer month);
 
+  @Query(
+      """
+      SELECT s FROM SpecialEvent s
+      WHERE (:month IS NULL OR FUNCTION('MONTH', s.eventDate) = :month)
+        AND (:searchKey = ''
+             OR LOWER(s.eventName) LIKE LOWER(CONCAT('%', :searchKey, '%'))
+             OR LOWER(COALESCE(s.message, '')) LIKE LOWER(CONCAT('%', :searchKey, '%')))
+      """)
+  Page<SpecialEvent> findByMonthAndSearchKey(
+      @Param("month") Integer month, @Param("searchKey") String searchKey, Pageable pageable);
+
   Optional<SpecialEvent> findByEventNameIgnoreCase(String eventName);
 
   @Query(

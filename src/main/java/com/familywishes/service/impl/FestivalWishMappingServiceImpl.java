@@ -1,5 +1,6 @@
 package com.familywishes.service.impl;
 
+import com.familywishes.dto.CommonDtos.PagedResponse;
 import com.familywishes.dto.FestivalDtos.FestivalWishMappingRequest;
 import com.familywishes.dto.FestivalDtos.FestivalWishMappingResponse;
 import com.familywishes.entity.FestivalWishMapping;
@@ -12,6 +13,8 @@ import com.familywishes.repository.UserRepository;
 import com.familywishes.service.FestivalWishMappingService;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -51,6 +54,28 @@ public class FestivalWishMappingServiceImpl implements FestivalWishMappingServic
   }
 
   @Override
+  public PagedResponse<FestivalWishMappingResponse> list(
+      int page, int size, String searchKey, String sortBy, String sortDir) {
+    String normalizedSortBy = resolveSortBy(sortBy);
+    Sort sort =
+        "desc".equalsIgnoreCase(sortDir)
+            ? Sort.by(normalizedSortBy).descending()
+            : Sort.by(normalizedSortBy).ascending();
+
+    var pageResult =
+        mappingRepository.findAllBySearchKey(
+            searchKey == null ? "" : searchKey.trim(), PageRequest.of(page, size, sort));
+    return new PagedResponse<>(
+        pageResult.getContent().stream().map(this::toResponse).toList(),
+        pageResult.getNumber(),
+        pageResult.getSize(),
+        pageResult.getTotalElements(),
+        pageResult.getTotalPages(),
+        pageResult.hasNext(),
+        pageResult.hasPrevious());
+  }
+
+  @Override
   public void delete(Long id) {
     if (!mappingRepository.existsById(id)) {
       throw new NotFoundException("Festival mapping not found");
@@ -67,5 +92,14 @@ public class FestivalWishMappingServiceImpl implements FestivalWishMappingServic
         mapping.getUser().getName(),
         mapping.getCustomMessage(),
         mapping.isActive());
+  }
+
+  private String resolveSortBy(String sortBy) {
+    return switch (sortBy) {
+      case "id", "active", "createdAt", "updatedAt", "lastWishSentOn" -> sortBy;
+      case "festivalName" -> "specialEvent.eventName";
+      case "userName" -> "user.name";
+      default -> "id";
+    };
   }
 }
