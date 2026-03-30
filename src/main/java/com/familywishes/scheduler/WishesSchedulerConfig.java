@@ -1,5 +1,6 @@
 package com.familywishes.scheduler;
 
+import java.util.Arrays;
 import java.util.TimeZone;
 import org.quartz.*;
 import org.springframework.beans.factory.annotation.Value;
@@ -167,13 +168,34 @@ public class WishesSchedulerConfig {
 
   @Bean
   public Trigger unreadChatEmailTrigger() {
+    String cronExpression = toValidQuartzCron(unreadChatMailCron);
     return TriggerBuilder.newTrigger()
         .forJob(unreadChatEmailJobDetail())
         .withIdentity("unreadChatEmailTrigger")
         .withSchedule(
-            CronScheduleBuilder.cronSchedule(unreadChatMailCron)
+            CronScheduleBuilder.cronSchedule(cronExpression)
                 .inTimeZone(TimeZone.getTimeZone(schedulerTimeZone))
                 .withMisfireHandlingInstructionDoNothing())
         .build();
+  }
+
+  private String toValidQuartzCron(String cron) {
+    if (CronExpression.isValidExpression(cron)) {
+      return cron;
+    }
+
+    String[] fields = cron == null ? new String[0] : cron.trim().split("\\s+");
+    if (fields.length == 6 && "*".equals(fields[3]) && "*".equals(fields[5])) {
+      String patched =
+          String.join(
+              " ",
+              Arrays.asList(fields[0], fields[1], fields[2], fields[3], fields[4], "?"));
+      if (CronExpression.isValidExpression(patched)) {
+        return patched;
+      }
+    }
+
+    throw new IllegalArgumentException(
+        "Invalid Quartz cron expression for app.chat.unread-mail.cron: " + cron);
   }
 }
