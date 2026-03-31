@@ -217,9 +217,9 @@ public class ChatMessageRepository {
           ) m ON true
          WHERE (c.user_a_id = :me OR c.user_b_id = :me)
            AND (:search = ''
-                OR LOWER(COALESCE(ou.name, '')) LIKE LOWER(CONCAT('%', :search, '%'))
-                OR LOWER(COALESCE(ou.email, '')) LIKE LOWER(CONCAT('%', :search, '%'))
-                OR LOWER(COALESCE(m.message_text, '')) LIKE LOWER(CONCAT('%', :search, '%')))
+                OR LOWER(COALESCE(ou.name, '')) LIKE '%' || LOWER(:search) || '%'
+                OR LOWER(COALESCE(ou.email, '')) LIKE '%' || LOWER(:search) || '%'
+                OR LOWER(COALESCE(m.message_text, '')) LIKE '%' || LOWER(:search) || '%')
          ORDER BY m.sent_at DESC
          LIMIT :limit OFFSET :offset
         """,
@@ -263,9 +263,9 @@ public class ChatMessageRepository {
               ) m ON true
              WHERE (c.user_a_id = :me OR c.user_b_id = :me)
                AND (:search = ''
-                    OR LOWER(COALESCE(ou.name, '')) LIKE LOWER(CONCAT('%', :search, '%'))
-                    OR LOWER(COALESCE(ou.email, '')) LIKE LOWER(CONCAT('%', :search, '%'))
-                    OR LOWER(COALESCE(m.message_text, '')) LIKE LOWER(CONCAT('%', :search, '%'))
+                    OR LOWER(COALESCE(ou.name, '')) LIKE '%' || LOWER(:search) || '%'
+                    OR LOWER(COALESCE(ou.email, '')) LIKE '%' || LOWER(:search) || '%'
+                    OR LOWER(COALESCE(m.message_text, '')) LIKE '%' || LOWER(:search) || '%'
                    )
             """,
             new MapSqlParameterSource().addValue("me", me).addValue("search", normalizedSearch),
