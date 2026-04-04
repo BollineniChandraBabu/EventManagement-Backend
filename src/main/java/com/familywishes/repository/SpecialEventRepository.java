@@ -24,7 +24,7 @@ public interface SpecialEventRepository extends JpaRepository<SpecialEvent, Long
   @Query(
       """
       SELECT s FROM SpecialEvent s
-      WHERE (:month IS NULL OR FUNCTION('MONTH', s.eventDate) = :month)
+      WHERE (:month IS NULL OR FUNCTION('DATE_PART', 'month', s.eventDate) = :month)
         AND (:searchKey = ''
              OR LOWER(s.eventName) LIKE LOWER(CONCAT('%', :searchKey, '%'))
              OR LOWER(COALESCE(s.message, '')) LIKE LOWER(CONCAT('%', :searchKey, '%')))

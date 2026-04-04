@@ -156,13 +156,21 @@ public class ChatMessageRepository {
           JOIN users ou
             ON ou.id = CASE WHEN c.user_a_id = :me THEN c.user_b_id ELSE c.user_a_id END
            AND ou.deleted = false
-          JOIN LATERAL (
-            SELECT message_text, sent_at, seen_at
-              FROM chat_messages
-             WHERE conversation_id = c.id
-             ORDER BY sent_at DESC
-             LIMIT 1
-          ) m ON true
+          JOIN (
+            SELECT ranked.conversation_id, ranked.message_text, ranked.sent_at, ranked.seen_at
+              FROM (
+                SELECT cm.conversation_id,
+                       cm.message_text,
+                       cm.sent_at,
+                       cm.seen_at,
+                       ROW_NUMBER() OVER (
+                         PARTITION BY cm.conversation_id
+                         ORDER BY cm.sent_at DESC, cm.id DESC
+                       ) AS rn
+                  FROM chat_messages cm
+              ) ranked
+             WHERE ranked.rn = 1
+          ) m ON m.conversation_id = c.id
          WHERE c.user_a_id = :me OR c.user_b_id = :me
          ORDER BY m.sent_at DESC
         """,
@@ -208,13 +216,21 @@ public class ChatMessageRepository {
           JOIN users ou
             ON ou.id = CASE WHEN c.user_a_id = :me THEN c.user_b_id ELSE c.user_a_id END
            AND ou.deleted = false
-          JOIN LATERAL (
-            SELECT message_text, sent_at, seen_at
-              FROM chat_messages
-             WHERE conversation_id = c.id
-             ORDER BY sent_at DESC
-             LIMIT 1
-          ) m ON true
+          JOIN (
+            SELECT ranked.conversation_id, ranked.message_text, ranked.sent_at, ranked.seen_at
+              FROM (
+                SELECT cm.conversation_id,
+                       cm.message_text,
+                       cm.sent_at,
+                       cm.seen_at,
+                       ROW_NUMBER() OVER (
+                         PARTITION BY cm.conversation_id
+                         ORDER BY cm.sent_at DESC, cm.id DESC
+                       ) AS rn
+                  FROM chat_messages cm
+              ) ranked
+             WHERE ranked.rn = 1
+          ) m ON m.conversation_id = c.id
          WHERE (c.user_a_id = :me OR c.user_b_id = :me)
            AND (:search = ''
                 OR LOWER(COALESCE(ou.name, '')) LIKE LOWER(CONCAT('%', :search, '%'))
@@ -254,13 +270,20 @@ public class ChatMessageRepository {
               JOIN users ou
                 ON ou.id = CASE WHEN c.user_a_id = :me THEN c.user_b_id ELSE c.user_a_id END
                AND ou.deleted = false
-              JOIN LATERAL (
-                SELECT message_text, sent_at
-                  FROM chat_messages
-                 WHERE conversation_id = c.id
-                 ORDER BY sent_at DESC
-                 LIMIT 1
-              ) m ON true
+              JOIN (
+                SELECT ranked.conversation_id, ranked.message_text, ranked.sent_at
+                  FROM (
+                    SELECT cm.conversation_id,
+                           cm.message_text,
+                           cm.sent_at,
+                           ROW_NUMBER() OVER (
+                             PARTITION BY cm.conversation_id
+                             ORDER BY cm.sent_at DESC, cm.id DESC
+                           ) AS rn
+                      FROM chat_messages cm
+                  ) ranked
+                 WHERE ranked.rn = 1
+              ) m ON m.conversation_id = c.id
              WHERE (c.user_a_id = :me OR c.user_b_id = :me)
                AND (:search = ''
                     OR LOWER(COALESCE(ou.name, '')) LIKE LOWER(CONCAT('%', :search, '%'))
