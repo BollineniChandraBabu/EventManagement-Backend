@@ -111,7 +111,9 @@ public class ChatMessageRepository {
          WHERE conversation_id = :conversationId
          ORDER BY sent_at DESC
          LIMIT :limit OFFSET :offset
-        """,
+        """;
+    return chatJdbc.query(
+        query,
         new MapSqlParameterSource()
             .addValue("conversationId", conversationId)
             .addValue("limit", size)
@@ -173,7 +175,9 @@ public class ChatMessageRepository {
           ) m ON m.conversation_id = c.id
          WHERE c.user_a_id = :me OR c.user_b_id = :me
          ORDER BY m.sent_at DESC
-        """,
+        """;
+    return chatJdbc.query(
+        query,
         Map.of("me", me),
         (rs, rowNum) ->
             new ConversationSummary(
@@ -272,9 +276,17 @@ public class ChatMessageRepository {
 
   public long countConversationSummaries(Long me, String searchKey) {
     String normalizedSearch = searchKey == null ? "" : searchKey.trim();
-    Long count =
-        chatJdbc.queryForObject(
+    boolean hasSearch = !normalizedSearch.isEmpty();
+    String searchFilterSql =
+        hasSearch
+            ? """
+               AND (LOWER(COALESCE(ou.name, '')) LIKE LOWER(CONCAT('%', :search, '%'))
+                    OR LOWER(COALESCE(ou.email, '')) LIKE LOWER(CONCAT('%', :search, '%'))
+                    OR LOWER(COALESCE(m.message_text, '')) LIKE LOWER(CONCAT('%', :search, '%')))
             """
+            : "";
+    String query =
+        """
             SELECT count(1)
               FROM chat_conversations c
               JOIN users ou
@@ -295,12 +307,12 @@ public class ChatMessageRepository {
                  WHERE ranked.rn = 1
               ) m ON m.conversation_id = c.id
              WHERE (c.user_a_id = :me OR c.user_b_id = :me)
-               AND (:search = ''
-                    OR LOWER(COALESCE(ou.name, '')) LIKE LOWER(CONCAT('%', :search, '%'))
-                    OR LOWER(COALESCE(ou.email, '')) LIKE LOWER(CONCAT('%', :search, '%'))
-                    OR LOWER(COALESCE(m.message_text, '')) LIKE LOWER(CONCAT('%', :search, '%'))
-                   )
-            """,
+             %s
+            """
+            .formatted(searchFilterSql);
+    Long count =
+        chatJdbc.queryForObject(
+            query,
             new MapSqlParameterSource().addValue("me", me).addValue("search", normalizedSearch),
             Long.class);
     return count == null ? 0L : count;
