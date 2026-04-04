@@ -49,9 +49,7 @@ public interface ChatService {
 
   MessageReactionsResponse reactToMessage(Long messageId, MessageReactionRequest request);
 
-  MessageReactionsResponse likeMessage(Long messageId);
+  MessageReactionsResponse likeMessage(Long messageId, MessageReactionRequest request);
 
-  MessageReactionsResponse unlikeMessage(Long messageId);
-
-  QuickReactionsResponse quickReactions();
+  MessageReactionsResponse unlikeMessage(Long messageId, MessageReactionRequest request);
 }

@@ -33,8 +33,6 @@ public class ChatDtos {
 
   public record MessageReactionsResponse(Long messageId, List<MessageReactionResponse> reactions) {}
 
-  public record QuickReactionsResponse(List<String> emojis) {}
-
   public record ConversationResponse(
       Long conversationId,
       Long otherUserId,

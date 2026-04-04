@@ -10,7 +10,6 @@ import com.familywishes.repository.UserRepository;
 import com.familywishes.service.impl.SupabaseStorageService;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
-import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
@@ -20,7 +19,6 @@ import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -28,9 +26,6 @@ import org.springframework.web.multipart.MultipartFile;
 @Service
 @RequiredArgsConstructor
 public class ChatServiceImpl implements ChatService {
-  @Value("${chat.reactions.quick:❤️,😂,😮,😢,😡,👍}")
-  private String quickReactionsCsv;
-
   private final ChatMessageRepository chatMessageRepository;
   private final UserRepository userRepository;
   private final SupabaseStorageService storageService;
@@ -513,25 +508,28 @@ public class ChatServiceImpl implements ChatService {
 
   @Override
   @Transactional
-  public MessageReactionsResponse likeMessage(Long messageId) {
+  public MessageReactionsResponse likeMessage(Long messageId, MessageReactionRequest request) {
     User me = currentUser();
     ensureCanAccessMessage(me.getId(), messageId);
-    chatMessageRepository.addReaction(messageId, me.getId(), defaultQuickReaction(), nowIst());
+    String emoji = request.emoji() == null ? "" : request.emoji().trim();
+    if (emoji.isBlank()) {
+      throw new BadRequestException("Emoji is required");
+    }
+    chatMessageRepository.addReaction(messageId, me.getId(), emoji, nowIst());
     return toMessageReactionsResponse(messageId, me.getId());
   }
 
   @Override
   @Transactional
-  public MessageReactionsResponse unlikeMessage(Long messageId) {
+  public MessageReactionsResponse unlikeMessage(Long messageId, MessageReactionRequest request) {
     User me = currentUser();
     ensureCanAccessMessage(me.getId(), messageId);
-    chatMessageRepository.removeReaction(messageId, me.getId(), defaultQuickReaction());
+    String emoji = request.emoji() == null ? "" : request.emoji().trim();
+    if (emoji.isBlank()) {
+      throw new BadRequestException("Emoji is required");
+    }
+    chatMessageRepository.removeReaction(messageId, me.getId(), emoji);
     return toMessageReactionsResponse(messageId, me.getId());
-  }
-
-  @Override
-  public QuickReactionsResponse quickReactions() {
-    return new QuickReactionsResponse(quickReactionEmojis());
   }
 
   private void ensureCanAccessMessage(Long userId, Long messageId) {
@@ -546,22 +544,6 @@ public class ChatServiceImpl implements ChatService {
             .map(r -> new MessageReactionResponse(r.emoji(), r.count(), r.mine()))
             .toList();
     return new MessageReactionsResponse(messageId, reactions);
-  }
-
-  private String defaultQuickReaction() {
-    List<String> emojis = quickReactionEmojis();
-    if (emojis.isEmpty()) {
-      throw new BadRequestException("No default quick reaction configured");
-    }
-    return emojis.get(0);
-  }
-
-  private List<String> quickReactionEmojis() {
-    return Arrays.stream(quickReactionsCsv.split(","))
-        .map(String::trim)
-        .filter(s -> !s.isBlank())
-        .distinct()
-        .toList();
   }
 
   private Long resolveConversationId(Long user1, Long user2) {

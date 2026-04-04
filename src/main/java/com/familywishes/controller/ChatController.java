@@ -90,18 +90,15 @@ public class ChatController {
   }
 
   @PostMapping("/messages/{messageId}/like")
-  public ChatDtos.MessageReactionsResponse like(@PathVariable Long messageId) {
-    return chatService.likeMessage(messageId);
+  public ChatDtos.MessageReactionsResponse like(
+      @PathVariable Long messageId, @RequestBody @Valid ChatDtos.MessageReactionRequest payload) {
+    return chatService.likeMessage(messageId, payload);
   }
 
   @DeleteMapping("/messages/{messageId}/like")
-  public ChatDtos.MessageReactionsResponse unlike(@PathVariable Long messageId) {
-    return chatService.unlikeMessage(messageId);
-  }
-
-  @GetMapping("/messages/reactions/quick")
-  public ChatDtos.QuickReactionsResponse quickReactions() {
-    return chatService.quickReactions();
+  public ChatDtos.MessageReactionsResponse unlike(
+      @PathVariable Long messageId, @RequestBody @Valid ChatDtos.MessageReactionRequest payload) {
+    return chatService.unlikeMessage(messageId, payload);
   }
 
   @PostMapping("/presence/heartbeat")
