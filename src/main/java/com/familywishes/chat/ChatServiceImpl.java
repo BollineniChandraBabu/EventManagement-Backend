@@ -287,8 +287,7 @@ public class ChatServiceImpl implements ChatService {
     if (otherUserIds.isEmpty()) {
       return Map.of();
     }
-    return userRepository.findAllById(otherUserIds).stream()
-        .filter(u -> !u.isDeleted())
+    return userRepository.findByIdInAndDeletedFalse(otherUserIds).stream()
         .collect(Collectors.toMap(User::getId, u -> u));
   }
 
@@ -329,25 +328,27 @@ public class ChatServiceImpl implements ChatService {
             .flatMap(r -> java.util.stream.Stream.of(r.senderId(), r.receiverId()))
             .collect(Collectors.toSet());
     Map<Long, User> users =
-        userRepository.findAllById(userIds).stream()
-            .filter(u -> !u.isDeleted())
+        userRepository.findByIdInAndDeletedFalse(userIds).stream()
             .collect(Collectors.toMap(User::getId, u -> u));
 
     List<GlobalMessageResponse> items =
         rows.stream()
             .map(
-                r ->
-                    new GlobalMessageResponse(
-                        r.messageId(),
-                        r.conversationId(),
-                        r.senderId(),
-                        users.get(r.senderId()) == null ? null : users.get(r.senderId()).getName(),
-                        r.receiverId(),
-                        users.get(r.receiverId()) == null ? null : users.get(r.receiverId()).getName(),
-                        r.messageText(),
-                        r.attachmentFileName(),
-                        r.sentAt(),
-                        r.seenAt()))
+                r -> {
+                  User sender = users.get(r.senderId());
+                  User receiver = users.get(r.receiverId());
+                  return new GlobalMessageResponse(
+                      r.messageId(),
+                      r.conversationId(),
+                      r.senderId(),
+                      sender == null ? null : sender.getName(),
+                      r.receiverId(),
+                      receiver == null ? null : receiver.getName(),
+                      r.messageText(),
+                      r.attachmentFileName(),
+                      r.sentAt(),
+                      r.seenAt());
+                })
             .toList();
     return new GlobalMessagePageResponse(items, page, size, items.size() == size);
   }

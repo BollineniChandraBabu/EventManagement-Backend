@@ -152,19 +152,13 @@ public class ChatMessageRepository {
                ) AS unread_count
           FROM chat_conversations c
           JOIN (
-            SELECT ranked.conversation_id, ranked.message_text, ranked.sent_at, ranked.seen_at
-              FROM (
-                SELECT cm.conversation_id,
-                       cm.message_text,
-                       cm.sent_at,
-                       cm.seen_at,
-                       ROW_NUMBER() OVER (
-                         PARTITION BY cm.conversation_id
-                         ORDER BY cm.sent_at DESC, cm.id DESC
-                       ) AS rn
-                  FROM chat_messages cm
-              ) ranked
-             WHERE ranked.rn = 1
+            SELECT DISTINCT ON (cm.conversation_id)
+                   cm.conversation_id,
+                   cm.message_text,
+                   cm.sent_at,
+                   cm.seen_at
+              FROM chat_messages cm
+             ORDER BY cm.conversation_id, cm.sent_at DESC, cm.id DESC
           ) m ON m.conversation_id = c.id
          WHERE c.user_a_id = :me OR c.user_b_id = :me
          ORDER BY m.sent_at DESC
@@ -212,19 +206,13 @@ public class ChatMessageRepository {
                ) AS unread_count
           FROM chat_conversations c
           JOIN (
-            SELECT ranked.conversation_id, ranked.message_text, ranked.sent_at, ranked.seen_at
-              FROM (
-                SELECT cm.conversation_id,
-                       cm.message_text,
-                       cm.sent_at,
-                       cm.seen_at,
-                       ROW_NUMBER() OVER (
-                         PARTITION BY cm.conversation_id
-                         ORDER BY cm.sent_at DESC, cm.id DESC
-                       ) AS rn
-                  FROM chat_messages cm
-              ) ranked
-             WHERE ranked.rn = 1
+            SELECT DISTINCT ON (cm.conversation_id)
+                   cm.conversation_id,
+                   cm.message_text,
+                   cm.sent_at,
+                   cm.seen_at
+              FROM chat_messages cm
+             ORDER BY cm.conversation_id, cm.sent_at DESC, cm.id DESC
           ) m ON m.conversation_id = c.id
          WHERE (c.user_a_id = :me OR c.user_b_id = :me)
          %s
@@ -268,18 +256,12 @@ public class ChatMessageRepository {
             SELECT count(1)
               FROM chat_conversations c
               JOIN (
-                SELECT ranked.conversation_id, ranked.message_text, ranked.sent_at
-                  FROM (
-                    SELECT cm.conversation_id,
-                           cm.message_text,
-                           cm.sent_at,
-                           ROW_NUMBER() OVER (
-                             PARTITION BY cm.conversation_id
-                             ORDER BY cm.sent_at DESC, cm.id DESC
-                           ) AS rn
-                      FROM chat_messages cm
-                  ) ranked
-                 WHERE ranked.rn = 1
+                SELECT DISTINCT ON (cm.conversation_id)
+                       cm.conversation_id,
+                       cm.message_text,
+                       cm.sent_at
+                  FROM chat_messages cm
+                 ORDER BY cm.conversation_id, cm.sent_at DESC, cm.id DESC
               ) m ON m.conversation_id = c.id
              WHERE (c.user_a_id = :me OR c.user_b_id = :me)
              %s

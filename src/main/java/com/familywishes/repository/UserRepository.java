@@ -3,6 +3,7 @@ package com.familywishes.repository;
 import com.familywishes.entity.User;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -13,6 +14,8 @@ public interface UserRepository extends JpaRepository<User, Long> {
   Optional<User> findByEmailAndDeletedFalse(String email);
 
   Optional<User> findByEmail(String email);
+
+  List<User> findByIdInAndDeletedFalse(Set<Long> ids);
 
   long countByDeletedFalse();
 
