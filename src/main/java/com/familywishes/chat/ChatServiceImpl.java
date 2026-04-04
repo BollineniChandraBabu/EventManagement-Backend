@@ -314,7 +314,7 @@ public class ChatServiceImpl implements ChatService {
     }
     return containsIgnoreCase(row.otherUserName(), normalizedSearch)
         || containsIgnoreCase(row.otherUserEmail(), normalizedSearch)
-        || containsIgnoreCase(row.messageText(), normalizedSearch);
+        || containsIgnoreCase(row.lastMessage(), normalizedSearch);
   }
 
   private boolean containsIgnoreCase(String value, String needleLower) {
@@ -338,7 +338,7 @@ public class ChatServiceImpl implements ChatService {
             .map(
                 r ->
                     new GlobalMessageResponse(
-                        r.id(),
+                        r.messageId(),
                         r.conversationId(),
                         r.senderId(),
                         users.get(r.senderId()) == null ? null : users.get(r.senderId()).getName(),
