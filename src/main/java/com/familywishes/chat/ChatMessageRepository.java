@@ -140,10 +140,6 @@ public class ChatMessageRepository {
         """
         SELECT c.id AS conversation_id,
                CASE WHEN c.user_a_id = :me THEN c.user_b_id ELSE c.user_a_id END AS other_user_id,
-               ou.name AS other_user_name,
-               ou.email AS other_user_email,
-               ou.online AS other_user_online,
-               ou.last_seen_at AS other_user_last_seen_at,
                m.message_text,
                m.sent_at,
                m.seen_at,
@@ -155,9 +151,6 @@ public class ChatMessageRepository {
                    AND um.seen_at IS NULL
                ) AS unread_count
           FROM chat_conversations c
-          JOIN users ou
-            ON ou.id = CASE WHEN c.user_a_id = :me THEN c.user_b_id ELSE c.user_a_id END
-           AND ou.deleted = false
           JOIN (
             SELECT ranked.conversation_id, ranked.message_text, ranked.sent_at, ranked.seen_at
               FROM (
@@ -183,12 +176,10 @@ public class ChatMessageRepository {
             new ConversationSummary(
                 rs.getLong("conversation_id"),
                 rs.getLong("other_user_id"),
-                rs.getString("other_user_name"),
-                rs.getString("other_user_email"),
-                rs.getBoolean("other_user_online"),
-                rs.getTimestamp("other_user_last_seen_at") == null
-                    ? null
-                    : rs.getTimestamp("other_user_last_seen_at").toLocalDateTime(),
+                null,
+                null,
+                false,
+                null,
                 rs.getString("message_text"),
                 rs.getTimestamp("sent_at") == null ? null : rs.getTimestamp("sent_at").toLocalDateTime(),
                 rs.getTimestamp("seen_at") == null ? null : rs.getTimestamp("seen_at").toLocalDateTime(),
@@ -202,19 +193,13 @@ public class ChatMessageRepository {
     String searchFilterSql =
         hasSearch
             ? """
-              AND (LOWER(COALESCE(ou.name, '')) LIKE LOWER(CONCAT('%', :search, '%'))
-                   OR LOWER(COALESCE(ou.email, '')) LIKE LOWER(CONCAT('%', :search, '%'))
-                   OR LOWER(COALESCE(m.message_text, '')) LIKE LOWER(CONCAT('%', :search, '%')))
+              AND LOWER(COALESCE(m.message_text, '')) LIKE LOWER(CONCAT('%', :search, '%'))
             """
             : "";
     String query =
         """
         SELECT c.id AS conversation_id,
                CASE WHEN c.user_a_id = :me THEN c.user_b_id ELSE c.user_a_id END AS other_user_id,
-               ou.name AS other_user_name,
-               ou.email AS other_user_email,
-               ou.online AS other_user_online,
-               ou.last_seen_at AS other_user_last_seen_at,
                m.message_text,
                m.sent_at,
                m.seen_at,
@@ -226,9 +211,6 @@ public class ChatMessageRepository {
                     AND um.seen_at IS NULL
                ) AS unread_count
           FROM chat_conversations c
-          JOIN users ou
-            ON ou.id = CASE WHEN c.user_a_id = :me THEN c.user_b_id ELSE c.user_a_id END
-           AND ou.deleted = false
           JOIN (
             SELECT ranked.conversation_id, ranked.message_text, ranked.sent_at, ranked.seen_at
               FROM (
@@ -262,12 +244,10 @@ public class ChatMessageRepository {
             new ConversationSummary(
                 rs.getLong("conversation_id"),
                 rs.getLong("other_user_id"),
-                rs.getString("other_user_name"),
-                rs.getString("other_user_email"),
-                rs.getBoolean("other_user_online"),
-                rs.getTimestamp("other_user_last_seen_at") == null
-                    ? null
-                    : rs.getTimestamp("other_user_last_seen_at").toLocalDateTime(),
+                null,
+                null,
+                false,
+                null,
                 rs.getString("message_text"),
                 rs.getTimestamp("sent_at") == null ? null : rs.getTimestamp("sent_at").toLocalDateTime(),
                 rs.getTimestamp("seen_at") == null ? null : rs.getTimestamp("seen_at").toLocalDateTime(),
@@ -280,18 +260,13 @@ public class ChatMessageRepository {
     String searchFilterSql =
         hasSearch
             ? """
-               AND (LOWER(COALESCE(ou.name, '')) LIKE LOWER(CONCAT('%', :search, '%'))
-                    OR LOWER(COALESCE(ou.email, '')) LIKE LOWER(CONCAT('%', :search, '%'))
-                    OR LOWER(COALESCE(m.message_text, '')) LIKE LOWER(CONCAT('%', :search, '%')))
+               AND LOWER(COALESCE(m.message_text, '')) LIKE LOWER(CONCAT('%', :search, '%'))
             """
             : "";
     String query =
         """
             SELECT count(1)
               FROM chat_conversations c
-              JOIN users ou
-                ON ou.id = CASE WHEN c.user_a_id = :me THEN c.user_b_id ELSE c.user_a_id END
-               AND ou.deleted = false
               JOIN (
                 SELECT ranked.conversation_id, ranked.message_text, ranked.sent_at
                   FROM (

@@ -12,7 +12,10 @@ import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.function.Predicate;
+import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
@@ -230,22 +233,10 @@ public class ChatServiceImpl implements ChatService {
   @Override
   public List<ConversationResponse> listConversations() {
     User me = currentUser();
-
-    return chatMessageRepository.findConversationSummaries(me.getId()).stream()
-        .map(
-            row ->
-                new ConversationResponse(
-                    row.conversationId(),
-                    row.otherUserId(),
-                    row.otherUserName(),
-                    row.otherUserEmail(),
-                    row.otherUserOnline(),
-                    row.otherUserLastSeenAt(),
-                    row.messageText(),
-                    row.sentAt(),
-                    row.seenAt(),
-                    row.unreadCount()))
-        .toList();
+    List<ChatMessageRepository.ConversationSummary> rows =
+        chatMessageRepository.findConversationSummaries(me.getId());
+    Map<Long, User> userById = loadUsersById(rows);
+    return rows.stream().map(row -> toConversationResponse(row, userById)).toList();
   }
 
   @Override
@@ -254,26 +245,61 @@ public class ChatServiceImpl implements ChatService {
     User me = currentUser();
     int safePage = Math.max(page, 0);
     int safeSize = Math.max(size, 1);
-    List<ConversationResponse> content =
-        chatMessageRepository.findConversationSummaries(me.getId(), safePage, safeSize, searchKey).stream()
-            .map(
-                row ->
-                    new ConversationResponse(
-                        row.conversationId(),
-                        row.otherUserId(),
-                        row.otherUserName(),
-                        row.otherUserEmail(),
-                        row.otherUserOnline(),
-                        row.otherUserLastSeenAt(),
-                        row.messageText(),
-                        row.sentAt(),
-                        row.seenAt(),
-                        row.unreadCount()))
+    String normalizedSearch = searchKey == null ? "" : searchKey.trim().toLowerCase();
+    List<ChatMessageRepository.ConversationSummary> rows =
+        chatMessageRepository.findConversationSummaries(me.getId());
+    Map<Long, User> userById = loadUsersById(rows);
+
+    List<ConversationResponse> filtered =
+        rows.stream()
+            .map(row -> toConversationResponse(row, userById))
+            .filter(row -> matchesConversationSearch(row, normalizedSearch))
             .toList();
-    long total = chatMessageRepository.countConversationSummaries(me.getId(), searchKey);
+
+    int fromIndex = Math.min(safePage * safeSize, filtered.size());
+    int toIndex = Math.min(fromIndex + safeSize, filtered.size());
+    List<ConversationResponse> content = filtered.subList(fromIndex, toIndex);
+    long total = filtered.size();
     int totalPages = (int) Math.ceil((double) total / safeSize);
     return new PagedResponse<>(
         content, safePage, safeSize, total, totalPages, safePage + 1 < totalPages, safePage > 0);
+  }
+
+  private Map<Long, User> loadUsersById(List<ChatMessageRepository.ConversationSummary> rows) {
+    Set<Long> otherUserIds =
+        rows.stream().map(ChatMessageRepository.ConversationSummary::otherUserId).collect(Collectors.toSet());
+    return userRepository.findAllById(otherUserIds).stream()
+        .filter(u -> !u.isDeleted())
+        .collect(Collectors.toMap(User::getId, u -> u));
+  }
+
+  private ConversationResponse toConversationResponse(
+      ChatMessageRepository.ConversationSummary row, Map<Long, User> userById) {
+    User other = userById.get(row.otherUserId());
+    return new ConversationResponse(
+        row.conversationId(),
+        row.otherUserId(),
+        other == null ? null : other.getName(),
+        other == null ? null : other.getEmail(),
+        other != null && other.isOnline(),
+        other == null ? null : other.getLastSeenAt(),
+        row.messageText(),
+        row.sentAt(),
+        row.seenAt(),
+        row.unreadCount());
+  }
+
+  private boolean matchesConversationSearch(ConversationResponse row, String normalizedSearch) {
+    if (normalizedSearch.isEmpty()) {
+      return true;
+    }
+    return containsIgnoreCase(row.otherUserName(), normalizedSearch)
+        || containsIgnoreCase(row.otherUserEmail(), normalizedSearch)
+        || containsIgnoreCase(row.messageText(), normalizedSearch);
+  }
+
+  private boolean containsIgnoreCase(String value, String needleLower) {
+    return value != null && value.toLowerCase().contains(needleLower);
   }
 
   @Override
