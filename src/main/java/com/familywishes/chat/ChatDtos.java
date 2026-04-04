@@ -9,7 +9,7 @@ public class ChatDtos {
 
   public record ChatUserResponse(Long userId, String name, String email, boolean online, LocalDateTime lastSeenAt) {}
 
-  public record SendMessageRequest(@NotNull Long receiverId, String messageText) {}
+  public record SendMessageRequest(@NotNull Long receiverId, String messageText, Long replyToMessageId) {}
 
   public record EditMessageRequest(@NotBlank String messageText) {}
 
@@ -18,6 +18,7 @@ public class ChatDtos {
       Long conversationId,
       Long senderId,
       Long receiverId,
+      Long replyToMessageId,
       String messageText,
       String attachmentKey,
       String attachmentFileName,
@@ -25,6 +26,12 @@ public class ChatDtos {
       LocalDateTime sentAt,
       LocalDateTime seenAt,
       boolean mine) {}
+
+  public record MessageReactionRequest(@NotBlank String emoji) {}
+
+  public record MessageReactionResponse(String emoji, long count, boolean mine) {}
+
+  public record MessageReactionsResponse(Long messageId, List<MessageReactionResponse> reactions) {}
 
   public record ConversationResponse(
       Long conversationId,

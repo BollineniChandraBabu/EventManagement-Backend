@@ -78,6 +78,29 @@ public class ChatController {
     return chatService.editMessage(messageId, payload);
   }
 
+  @GetMapping("/messages/{messageId}/reactions")
+  public ChatDtos.MessageReactionsResponse reactions(@PathVariable Long messageId) {
+    return chatService.listReactions(messageId);
+  }
+
+  @PostMapping("/messages/{messageId}/reactions")
+  public ChatDtos.MessageReactionsResponse react(
+      @PathVariable Long messageId, @RequestBody @Valid ChatDtos.MessageReactionRequest payload) {
+    return chatService.reactToMessage(messageId, payload);
+  }
+
+  @PostMapping("/messages/{messageId}/like")
+  public ChatDtos.MessageReactionsResponse like(
+      @PathVariable Long messageId, @RequestBody @Valid ChatDtos.MessageReactionRequest payload) {
+    return chatService.likeMessage(messageId, payload);
+  }
+
+  @DeleteMapping("/messages/{messageId}/like")
+  public ChatDtos.MessageReactionsResponse unlike(
+      @PathVariable Long messageId, @RequestBody @Valid ChatDtos.MessageReactionRequest payload) {
+    return chatService.unlikeMessage(messageId, payload);
+  }
+
   @PostMapping("/presence/heartbeat")
   public void heartbeat() {
     chatService.heartbeat();

@@ -12,7 +12,10 @@ import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.function.Predicate;
+import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
@@ -23,7 +26,6 @@ import org.springframework.web.multipart.MultipartFile;
 @Service
 @RequiredArgsConstructor
 public class ChatServiceImpl implements ChatService {
-
   private final ChatMessageRepository chatMessageRepository;
   private final UserRepository userRepository;
   private final SupabaseStorageService storageService;
@@ -139,6 +141,7 @@ public class ChatServiceImpl implements ChatService {
             conversationId,
             me.getId(),
             receiver.getId(),
+            request.replyToMessageId(),
             text,
             attachmentKey,
             fileName,
@@ -151,6 +154,7 @@ public class ChatServiceImpl implements ChatService {
             conversationId,
             me.getId(),
             receiver.getId(),
+            request.replyToMessageId(),
             text,
             attachmentKey,
             fileName,
@@ -187,7 +191,7 @@ public class ChatServiceImpl implements ChatService {
     LocalDateTime now = nowIst();
     Long messageId =
         chatMessageRepository.insertMessage(
-            conversationId, sender.getId(), receiver.getId(), text, null, null, null, now);
+            conversationId, sender.getId(), receiver.getId(), null, text, null, null, null, now);
 
     MessageResponse response =
         new MessageResponse(
@@ -195,6 +199,7 @@ public class ChatServiceImpl implements ChatService {
             conversationId,
             sender.getId(),
             receiver.getId(),
+            null,
             text,
             null,
             null,
@@ -230,22 +235,10 @@ public class ChatServiceImpl implements ChatService {
   @Override
   public List<ConversationResponse> listConversations() {
     User me = currentUser();
-
-    return chatMessageRepository.findConversationSummaries(me.getId()).stream()
-        .map(
-            row ->
-                new ConversationResponse(
-                    row.conversationId(),
-                    row.otherUserId(),
-                    row.otherUserName(),
-                    row.otherUserEmail(),
-                    row.otherUserOnline(),
-                    row.otherUserLastSeenAt(),
-                    row.messageText(),
-                    row.sentAt(),
-                    row.seenAt(),
-                    row.unreadCount()))
-        .toList();
+    List<ChatMessageRepository.ConversationSummary> rows =
+        chatMessageRepository.findConversationSummaries(me.getId());
+    Map<Long, User> userById = loadUsersById(rows);
+    return rows.stream().map(row -> toConversationResponse(row, userById)).toList();
   }
 
   @Override
@@ -254,31 +247,111 @@ public class ChatServiceImpl implements ChatService {
     User me = currentUser();
     int safePage = Math.max(page, 0);
     int safeSize = Math.max(size, 1);
-    List<ConversationResponse> content =
-        chatMessageRepository.findConversationSummaries(me.getId(), safePage, safeSize, searchKey).stream()
-            .map(
-                row ->
-                    new ConversationResponse(
-                        row.conversationId(),
-                        row.otherUserId(),
-                        row.otherUserName(),
-                        row.otherUserEmail(),
-                        row.otherUserOnline(),
-                        row.otherUserLastSeenAt(),
-                        row.messageText(),
-                        row.sentAt(),
-                        row.seenAt(),
-                        row.unreadCount()))
+    String normalizedSearch = searchKey == null ? "" : searchKey.trim().toLowerCase();
+    if (normalizedSearch.isEmpty()) {
+      List<ChatMessageRepository.ConversationSummary> pageRows =
+          chatMessageRepository.findConversationSummaries(me.getId(), safePage, safeSize, "");
+      Map<Long, User> userById = loadUsersById(pageRows);
+      List<ConversationResponse> content =
+          pageRows.stream()
+              .map(row -> toConversationResponse(row, userById))
+              .filter(row -> row.otherUserName() != null)
+              .toList();
+      long total = chatMessageRepository.countConversationSummaries(me.getId(), "");
+      int totalPages = (int) Math.ceil((double) total / safeSize);
+      return new PagedResponse<>(
+          content, safePage, safeSize, total, totalPages, safePage + 1 < totalPages, safePage > 0);
+    }
+
+    List<ChatMessageRepository.ConversationSummary> rows =
+        chatMessageRepository.findConversationSummaries(me.getId());
+    Map<Long, User> userById = loadUsersById(rows);
+
+    List<ConversationResponse> filtered =
+        rows.stream()
+            .map(row -> toConversationResponse(row, userById))
+            .filter(row -> row.otherUserName() != null)
+            .filter(row -> matchesConversationSearch(row, normalizedSearch))
             .toList();
-    long total = chatMessageRepository.countConversationSummaries(me.getId(), searchKey);
+
+    int fromIndex = Math.min(safePage * safeSize, filtered.size());
+    int toIndex = Math.min(fromIndex + safeSize, filtered.size());
+    List<ConversationResponse> content = filtered.subList(fromIndex, toIndex);
+    long total = filtered.size();
     int totalPages = (int) Math.ceil((double) total / safeSize);
     return new PagedResponse<>(
         content, safePage, safeSize, total, totalPages, safePage + 1 < totalPages, safePage > 0);
   }
 
+  private Map<Long, User> loadUsersById(List<ChatMessageRepository.ConversationSummary> rows) {
+    Set<Long> otherUserIds =
+        rows.stream().map(ChatMessageRepository.ConversationSummary::otherUserId).collect(Collectors.toSet());
+    if (otherUserIds.isEmpty()) {
+      return Map.of();
+    }
+    return userRepository.findByIdInAndDeletedFalse(otherUserIds).stream()
+        .collect(Collectors.toMap(User::getId, u -> u));
+  }
+
+  private ConversationResponse toConversationResponse(
+      ChatMessageRepository.ConversationSummary row, Map<Long, User> userById) {
+    User other = userById.get(row.otherUserId());
+    return new ConversationResponse(
+        row.conversationId(),
+        row.otherUserId(),
+        other == null ? null : other.getName(),
+        other == null ? null : other.getEmail(),
+        other != null && other.isOnline(),
+        other == null ? null : other.getLastSeenAt(),
+        row.messageText(),
+        row.sentAt(),
+        row.seenAt(),
+        row.unreadCount());
+  }
+
+  private boolean matchesConversationSearch(ConversationResponse row, String normalizedSearch) {
+    if (normalizedSearch.isEmpty()) {
+      return true;
+    }
+    return containsIgnoreCase(row.otherUserName(), normalizedSearch)
+        || containsIgnoreCase(row.otherUserEmail(), normalizedSearch)
+        || containsIgnoreCase(row.lastMessage(), normalizedSearch);
+  }
+
+  private boolean containsIgnoreCase(String value, String needleLower) {
+    return value != null && value.toLowerCase().contains(needleLower);
+  }
+
   @Override
   public GlobalMessagePageResponse listAllMessages(int page, int size, String searchKey) {
-    List<GlobalMessageResponse> items = chatMessageRepository.findGlobalMessages(page, size, searchKey);
+    List<GlobalMessageResponse> rows = chatMessageRepository.findGlobalMessages(page, size, searchKey);
+    Set<Long> userIds =
+        rows.stream()
+            .flatMap(r -> java.util.stream.Stream.of(r.senderId(), r.receiverId()))
+            .collect(Collectors.toSet());
+    Map<Long, User> users =
+        userRepository.findByIdInAndDeletedFalse(userIds).stream()
+            .collect(Collectors.toMap(User::getId, u -> u));
+
+    List<GlobalMessageResponse> items =
+        rows.stream()
+            .map(
+                r -> {
+                  User sender = users.get(r.senderId());
+                  User receiver = users.get(r.receiverId());
+                  return new GlobalMessageResponse(
+                      r.messageId(),
+                      r.conversationId(),
+                      r.senderId(),
+                      sender == null ? null : sender.getName(),
+                      r.receiverId(),
+                      receiver == null ? null : receiver.getName(),
+                      r.messageText(),
+                      r.attachmentFileName(),
+                      r.sentAt(),
+                      r.seenAt());
+                })
+            .toList();
     return new GlobalMessagePageResponse(items, page, size, items.size() == size);
   }
 
@@ -411,6 +484,66 @@ public class ChatServiceImpl implements ChatService {
 
     realtimePublisher.publishMessageEdited(updated, me.getId());
     return updated;
+  }
+
+  @Override
+  public MessageReactionsResponse listReactions(Long messageId) {
+    User me = currentUser();
+    ensureCanAccessMessage(me.getId(), messageId);
+    return toMessageReactionsResponse(messageId, me.getId());
+  }
+
+  @Override
+  @Transactional
+  public MessageReactionsResponse reactToMessage(Long messageId, MessageReactionRequest request) {
+    User me = currentUser();
+    ensureCanAccessMessage(me.getId(), messageId);
+    String emoji = request.emoji() == null ? "" : request.emoji().trim();
+    if (emoji.isBlank()) {
+      throw new BadRequestException("Emoji is required");
+    }
+    chatMessageRepository.addReaction(messageId, me.getId(), emoji, nowIst());
+    return toMessageReactionsResponse(messageId, me.getId());
+  }
+
+  @Override
+  @Transactional
+  public MessageReactionsResponse likeMessage(Long messageId, MessageReactionRequest request) {
+    User me = currentUser();
+    ensureCanAccessMessage(me.getId(), messageId);
+    String emoji = request.emoji() == null ? "" : request.emoji().trim();
+    if (emoji.isBlank()) {
+      throw new BadRequestException("Emoji is required");
+    }
+    chatMessageRepository.addReaction(messageId, me.getId(), emoji, nowIst());
+    return toMessageReactionsResponse(messageId, me.getId());
+  }
+
+  @Override
+  @Transactional
+  public MessageReactionsResponse unlikeMessage(Long messageId, MessageReactionRequest request) {
+    User me = currentUser();
+    ensureCanAccessMessage(me.getId(), messageId);
+    String emoji = request.emoji() == null ? "" : request.emoji().trim();
+    if (emoji.isBlank()) {
+      throw new BadRequestException("Emoji is required");
+    }
+    chatMessageRepository.removeReaction(messageId, me.getId(), emoji);
+    return toMessageReactionsResponse(messageId, me.getId());
+  }
+
+  private void ensureCanAccessMessage(Long userId, Long messageId) {
+    if (chatMessageRepository.findMessageMetaForParticipant(messageId, userId) == null) {
+      throw new NotFoundException("Message not found");
+    }
+  }
+
+  private MessageReactionsResponse toMessageReactionsResponse(Long messageId, Long me) {
+    List<MessageReactionResponse> reactions =
+        chatMessageRepository.findReactions(messageId, me).stream()
+            .map(r -> new MessageReactionResponse(r.emoji(), r.count(), r.mine()))
+            .toList();
+    return new MessageReactionsResponse(messageId, reactions);
   }
 
   private Long resolveConversationId(Long user1, Long user2) {
