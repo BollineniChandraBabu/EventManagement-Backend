@@ -432,20 +432,16 @@ public class ChatMessageRepository {
         SELECT m.id,
                m.conversation_id,
                m.sender_id,
-               s.name AS sender_name,
+               NULL::TEXT AS sender_name,
                m.receiver_id,
-               r.name AS receiver_name,
+               NULL::TEXT AS receiver_name,
                m.message_text,
                m.attachment_file_name,
                m.sent_at,
                m.seen_at
           FROM chat_messages m
-          JOIN users s ON s.id = m.sender_id
-          JOIN users r ON r.id = m.receiver_id
          WHERE (:search = ''
                 OR LOWER(COALESCE(m.message_text, '')) LIKE LOWER(CONCAT('%', :search, '%'))
-                OR LOWER(COALESCE(s.name, '')) LIKE LOWER(CONCAT('%', :search, '%'))
-                OR LOWER(COALESCE(r.name, '')) LIKE LOWER(CONCAT('%', :search, '%'))
                 OR CAST(m.sender_id AS TEXT) LIKE CONCAT('%', :search, '%')
                 OR CAST(m.receiver_id AS TEXT) LIKE CONCAT('%', :search, '%'))
          ORDER BY m.sent_at DESC

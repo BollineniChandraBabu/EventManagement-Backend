@@ -246,6 +246,21 @@ public class ChatServiceImpl implements ChatService {
     int safePage = Math.max(page, 0);
     int safeSize = Math.max(size, 1);
     String normalizedSearch = searchKey == null ? "" : searchKey.trim().toLowerCase();
+    if (normalizedSearch.isEmpty()) {
+      List<ChatMessageRepository.ConversationSummary> pageRows =
+          chatMessageRepository.findConversationSummaries(me.getId(), safePage, safeSize, "");
+      Map<Long, User> userById = loadUsersById(pageRows);
+      List<ConversationResponse> content =
+          pageRows.stream()
+              .map(row -> toConversationResponse(row, userById))
+              .filter(row -> row.otherUserName() != null)
+              .toList();
+      long total = chatMessageRepository.countConversationSummaries(me.getId(), "");
+      int totalPages = (int) Math.ceil((double) total / safeSize);
+      return new PagedResponse<>(
+          content, safePage, safeSize, total, totalPages, safePage + 1 < totalPages, safePage > 0);
+    }
+
     List<ChatMessageRepository.ConversationSummary> rows =
         chatMessageRepository.findConversationSummaries(me.getId());
     Map<Long, User> userById = loadUsersById(rows);
@@ -253,6 +268,7 @@ public class ChatServiceImpl implements ChatService {
     List<ConversationResponse> filtered =
         rows.stream()
             .map(row -> toConversationResponse(row, userById))
+            .filter(row -> row.otherUserName() != null)
             .filter(row -> matchesConversationSearch(row, normalizedSearch))
             .toList();
 
@@ -268,6 +284,9 @@ public class ChatServiceImpl implements ChatService {
   private Map<Long, User> loadUsersById(List<ChatMessageRepository.ConversationSummary> rows) {
     Set<Long> otherUserIds =
         rows.stream().map(ChatMessageRepository.ConversationSummary::otherUserId).collect(Collectors.toSet());
+    if (otherUserIds.isEmpty()) {
+      return Map.of();
+    }
     return userRepository.findAllById(otherUserIds).stream()
         .filter(u -> !u.isDeleted())
         .collect(Collectors.toMap(User::getId, u -> u));
@@ -304,7 +323,32 @@ public class ChatServiceImpl implements ChatService {
 
   @Override
   public GlobalMessagePageResponse listAllMessages(int page, int size, String searchKey) {
-    List<GlobalMessageResponse> items = chatMessageRepository.findGlobalMessages(page, size, searchKey);
+    List<GlobalMessageResponse> rows = chatMessageRepository.findGlobalMessages(page, size, searchKey);
+    Set<Long> userIds =
+        rows.stream()
+            .flatMap(r -> java.util.stream.Stream.of(r.senderId(), r.receiverId()))
+            .collect(Collectors.toSet());
+    Map<Long, User> users =
+        userRepository.findAllById(userIds).stream()
+            .filter(u -> !u.isDeleted())
+            .collect(Collectors.toMap(User::getId, u -> u));
+
+    List<GlobalMessageResponse> items =
+        rows.stream()
+            .map(
+                r ->
+                    new GlobalMessageResponse(
+                        r.id(),
+                        r.conversationId(),
+                        r.senderId(),
+                        users.get(r.senderId()) == null ? null : users.get(r.senderId()).getName(),
+                        r.receiverId(),
+                        users.get(r.receiverId()) == null ? null : users.get(r.receiverId()).getName(),
+                        r.messageText(),
+                        r.attachmentFileName(),
+                        r.sentAt(),
+                        r.seenAt()))
+            .toList();
     return new GlobalMessagePageResponse(items, page, size, items.size() == size);
   }
 
