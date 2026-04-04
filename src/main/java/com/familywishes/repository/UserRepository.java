@@ -37,9 +37,7 @@ public interface UserRepository extends JpaRepository<User, Long> {
   @Query(
       """
       SELECT u FROM User u
-      WHERE u.deleted = false
-        AND u.active = true
-        AND u.id <> :excludeUserId
+      WHERE u.id <> :excludeUserId
         AND (:onlyOnline = false OR u.online = true)
         AND (:searchKey = ''
              OR LOWER(u.name) LIKE LOWER(CONCAT('%', :searchKey, '%'))

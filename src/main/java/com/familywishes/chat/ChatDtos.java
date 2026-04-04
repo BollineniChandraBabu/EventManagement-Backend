@@ -7,7 +7,7 @@ import java.util.List;
 
 public class ChatDtos {
 
-  public record ChatUserResponse(Long userId, String name, String email, boolean online, LocalDateTime lastSeenAt) {}
+  public record ChatUserResponse(Long userId, String name, String email, boolean active, boolean online, LocalDateTime lastSeenAt) {}
 
   public record SendMessageRequest(@NotNull Long receiverId, String messageText, Long replyToMessageId) {}
 

@@ -39,7 +39,7 @@ public class ChatServiceImpl implements ChatService {
         .map(
             u ->
                 new ChatUserResponse(
-                    u.getId(), u.getName(), u.getEmail(), u.isOnline(), u.getLastSeenAt()))
+                    u.getId(), u.getName(), u.getEmail(), !u.isDeleted() && u.isActive(), u.isOnline(), u.getLastSeenAt()))
         .toList();
   }
 
@@ -60,7 +60,7 @@ public class ChatServiceImpl implements ChatService {
             .map(
                 u ->
                     new ChatUserResponse(
-                        u.getId(), u.getName(), u.getEmail(), u.isOnline(), u.getLastSeenAt()))
+                        u.getId(), u.getName(), u.getEmail(), !u.isDeleted() && u.isActive(), u.isOnline(), u.getLastSeenAt()))
             .toList(),
         pageResult.getNumber(),
         pageResult.getSize(),
@@ -78,7 +78,7 @@ public class ChatServiceImpl implements ChatService {
         .map(
             u ->
                 new ChatUserResponse(
-                    u.getId(), u.getName(), u.getEmail(), u.isOnline(), u.getLastSeenAt()))
+                    u.getId(), u.getName(), u.getEmail(), !u.isDeleted() && u.isActive(), u.isOnline(), u.getLastSeenAt()))
         .toList();
   }
 
@@ -99,7 +99,7 @@ public class ChatServiceImpl implements ChatService {
             .map(
                 u ->
                     new ChatUserResponse(
-                        u.getId(), u.getName(), u.getEmail(), u.isOnline(), u.getLastSeenAt()))
+                        u.getId(), u.getName(), u.getEmail(), !u.isDeleted() && u.isActive(), u.isOnline(), u.getLastSeenAt()))
             .toList(),
         pageResult.getNumber(),
         pageResult.getSize(),
