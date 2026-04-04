@@ -52,4 +52,6 @@ public interface ChatService {
   MessageReactionsResponse likeMessage(Long messageId);
 
   MessageReactionsResponse unlikeMessage(Long messageId);
+
+  QuickReactionsResponse quickReactions();
 }

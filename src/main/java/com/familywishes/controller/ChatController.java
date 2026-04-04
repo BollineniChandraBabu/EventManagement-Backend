@@ -99,6 +99,11 @@ public class ChatController {
     return chatService.unlikeMessage(messageId);
   }
 
+  @GetMapping("/messages/reactions/quick")
+  public ChatDtos.QuickReactionsResponse quickReactions() {
+    return chatService.quickReactions();
+  }
+
   @PostMapping("/presence/heartbeat")
   public void heartbeat() {
     chatService.heartbeat();

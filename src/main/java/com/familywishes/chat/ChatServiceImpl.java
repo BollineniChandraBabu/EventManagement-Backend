@@ -10,6 +10,7 @@ import com.familywishes.repository.UserRepository;
 import com.familywishes.service.impl.SupabaseStorageService;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
+import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
@@ -19,6 +20,7 @@ import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -26,7 +28,8 @@ import org.springframework.web.multipart.MultipartFile;
 @Service
 @RequiredArgsConstructor
 public class ChatServiceImpl implements ChatService {
-  private static final String LIKE_EMOJI = "❤️";
+  @Value("${chat.reactions.quick:❤️,😂,😮,😢,😡,👍}")
+  private String quickReactionsCsv;
 
   private final ChatMessageRepository chatMessageRepository;
   private final UserRepository userRepository;
@@ -513,7 +516,7 @@ public class ChatServiceImpl implements ChatService {
   public MessageReactionsResponse likeMessage(Long messageId) {
     User me = currentUser();
     ensureCanAccessMessage(me.getId(), messageId);
-    chatMessageRepository.addReaction(messageId, me.getId(), LIKE_EMOJI, nowIst());
+    chatMessageRepository.addReaction(messageId, me.getId(), defaultQuickReaction(), nowIst());
     return toMessageReactionsResponse(messageId, me.getId());
   }
 
@@ -522,8 +525,13 @@ public class ChatServiceImpl implements ChatService {
   public MessageReactionsResponse unlikeMessage(Long messageId) {
     User me = currentUser();
     ensureCanAccessMessage(me.getId(), messageId);
-    chatMessageRepository.removeReaction(messageId, me.getId(), LIKE_EMOJI);
+    chatMessageRepository.removeReaction(messageId, me.getId(), defaultQuickReaction());
     return toMessageReactionsResponse(messageId, me.getId());
+  }
+
+  @Override
+  public QuickReactionsResponse quickReactions() {
+    return new QuickReactionsResponse(quickReactionEmojis());
   }
 
   private void ensureCanAccessMessage(Long userId, Long messageId) {
@@ -538,6 +546,22 @@ public class ChatServiceImpl implements ChatService {
             .map(r -> new MessageReactionResponse(r.emoji(), r.count(), r.mine()))
             .toList();
     return new MessageReactionsResponse(messageId, reactions);
+  }
+
+  private String defaultQuickReaction() {
+    List<String> emojis = quickReactionEmojis();
+    if (emojis.isEmpty()) {
+      throw new BadRequestException("No default quick reaction configured");
+    }
+    return emojis.get(0);
+  }
+
+  private List<String> quickReactionEmojis() {
+    return Arrays.stream(quickReactionsCsv.split(","))
+        .map(String::trim)
+        .filter(s -> !s.isBlank())
+        .distinct()
+        .toList();
   }
 
   private Long resolveConversationId(Long user1, Long user2) {
