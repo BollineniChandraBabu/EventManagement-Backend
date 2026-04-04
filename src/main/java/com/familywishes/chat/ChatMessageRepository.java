@@ -103,7 +103,7 @@ public class ChatMessageRepository {
   }
 
   public List<MessageResponse> findConversationMessages(Long conversationId, int page, int size, Long me) {
-    return chatJdbc.query(
+    String query =
         """
         SELECT id, conversation_id, sender_id, receiver_id, message_text, attachment_key,
                attachment_file_name, attachment_content_type, sent_at, seen_at
@@ -134,7 +134,7 @@ public class ChatMessageRepository {
   }
 
   public List<ConversationSummary> findConversationSummaries(Long me) {
-    return chatJdbc.query(
+    String query =
         """
         SELECT c.id AS conversation_id,
                CASE WHEN c.user_a_id = :me THEN c.user_b_id ELSE c.user_a_id END AS other_user_id,
@@ -195,7 +195,15 @@ public class ChatMessageRepository {
       Long me, int page, int size, String searchKey) {
     String normalizedSearch = searchKey == null ? "" : searchKey.trim();
     boolean hasSearch = !normalizedSearch.isEmpty();
-    return chatJdbc.query(
+    String searchFilterSql =
+        hasSearch
+            ? """
+              AND (LOWER(COALESCE(ou.name, '')) LIKE LOWER(CONCAT('%', :search, '%'))
+                   OR LOWER(COALESCE(ou.email, '')) LIKE LOWER(CONCAT('%', :search, '%'))
+                   OR LOWER(COALESCE(m.message_text, '')) LIKE LOWER(CONCAT('%', :search, '%')))
+            """
+            : "";
+    String query =
         """
         SELECT c.id AS conversation_id,
                CASE WHEN c.user_a_id = :me THEN c.user_b_id ELSE c.user_a_id END AS other_user_id,
@@ -231,21 +239,21 @@ public class ChatMessageRepository {
                   FROM chat_messages cm
               ) ranked
              WHERE ranked.rn = 1
-         ) m ON m.conversation_id = c.id
+          ) m ON m.conversation_id = c.id
          WHERE (c.user_a_id = :me OR c.user_b_id = :me)
-           AND (:hasSearch = false
-                OR LOWER(COALESCE(ou.name, '')) LIKE LOWER(CONCAT('%', :search, '%'))
-                OR LOWER(COALESCE(ou.email, '')) LIKE LOWER(CONCAT('%', :search, '%'))
-                OR LOWER(COALESCE(m.message_text, '')) LIKE LOWER(CONCAT('%', :search, '%')))
+         %s
          ORDER BY m.sent_at DESC
          LIMIT :limit OFFSET :offset
-        """,
+        """
+            .formatted(searchFilterSql);
+
+    return chatJdbc.query(
+        query,
         new MapSqlParameterSource()
             .addValue("me", me)
-            .addValue("hasSearch", hasSearch)
-            .addValue("search", normalizedSearch)
             .addValue("limit", size)
-            .addValue("offset", page * size),
+            .addValue("offset", page * size)
+            .addValue("search", normalizedSearch),
         (rs, rowNum) ->
             new ConversationSummary(
                 rs.getLong("conversation_id"),
