@@ -194,6 +194,7 @@ public class ChatMessageRepository {
   public List<ConversationSummary> findConversationSummaries(
       Long me, int page, int size, String searchKey) {
     String normalizedSearch = searchKey == null ? "" : searchKey.trim();
+    boolean hasSearch = !normalizedSearch.isEmpty();
     return chatJdbc.query(
         """
         SELECT c.id AS conversation_id,
@@ -230,9 +231,9 @@ public class ChatMessageRepository {
                   FROM chat_messages cm
               ) ranked
              WHERE ranked.rn = 1
-          ) m ON m.conversation_id = c.id
+         ) m ON m.conversation_id = c.id
          WHERE (c.user_a_id = :me OR c.user_b_id = :me)
-           AND (:search = ''
+           AND (:hasSearch = false
                 OR LOWER(COALESCE(ou.name, '')) LIKE LOWER(CONCAT('%', :search, '%'))
                 OR LOWER(COALESCE(ou.email, '')) LIKE LOWER(CONCAT('%', :search, '%'))
                 OR LOWER(COALESCE(m.message_text, '')) LIKE LOWER(CONCAT('%', :search, '%')))
@@ -241,6 +242,7 @@ public class ChatMessageRepository {
         """,
         new MapSqlParameterSource()
             .addValue("me", me)
+            .addValue("hasSearch", hasSearch)
             .addValue("search", normalizedSearch)
             .addValue("limit", size)
             .addValue("offset", page * size),
