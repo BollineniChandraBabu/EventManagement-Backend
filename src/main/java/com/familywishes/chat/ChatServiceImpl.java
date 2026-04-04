@@ -26,6 +26,7 @@ import org.springframework.web.multipart.MultipartFile;
 @Service
 @RequiredArgsConstructor
 public class ChatServiceImpl implements ChatService {
+  private static final String LIKE_EMOJI = "❤️";
 
   private final ChatMessageRepository chatMessageRepository;
   private final UserRepository userRepository;
@@ -142,6 +143,7 @@ public class ChatServiceImpl implements ChatService {
             conversationId,
             me.getId(),
             receiver.getId(),
+            request.replyToMessageId(),
             text,
             attachmentKey,
             fileName,
@@ -154,6 +156,7 @@ public class ChatServiceImpl implements ChatService {
             conversationId,
             me.getId(),
             receiver.getId(),
+            request.replyToMessageId(),
             text,
             attachmentKey,
             fileName,
@@ -190,7 +193,7 @@ public class ChatServiceImpl implements ChatService {
     LocalDateTime now = nowIst();
     Long messageId =
         chatMessageRepository.insertMessage(
-            conversationId, sender.getId(), receiver.getId(), text, null, null, null, now);
+            conversationId, sender.getId(), receiver.getId(), null, text, null, null, null, now);
 
     MessageResponse response =
         new MessageResponse(
@@ -198,6 +201,7 @@ public class ChatServiceImpl implements ChatService {
             conversationId,
             sender.getId(),
             receiver.getId(),
+            null,
             text,
             null,
             null,
@@ -482,6 +486,58 @@ public class ChatServiceImpl implements ChatService {
 
     realtimePublisher.publishMessageEdited(updated, me.getId());
     return updated;
+  }
+
+  @Override
+  public MessageReactionsResponse listReactions(Long messageId) {
+    User me = currentUser();
+    ensureCanAccessMessage(me.getId(), messageId);
+    return toMessageReactionsResponse(messageId, me.getId());
+  }
+
+  @Override
+  @Transactional
+  public MessageReactionsResponse reactToMessage(Long messageId, MessageReactionRequest request) {
+    User me = currentUser();
+    ensureCanAccessMessage(me.getId(), messageId);
+    String emoji = request.emoji() == null ? "" : request.emoji().trim();
+    if (emoji.isBlank()) {
+      throw new BadRequestException("Emoji is required");
+    }
+    chatMessageRepository.addReaction(messageId, me.getId(), emoji, nowIst());
+    return toMessageReactionsResponse(messageId, me.getId());
+  }
+
+  @Override
+  @Transactional
+  public MessageReactionsResponse likeMessage(Long messageId) {
+    User me = currentUser();
+    ensureCanAccessMessage(me.getId(), messageId);
+    chatMessageRepository.addReaction(messageId, me.getId(), LIKE_EMOJI, nowIst());
+    return toMessageReactionsResponse(messageId, me.getId());
+  }
+
+  @Override
+  @Transactional
+  public MessageReactionsResponse unlikeMessage(Long messageId) {
+    User me = currentUser();
+    ensureCanAccessMessage(me.getId(), messageId);
+    chatMessageRepository.removeReaction(messageId, me.getId(), LIKE_EMOJI);
+    return toMessageReactionsResponse(messageId, me.getId());
+  }
+
+  private void ensureCanAccessMessage(Long userId, Long messageId) {
+    if (chatMessageRepository.findMessageMetaForParticipant(messageId, userId) == null) {
+      throw new NotFoundException("Message not found");
+    }
+  }
+
+  private MessageReactionsResponse toMessageReactionsResponse(Long messageId, Long me) {
+    List<MessageReactionResponse> reactions =
+        chatMessageRepository.findReactions(messageId, me).stream()
+            .map(r -> new MessageReactionResponse(r.emoji(), r.count(), r.mine()))
+            .toList();
+    return new MessageReactionsResponse(messageId, reactions);
   }
 
   private Long resolveConversationId(Long user1, Long user2) {

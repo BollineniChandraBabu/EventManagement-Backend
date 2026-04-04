@@ -17,6 +17,7 @@ import org.springframework.stereotype.Repository;
 public class ChatMessageRepository {
 
   public record MessageMeta(Long messageId, Long conversationId, Long senderId, LocalDateTime sentAt) {}
+  public record MessageReactionSummary(String emoji, long count, boolean mine) {}
   public record ConversationSummary(
       Long conversationId,
       Long otherUserId,
@@ -62,6 +63,7 @@ public class ChatMessageRepository {
       Long conversationId,
       Long senderId,
       Long receiverId,
+      Long replyToMessageId,
       String text,
       String attachmentKey,
       String attachmentFileName,
@@ -69,9 +71,9 @@ public class ChatMessageRepository {
       LocalDateTime sentAt) {
     return chatJdbc.queryForObject(
         """
-        INSERT INTO chat_messages(conversation_id, sender_id, receiver_id, message_text, attachment_key,
+        INSERT INTO chat_messages(conversation_id, sender_id, receiver_id, reply_to_message_id, message_text, attachment_key,
             attachment_file_name, attachment_content_type, sent_at)
-        VALUES (:conversationId, :senderId, :receiverId, :text, :attachmentKey, :attachmentFileName,
+        VALUES (:conversationId, :senderId, :receiverId, :replyToMessageId, :text, :attachmentKey, :attachmentFileName,
             :attachmentContentType, :sentAt)
         RETURNING id
         """,
@@ -79,6 +81,7 @@ public class ChatMessageRepository {
             .addValue("conversationId", conversationId)
             .addValue("senderId", senderId)
             .addValue("receiverId", receiverId)
+            .addValue("replyToMessageId", replyToMessageId)
             .addValue("text", text)
             .addValue("attachmentKey", attachmentKey)
             .addValue("attachmentFileName", attachmentFileName)
@@ -105,7 +108,7 @@ public class ChatMessageRepository {
   public List<MessageResponse> findConversationMessages(Long conversationId, int page, int size, Long me) {
     String query =
         """
-        SELECT id, conversation_id, sender_id, receiver_id, message_text, attachment_key,
+        SELECT id, conversation_id, sender_id, receiver_id, reply_to_message_id, message_text, attachment_key,
                attachment_file_name, attachment_content_type, sent_at, seen_at
           FROM chat_messages
          WHERE conversation_id = :conversationId
@@ -125,6 +128,7 @@ public class ChatMessageRepository {
               rs.getLong("conversation_id"),
               sender,
               rs.getLong("receiver_id"),
+              rs.getObject("reply_to_message_id") == null ? null : rs.getLong("reply_to_message_id"),
               rs.getString("message_text"),
               rs.getString("attachment_key"),
               rs.getString("attachment_file_name"),
@@ -352,7 +356,7 @@ public class ChatMessageRepository {
                SET message_text = :messageText
              WHERE id = :messageId
                AND sender_id = :senderId
-             RETURNING id, conversation_id, sender_id, receiver_id, message_text, attachment_key,
+             RETURNING id, conversation_id, sender_id, receiver_id, reply_to_message_id, message_text, attachment_key,
                        attachment_file_name, attachment_content_type, sent_at, seen_at
             """,
             new MapSqlParameterSource()
@@ -366,6 +370,7 @@ public class ChatMessageRepository {
                   rs.getLong("conversation_id"),
                   sender,
                   rs.getLong("receiver_id"),
+                  rs.getObject("reply_to_message_id") == null ? null : rs.getLong("reply_to_message_id"),
                   rs.getString("message_text"),
                   rs.getString("attachment_key"),
                   rs.getString("attachment_file_name"),
@@ -405,6 +410,48 @@ public class ChatMessageRepository {
          GROUP BY receiver_id
         """,
         Map.of());
+  }
+
+  public int addReaction(Long messageId, Long userId, String emoji, LocalDateTime reactedAt) {
+    return chatJdbc.update(
+        """
+        INSERT INTO chat_message_reactions(message_id, user_id, emoji, reacted_at)
+        VALUES (:messageId, :userId, :emoji, :reactedAt)
+        ON CONFLICT (message_id, user_id, emoji) DO NOTHING
+        """,
+        new MapSqlParameterSource()
+            .addValue("messageId", messageId)
+            .addValue("userId", userId)
+            .addValue("emoji", emoji)
+            .addValue("reactedAt", Timestamp.valueOf(reactedAt)));
+  }
+
+  public int removeReaction(Long messageId, Long userId, String emoji) {
+    return chatJdbc.update(
+        """
+        DELETE FROM chat_message_reactions
+         WHERE message_id = :messageId
+           AND user_id = :userId
+           AND emoji = :emoji
+        """,
+        Map.of("messageId", messageId, "userId", userId, "emoji", emoji));
+  }
+
+  public List<MessageReactionSummary> findReactions(Long messageId, Long me) {
+    return chatJdbc.query(
+        """
+        SELECT r.emoji,
+               count(1) AS reaction_count,
+               bool_or(r.user_id = :me) AS mine
+          FROM chat_message_reactions r
+         WHERE r.message_id = :messageId
+         GROUP BY r.emoji
+         ORDER BY reaction_count DESC, r.emoji ASC
+        """,
+        Map.of("messageId", messageId, "me", me),
+        (rs, rowNum) ->
+            new MessageReactionSummary(
+                rs.getString("emoji"), rs.getLong("reaction_count"), rs.getBoolean("mine")));
   }
 
   public List<GlobalMessageResponse> findGlobalMessages(int page, int size, String searchKey) {

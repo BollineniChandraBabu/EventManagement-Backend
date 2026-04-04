@@ -44,4 +44,12 @@ public interface ChatService {
   DeleteMessageResponse deleteLastSentMessage(Long otherUserId);
 
   MessageResponse editMessage(Long messageId, EditMessageRequest request);
+
+  MessageReactionsResponse listReactions(Long messageId);
+
+  MessageReactionsResponse reactToMessage(Long messageId, MessageReactionRequest request);
+
+  MessageReactionsResponse likeMessage(Long messageId);
+
+  MessageReactionsResponse unlikeMessage(Long messageId);
 }
