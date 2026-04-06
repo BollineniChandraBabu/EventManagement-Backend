@@ -1,11 +1,17 @@
 package com.familywishes.chat;
 
-import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 
 public class ChatSocketDtos {
   public record RealtimeSendMessageRequest(
-      @NotNull Long senderId, @NotNull Long receiverId, @NotBlank String messageText) {}
+      @NotNull Long senderId,
+      @NotNull Long receiverId,
+      String messageText,
+      String encryptedMessage,
+      String encryptionAlgorithm,
+      String encryptionKeyId,
+      String messageType,
+      Integer voiceDurationSeconds) {}
 
   public record MarkSeenRequest(
       @NotNull Long conversationId, @NotNull Long viewerId, @NotNull Long otherUserId) {}

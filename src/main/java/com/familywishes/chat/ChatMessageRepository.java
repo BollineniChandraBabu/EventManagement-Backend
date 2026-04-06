@@ -65,6 +65,11 @@ public class ChatMessageRepository {
       Long receiverId,
       Long replyToMessageId,
       String text,
+      String encryptedMessage,
+      String encryptionAlgorithm,
+      String encryptionKeyId,
+      String messageType,
+      Integer voiceDurationSeconds,
       String attachmentKey,
       String attachmentFileName,
       String attachmentContentType,
@@ -72,9 +77,11 @@ public class ChatMessageRepository {
     return chatJdbc.queryForObject(
         """
         INSERT INTO chat_messages(conversation_id, sender_id, receiver_id, reply_to_message_id, message_text, attachment_key,
-            attachment_file_name, attachment_content_type, sent_at)
+            attachment_file_name, attachment_content_type, sent_at, encrypted_message, encryption_algorithm,
+            encryption_key_id, message_type, voice_duration_seconds)
         VALUES (:conversationId, :senderId, :receiverId, :replyToMessageId, :text, :attachmentKey, :attachmentFileName,
-            :attachmentContentType, :sentAt)
+            :attachmentContentType, :sentAt, :encryptedMessage, :encryptionAlgorithm, :encryptionKeyId, :messageType,
+            :voiceDurationSeconds)
         RETURNING id
         """,
         new MapSqlParameterSource()
@@ -83,6 +90,11 @@ public class ChatMessageRepository {
             .addValue("receiverId", receiverId)
             .addValue("replyToMessageId", replyToMessageId)
             .addValue("text", text)
+            .addValue("encryptedMessage", encryptedMessage)
+            .addValue("encryptionAlgorithm", encryptionAlgorithm)
+            .addValue("encryptionKeyId", encryptionKeyId)
+            .addValue("messageType", messageType)
+            .addValue("voiceDurationSeconds", voiceDurationSeconds)
             .addValue("attachmentKey", attachmentKey)
             .addValue("attachmentFileName", attachmentFileName)
             .addValue("attachmentContentType", attachmentContentType)
@@ -109,7 +121,8 @@ public class ChatMessageRepository {
     String query =
         """
         SELECT id, conversation_id, sender_id, receiver_id, reply_to_message_id, message_text, attachment_key,
-               attachment_file_name, attachment_content_type, sent_at, seen_at
+               attachment_file_name, attachment_content_type, sent_at, seen_at, encrypted_message,
+               encryption_algorithm, encryption_key_id, message_type, voice_duration_seconds
           FROM chat_messages
          WHERE conversation_id = :conversationId
          ORDER BY sent_at DESC
@@ -130,6 +143,11 @@ public class ChatMessageRepository {
               rs.getLong("receiver_id"),
               rs.getObject("reply_to_message_id") == null ? null : rs.getLong("reply_to_message_id"),
               rs.getString("message_text"),
+              rs.getString("encrypted_message"),
+              rs.getString("encryption_algorithm"),
+              rs.getString("encryption_key_id"),
+              rs.getString("message_type"),
+              rs.getObject("voice_duration_seconds") == null ? null : rs.getInt("voice_duration_seconds"),
               rs.getString("attachment_key"),
               rs.getString("attachment_file_name"),
               rs.getString("attachment_content_type"),
@@ -357,7 +375,8 @@ public class ChatMessageRepository {
              WHERE id = :messageId
                AND sender_id = :senderId
              RETURNING id, conversation_id, sender_id, receiver_id, reply_to_message_id, message_text, attachment_key,
-                       attachment_file_name, attachment_content_type, sent_at, seen_at
+                       attachment_file_name, attachment_content_type, sent_at, seen_at, encrypted_message,
+                       encryption_algorithm, encryption_key_id, message_type, voice_duration_seconds
             """,
             new MapSqlParameterSource()
                 .addValue("messageId", messageId)
@@ -372,6 +391,13 @@ public class ChatMessageRepository {
                   rs.getLong("receiver_id"),
                   rs.getObject("reply_to_message_id") == null ? null : rs.getLong("reply_to_message_id"),
                   rs.getString("message_text"),
+                  rs.getString("encrypted_message"),
+                  rs.getString("encryption_algorithm"),
+                  rs.getString("encryption_key_id"),
+                  rs.getString("message_type"),
+                  rs.getObject("voice_duration_seconds") == null
+                      ? null
+                      : rs.getInt("voice_duration_seconds"),
                   rs.getString("attachment_key"),
                   rs.getString("attachment_file_name"),
                   rs.getString("attachment_content_type"),

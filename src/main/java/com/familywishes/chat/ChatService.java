@@ -18,7 +18,15 @@ public interface ChatService {
 
   MessageResponse sendMessage(SendMessageRequest request, MultipartFile attachment);
 
-  MessageResponse sendRealtimeTextMessage(Long senderId, Long receiverId, String messageText);
+  MessageResponse sendRealtimeMessage(
+      Long senderId,
+      Long receiverId,
+      String messageText,
+      String encryptedMessage,
+      String encryptionAlgorithm,
+      String encryptionKeyId,
+      String messageType,
+      Integer voiceDurationSeconds);
 
   MessagePageResponse getConversationMessages(Long otherUserId, int page, int size, boolean markSeen);
 
