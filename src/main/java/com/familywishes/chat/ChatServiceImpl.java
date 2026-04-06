@@ -518,6 +518,8 @@ public class ChatServiceImpl implements ChatService {
             conversationId, me.getId(), deletableFrom, deletedAt);
     if (deleted == null) {
       throw new NotFoundException("No sent message found to delete");
+    }else {
+      chatMessageRepository.removeAllReactions(deleted.messageId(),otherUserId);
     }
 
     realtimePublisher.publishMessageDeleted(deleted.conversationId(), deleted.messageId(), me.getId());

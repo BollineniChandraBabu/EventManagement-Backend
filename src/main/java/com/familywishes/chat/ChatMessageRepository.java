@@ -463,6 +463,16 @@ public class ChatMessageRepository {
         Map.of("messageId", messageId, "userId", userId, "emoji", emoji));
   }
 
+  public int removeAllReactions(Long messageId, Long userId) {
+    return chatJdbc.update(
+            """
+            DELETE FROM chat_message_reactions
+             WHERE message_id = :messageId
+               AND user_id = :userId
+            """,
+            Map.of("messageId", messageId, "userId", userId));
+  }
+
   public List<MessageReactionSummary> findReactions(Long messageId, Long me) {
     return chatJdbc.query(
         """
