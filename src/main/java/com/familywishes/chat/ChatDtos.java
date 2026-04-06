@@ -9,7 +9,15 @@ public class ChatDtos {
 
   public record ChatUserResponse(Long userId, String name, String email, boolean active, boolean online, LocalDateTime lastSeenAt) {}
 
-  public record SendMessageRequest(@NotNull Long receiverId, String messageText, Long replyToMessageId) {}
+  public record SendMessageRequest(
+      @NotNull Long receiverId,
+      String messageText,
+      String encryptedMessage,
+      String encryptionAlgorithm,
+      String encryptionKeyId,
+      String messageType,
+      Integer voiceDurationSeconds,
+      Long replyToMessageId) {}
 
   public record EditMessageRequest(@NotBlank String messageText) {}
 
@@ -20,6 +28,11 @@ public class ChatDtos {
       Long receiverId,
       Long replyToMessageId,
       String messageText,
+      String encryptedMessage,
+      String encryptionAlgorithm,
+      String encryptionKeyId,
+      String messageType,
+      Integer voiceDurationSeconds,
       String attachmentKey,
       String attachmentFileName,
       String attachmentContentType,

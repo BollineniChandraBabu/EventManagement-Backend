@@ -120,9 +120,14 @@ public class ChatServiceImpl implements ChatService {
             .orElseThrow(() -> new NotFoundException("Receiver not found"));
 
     String text = request.messageText() == null ? "" : request.messageText().trim();
-    if (text.isBlank() && (attachment == null || attachment.isEmpty())) {
-      throw new BadRequestException("Message text or attachment is required");
+    String encryptedMessage = request.encryptedMessage() == null ? null : request.encryptedMessage().trim();
+    if (encryptedMessage != null && encryptedMessage.isBlank()) {
+      encryptedMessage = null;
     }
+    if (text.isBlank() && encryptedMessage == null && (attachment == null || attachment.isEmpty())) {
+      throw new BadRequestException("Message text, encrypted payload or attachment is required");
+    }
+    String messageType = resolveMessageType(request.messageType(), attachment, encryptedMessage != null);
 
     Long conversationId = resolveConversationId(me.getId(), receiver.getId());
     String attachmentKey = null;
@@ -143,6 +148,11 @@ public class ChatServiceImpl implements ChatService {
             receiver.getId(),
             request.replyToMessageId(),
             text,
+            encryptedMessage,
+            normalizeNullable(request.encryptionAlgorithm()),
+            normalizeNullable(request.encryptionKeyId()),
+            messageType,
+            request.voiceDurationSeconds(),
             attachmentKey,
             fileName,
             contentType,
@@ -156,6 +166,11 @@ public class ChatServiceImpl implements ChatService {
             receiver.getId(),
             request.replyToMessageId(),
             text,
+            encryptedMessage,
+            normalizeNullable(request.encryptionAlgorithm()),
+            normalizeNullable(request.encryptionKeyId()),
+            messageType,
+            request.voiceDurationSeconds(),
             attachmentKey,
             fileName,
             contentType,
@@ -169,7 +184,15 @@ public class ChatServiceImpl implements ChatService {
 
   @Override
   @Transactional
-  public MessageResponse sendRealtimeTextMessage(Long senderId, Long receiverId, String messageText) {
+  public MessageResponse sendRealtimeMessage(
+      Long senderId,
+      Long receiverId,
+      String messageText,
+      String encryptedMessage,
+      String encryptionAlgorithm,
+      String encryptionKeyId,
+      String messageType,
+      Integer voiceDurationSeconds) {
     User sender =
         userRepository
             .findById(senderId)
@@ -183,15 +206,30 @@ public class ChatServiceImpl implements ChatService {
             .orElseThrow(() -> new NotFoundException("Receiver not found"));
 
     String text = messageText == null ? "" : messageText.trim();
-    if (text.isBlank()) {
-      throw new BadRequestException("Message text is required");
+    String normalizedEncryptedMessage = normalizeNullable(encryptedMessage);
+    if (text.isBlank() && normalizedEncryptedMessage == null) {
+      throw new BadRequestException("Message text or encrypted payload is required");
     }
 
     Long conversationId = resolveConversationId(sender.getId(), receiver.getId());
     LocalDateTime now = nowIst();
+    String resolvedType = resolveMessageType(messageType, null, normalizedEncryptedMessage != null);
     Long messageId =
         chatMessageRepository.insertMessage(
-            conversationId, sender.getId(), receiver.getId(), null, text, null, null, null, now);
+            conversationId,
+            sender.getId(),
+            receiver.getId(),
+            null,
+            text,
+            normalizedEncryptedMessage,
+            normalizeNullable(encryptionAlgorithm),
+            normalizeNullable(encryptionKeyId),
+            resolvedType,
+            voiceDurationSeconds,
+            null,
+            null,
+            null,
+            now);
 
     MessageResponse response =
         new MessageResponse(
@@ -201,6 +239,11 @@ public class ChatServiceImpl implements ChatService {
             receiver.getId(),
             null,
             text,
+            normalizedEncryptedMessage,
+            normalizeNullable(encryptionAlgorithm),
+            normalizeNullable(encryptionKeyId),
+            resolvedType,
+            voiceDurationSeconds,
             null,
             null,
             null,
@@ -320,6 +363,33 @@ public class ChatServiceImpl implements ChatService {
 
   private boolean containsIgnoreCase(String value, String needleLower) {
     return value != null && value.toLowerCase().contains(needleLower);
+  }
+
+  private String normalizeNullable(String value) {
+    if (value == null) {
+      return null;
+    }
+    String trimmed = value.trim();
+    return trimmed.isEmpty() ? null : trimmed;
+  }
+
+  private String resolveMessageType(
+      String requestedType, MultipartFile attachment, boolean encryptedPayloadPresent) {
+    String normalizedRequested = normalizeNullable(requestedType);
+    if (normalizedRequested != null) {
+      return normalizedRequested.toUpperCase();
+    }
+    if (attachment != null && !attachment.isEmpty()) {
+      String contentType = attachment.getContentType();
+      if (contentType != null && contentType.toLowerCase().startsWith("audio/")) {
+        return "VOICE";
+      }
+      return "FILE";
+    }
+    if (encryptedPayloadPresent) {
+      return "ENCRYPTED";
+    }
+    return "TEXT";
   }
 
   @Override

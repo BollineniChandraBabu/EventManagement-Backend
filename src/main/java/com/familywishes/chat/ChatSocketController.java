@@ -16,7 +16,15 @@ public class ChatSocketController {
 
   @MessageMapping("/chat.send")
   public void send(@Payload @Valid ChatSocketDtos.RealtimeSendMessageRequest payload) {
-    chatService.sendRealtimeTextMessage(payload.senderId(), payload.receiverId(), payload.messageText());
+    chatService.sendRealtimeMessage(
+        payload.senderId(),
+        payload.receiverId(),
+        payload.messageText(),
+        payload.encryptedMessage(),
+        payload.encryptionAlgorithm(),
+        payload.encryptionKeyId(),
+        payload.messageType(),
+        payload.voiceDurationSeconds());
   }
 
   @MessageMapping("/chat.seen")

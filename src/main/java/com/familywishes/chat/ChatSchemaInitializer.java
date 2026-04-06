@@ -46,6 +46,16 @@ public class ChatSchemaInitializer {
 
     chatJdbc.getJdbcTemplate().execute(
         "ALTER TABLE chat_messages ADD COLUMN IF NOT EXISTS reply_to_message_id BIGINT NULL");
+    chatJdbc.getJdbcTemplate().execute(
+        "ALTER TABLE chat_messages ADD COLUMN IF NOT EXISTS encrypted_message TEXT NULL");
+    chatJdbc.getJdbcTemplate().execute(
+        "ALTER TABLE chat_messages ADD COLUMN IF NOT EXISTS encryption_algorithm TEXT NULL");
+    chatJdbc.getJdbcTemplate().execute(
+        "ALTER TABLE chat_messages ADD COLUMN IF NOT EXISTS encryption_key_id TEXT NULL");
+    chatJdbc.getJdbcTemplate().execute(
+        "ALTER TABLE chat_messages ADD COLUMN IF NOT EXISTS message_type TEXT NOT NULL DEFAULT 'TEXT'");
+    chatJdbc.getJdbcTemplate().execute(
+        "ALTER TABLE chat_messages ADD COLUMN IF NOT EXISTS voice_duration_seconds INTEGER NULL");
 
     chatJdbc.getJdbcTemplate().execute(
         """
