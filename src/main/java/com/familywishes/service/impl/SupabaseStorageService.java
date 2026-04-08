@@ -14,6 +14,7 @@ import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;
 import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.s3.S3Client;
+import software.amazon.awssdk.services.s3.model.DeleteObjectRequest;
 import software.amazon.awssdk.services.s3.model.GetObjectRequest;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 
@@ -100,6 +101,22 @@ public class SupabaseStorageService {
     } catch (Exception ex) {
       log.warn("Failed to download image from Supabase storage for key={}", objectKey, ex);
       return null;
+    }
+  }
+
+  public boolean deleteObject(String objectKey) {
+    if (objectKey == null || objectKey.isBlank()) {
+      return false;
+    }
+
+    try {
+      DeleteObjectRequest request =
+          DeleteObjectRequest.builder().bucket(bucket).key(objectKey).build();
+      s3Client.deleteObject(request);
+      return true;
+    } catch (Exception ex) {
+      log.warn("Failed to delete object from Supabase storage for key={}", objectKey, ex);
+      return false;
     }
   }
 
