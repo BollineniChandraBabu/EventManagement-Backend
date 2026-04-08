@@ -24,6 +24,8 @@ public class AppConfig {
                 "http://localhost:4200",
                 "http://127.0.0.1:4200",
                 "https://*.firebaseapp.com",
+                "https://chandu-goldengreetings.web.app",
+                "http://chandu-goldengreetings.web.app",
                 "https://*.web.app")
             .allowedMethods("*")
             .allowedHeaders("*")
