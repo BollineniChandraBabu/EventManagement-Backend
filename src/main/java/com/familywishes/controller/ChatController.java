@@ -118,4 +118,9 @@ public class ChatController {
       @RequestParam(defaultValue = "") String searchKey) {
     return chatService.listAllMessages(page, size, searchKey);
   }
+
+  @GetMapping("/unread-count")
+  public java.util.Map<String, Long> unreadCount() {
+    return java.util.Map.of("unreadCount", chatService.unreadCount());
+  }
 }

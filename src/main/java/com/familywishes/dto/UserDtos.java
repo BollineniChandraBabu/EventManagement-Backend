@@ -1,5 +1,6 @@
 package com.familywishes.dto;
 
+import com.familywishes.entity.enums.Gender;
 import com.familywishes.entity.enums.Role;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
@@ -12,6 +13,7 @@ public class UserDtos {
       @NotBlank String name,
       @Email String email,
       Role role,
+      @NotNull Gender gender,
       @NotNull LocalDate dateOfBirth,
       @NotBlank String relationShip,
       boolean isGoodMorningEnabled,
@@ -28,6 +30,7 @@ public class UserDtos {
       String name,
       String email,
       Role role,
+      Gender gender,
       LocalDate dateOfBirth,
       boolean active,
       String relationShip,
@@ -35,5 +38,6 @@ public class UserDtos {
       boolean isGoodNightEnabled,
       boolean isBirthdayEnabled,
       boolean online,
-      LocalDateTime lastSeenAt) {}
+      LocalDateTime lastSeenAt,
+      String profilePictureUrl) {}
 }

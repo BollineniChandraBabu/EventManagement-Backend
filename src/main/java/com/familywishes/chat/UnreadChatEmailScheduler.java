@@ -1,6 +1,7 @@
 package com.familywishes.chat;
 
 import com.familywishes.entity.User;
+import com.familywishes.entity.enums.EmailType;
 import com.familywishes.repository.UserRepository;
 import com.familywishes.service.GmailEmailService;
 import java.util.List;
@@ -59,6 +60,7 @@ public class UnreadChatEmailScheduler implements Job {
             + "<p style='margin:0'>Thanks and regards,<br/>Golden Greetings Team</p>"
             + "</div>";
 
-    gmailEmailService.sendEmailWithAttachments(user.getEmail(), subject, html, null, null);
+    gmailEmailService.sendEmailWithAttachments(
+        user.getEmail(), subject, html, null, null, EmailType.UNREAD_CHAT_MESSAGE);
   }
 }

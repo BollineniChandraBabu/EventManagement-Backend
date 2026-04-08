@@ -20,6 +20,7 @@ import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
 
 @Service
 @RequiredArgsConstructor
@@ -27,6 +28,7 @@ public class UserServiceImpl implements UserService {
   private final UserRepository userRepository;
   private final PasswordEncoder encoder;
   private final RelationshipSeedRepository relationshipSeedRepository;
+  private final SupabaseStorageService supabaseStorageService;
 
   @Override
   public UserResponse create(UserRequest request) {
@@ -36,6 +38,7 @@ public class UserServiceImpl implements UserService {
             .email(request.email())
             .password(encoder.encode("Test"))
             .role(request.role())
+            .gender(request.gender())
             .birthday(request.dateOfBirth())
             .relationShip(resolveRelationship(request.relationShip()))
             .active(true)
@@ -51,16 +54,17 @@ public class UserServiceImpl implements UserService {
             .build());
 
     user = userRepository.save(user);
-    return getUserResponse(user);
+    return toUserResponse(user);
   }
 
-  private static UserResponse getUserResponse(User user) {
+  private UserResponse toUserResponse(User user) {
     if (Objects.nonNull(user.getWishSettings())) {
       return new UserResponse(
           user.getId(),
           user.getName(),
           user.getEmail(),
           user.getRole(),
+          user.getGender(),
           user.getBirthday(),
           user.isActive(),
           user.getRelationShip().getCode(),
@@ -68,13 +72,15 @@ public class UserServiceImpl implements UserService {
           user.getWishSettings().isGoodNightEnabled(),
           user.getWishSettings().isBirthdayEnabled(),
           user.isOnline(),
-          user.getLastSeenAt());
+          user.getLastSeenAt(),
+          resolveProfilePictureUrl(user));
     } else {
       return new UserResponse(
           user.getId(),
           user.getName(),
           user.getEmail(),
           user.getRole(),
+          user.getGender(),
           user.getBirthday(),
           user.isActive(),
           user.getRelationShip().getCode(),
@@ -82,7 +88,8 @@ public class UserServiceImpl implements UserService {
           false,
           false,
           user.isOnline(),
-          user.getLastSeenAt());
+          user.getLastSeenAt(),
+          resolveProfilePictureUrl(user));
     }
   }
 
@@ -97,6 +104,7 @@ public class UserServiceImpl implements UserService {
       throw new BadRequestException("Only admin can update role");
     }
     user.setRole(request.role());
+    user.setGender(request.gender());
     user.setBirthday(request.dateOfBirth());
     user.setRelationShip(resolveRelationship(request.relationShip()));
 
@@ -110,7 +118,7 @@ public class UserServiceImpl implements UserService {
     user.setWishSettings(userWishSettings);
 
     user = userRepository.save(user);
-    return getUserResponse(user);
+    return toUserResponse(user);
   }
 
   @Override
@@ -126,7 +134,7 @@ public class UserServiceImpl implements UserService {
             PageRequest.of(page, size, Sort.by(direction, normalizedSortBy)));
 
     return new PagedResponse<>(
-        userPage.getContent().stream().map(UserServiceImpl::getUserResponse).toList(),
+        userPage.getContent().stream().map(this::toUserResponse).toList(),
         userPage.getNumber(),
         userPage.getSize(),
         userPage.getTotalElements(),
@@ -139,13 +147,13 @@ public class UserServiceImpl implements UserService {
   public UserResponse getById(Long id) {
     User user =
         userRepository.findById(id).orElseThrow(() -> new NotFoundException("User not found"));
-    return getUserResponse(user);
+    return toUserResponse(user);
   }
 
   @Override
   public UserResponse getCurrentUser() {
     User user = findAuthenticatedUser();
-    return getUserResponse(user);
+    return toUserResponse(user);
   }
 
   @Override
@@ -166,7 +174,36 @@ public class UserServiceImpl implements UserService {
 
     user.setWishSettings(settings);
     user = userRepository.save(user);
-    return getUserResponse(user);
+    return toUserResponse(user);
+  }
+
+  @Override
+  public UserResponse uploadCurrentUserProfilePicture(MultipartFile file) {
+    if (file == null || file.isEmpty()) {
+      throw new BadRequestException("Profile picture file is required");
+    }
+    User user = findAuthenticatedUser();
+    if (user.getProfilePictureUrl() != null && !user.getProfilePictureUrl().isBlank()) {
+      supabaseStorageService.deleteByPublicUrl(user.getProfilePictureUrl());
+    }
+    String uploadedUrl = supabaseStorageService.uploadUserProfilePicture(file, user.getId());
+    if (uploadedUrl == null || uploadedUrl.isBlank()) {
+      throw new BadRequestException("Unable to upload profile picture");
+    }
+    user.setProfilePictureUrl(uploadedUrl);
+    user = userRepository.save(user);
+    return toUserResponse(user);
+  }
+
+  @Override
+  public UserResponse removeCurrentUserProfilePicture() {
+    User user = findAuthenticatedUser();
+    if (user.getProfilePictureUrl() != null && !user.getProfilePictureUrl().isBlank()) {
+      supabaseStorageService.deleteByPublicUrl(user.getProfilePictureUrl());
+    }
+    user.setProfilePictureUrl(null);
+    user = userRepository.save(user);
+    return toUserResponse(user);
   }
 
   @Override
@@ -180,7 +217,14 @@ public class UserServiceImpl implements UserService {
         userRepository.findById(id).orElseThrow(() -> new NotFoundException("User not found"));
     user.setActive(active);
     user = userRepository.save(user);
-    return getUserResponse(user);
+    return toUserResponse(user);
+  }
+
+  private String resolveProfilePictureUrl(User user) {
+    if (user.getProfilePictureUrl() == null || user.getProfilePictureUrl().isBlank()) {
+      return supabaseStorageService.getDefaultProfilePictureUrl(user.getGender());
+    }
+    return user.getProfilePictureUrl();
   }
 
   private RelationshipSeed resolveRelationship(String relationship) {

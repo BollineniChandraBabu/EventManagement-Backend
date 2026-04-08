@@ -78,4 +78,36 @@ public class EmailController {
       @RequestParam(defaultValue = "desc") String sortDir) {
     return emailService.getForgotPasswordStatus(page, size, searchKey, sortBy, sortDir);
   }
+
+  @GetMapping("/status/festival-wishes")
+  public PagedResponse<EmailStatusResponse> festivalWishStatus(
+      Authentication authentication,
+      @RequestParam(defaultValue = "0") int page,
+      @RequestParam(defaultValue = "10") int size,
+      @RequestParam(defaultValue = "") String searchKey,
+      @RequestParam(defaultValue = "id") String sortBy,
+      @RequestParam(defaultValue = "desc") String sortDir) {
+    boolean isAdmin =
+        authentication.getAuthorities().stream()
+            .map(GrantedAuthority::getAuthority)
+            .anyMatch("ROLE_ADMIN"::equals);
+    return emailService.getFestivalWishStatus(
+        page, size, searchKey, authentication.getName(), isAdmin, sortBy, sortDir);
+  }
+
+  @GetMapping("/status/unread-chat-messages")
+  public PagedResponse<EmailStatusResponse> unreadChatMessageStatus(
+      Authentication authentication,
+      @RequestParam(defaultValue = "0") int page,
+      @RequestParam(defaultValue = "10") int size,
+      @RequestParam(defaultValue = "") String searchKey,
+      @RequestParam(defaultValue = "id") String sortBy,
+      @RequestParam(defaultValue = "desc") String sortDir) {
+    boolean isAdmin =
+        authentication.getAuthorities().stream()
+            .map(GrantedAuthority::getAuthority)
+            .anyMatch("ROLE_ADMIN"::equals);
+    return emailService.getUnreadChatMessageStatus(
+        page, size, searchKey, authentication.getName(), isAdmin, sortBy, sortDir);
+  }
 }

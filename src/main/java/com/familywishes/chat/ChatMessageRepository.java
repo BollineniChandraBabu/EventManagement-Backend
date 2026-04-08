@@ -529,4 +529,18 @@ public class ChatMessageRepository {
                 rs.getTimestamp("sent_at") == null ? null : rs.getTimestamp("sent_at").toLocalDateTime(),
                 rs.getTimestamp("seen_at") == null ? null : rs.getTimestamp("seen_at").toLocalDateTime()));
   }
+
+  public long countUnreadMessagesForReceiver(Long receiverId) {
+    Long count =
+        chatJdbc.queryForObject(
+            """
+            SELECT count(1)
+              FROM chat_messages
+             WHERE receiver_id = :receiverId
+               AND seen_at IS NULL
+            """,
+            Map.of("receiverId", receiverId),
+            Long.class);
+    return count == null ? 0L : count;
+  }
 }

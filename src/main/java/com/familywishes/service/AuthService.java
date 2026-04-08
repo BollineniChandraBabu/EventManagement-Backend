@@ -22,4 +22,6 @@ public interface AuthService {
   void resetPasswordWithEmail(ResetPasswordWithEmailRequest request);
 
   void changePassword(ChangePasswordRequest request);
+
+  AuthResponse googleSsoLogin(GoogleSsoLoginRequest request);
 }

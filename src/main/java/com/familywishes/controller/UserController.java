@@ -7,6 +7,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 @RestController
 @RequestMapping("/api/users")
@@ -50,6 +51,16 @@ public class UserController {
   @PatchMapping("/me/wish-settings")
   public UserResponse updateMyWishSettings(@RequestBody WishSettingsUpdateRequest request) {
     return userService.updateCurrentUserWishSettings(request);
+  }
+
+  @PostMapping("/me/profile-picture")
+  public UserResponse uploadMyProfilePicture(@RequestPart("file") MultipartFile file) {
+    return userService.uploadCurrentUserProfilePicture(file);
+  }
+
+  @DeleteMapping("/me/profile-picture")
+  public UserResponse removeMyProfilePicture() {
+    return userService.removeCurrentUserProfilePicture();
   }
 
   @PostMapping("/{id}/deactivate")

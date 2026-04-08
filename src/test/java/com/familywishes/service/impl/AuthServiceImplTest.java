@@ -10,6 +10,7 @@ import static org.mockito.Mockito.when;
 import com.familywishes.dto.AuthDtos.AdminLoginAsUserRequest;
 import com.familywishes.dto.AuthDtos.AuthResponse;
 import com.familywishes.dto.AuthDtos.LoginRequest;
+import com.familywishes.chat.ChatMessageRepository;
 import com.familywishes.entity.RefreshToken;
 import com.familywishes.entity.User;
 import com.familywishes.entity.enums.Role;
@@ -46,6 +47,7 @@ class AuthServiceImplTest {
   @Mock private PasswordResetTokenRepository resetTokenRepository;
   @Mock private PasswordEncoder passwordEncoder;
   @Mock private GmailEmailService emailService;
+  @Mock private ChatMessageRepository chatMessageRepository;
 
   @InjectMocks private AuthServiceImpl authService;
 

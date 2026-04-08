@@ -10,6 +10,7 @@ import com.familywishes.dto.UserDtos.WishSettingsUpdateRequest;
 import com.familywishes.entity.RelationshipSeed;
 import com.familywishes.entity.User;
 import com.familywishes.entity.UserWishSettings;
+import com.familywishes.entity.enums.Gender;
 import com.familywishes.entity.enums.Role;
 import com.familywishes.exception.BadRequestException;
 import com.familywishes.repository.RelationshipSeedRepository;
@@ -34,6 +35,7 @@ class UserServiceImplTest {
   @Mock private UserRepository userRepository;
   @Mock private PasswordEncoder passwordEncoder;
   @Mock private RelationshipSeedRepository relationshipSeedRepository;
+  @Mock private SupabaseStorageService supabaseStorageService;
 
   @InjectMocks private UserServiceImpl userService;
 
@@ -49,6 +51,7 @@ class UserServiceImplTest {
             "Aman",
             "aman@example.com",
             Role.ROLE_USER,
+            Gender.MALE,
             LocalDate.of(1995, 5, 4),
             "BROTHER",
             true,
@@ -59,6 +62,7 @@ class UserServiceImplTest {
     when(relationshipSeedRepository.findByCodeAndActiveTrue("BROTHER"))
         .thenReturn(Optional.of(relationship));
     when(passwordEncoder.encode("Test")).thenReturn("encoded-password");
+    when(supabaseStorageService.getDefaultProfilePictureUrl(any())).thenReturn("default.png");
     when(userRepository.save(any(User.class)))
         .thenAnswer(
             invocation -> {
@@ -84,6 +88,7 @@ class UserServiceImplTest {
             .name("Ravi")
             .email("ravi@example.com")
             .role(Role.ROLE_USER)
+            .gender(Gender.MALE)
             .birthday(LocalDate.of(1997, 6, 15))
             .relationShip(relationship)
             .active(true)
@@ -105,6 +110,7 @@ class UserServiceImplTest {
     when(userRepository.findByEmailAndDeletedFalse("ravi@example.com"))
         .thenReturn(Optional.of(user));
     when(userRepository.save(any(User.class))).thenAnswer(invocation -> invocation.getArgument(0));
+    when(supabaseStorageService.getDefaultProfilePictureUrl(any())).thenReturn("default.png");
 
     UserResponse response =
         userService.updateCurrentUserWishSettings(new WishSettingsUpdateRequest(true, null, true));
@@ -123,6 +129,7 @@ class UserServiceImplTest {
             .name("Aman")
             .email("aman@example.com")
             .role(Role.ROLE_USER)
+            .gender(Gender.MALE)
             .birthday(LocalDate.of(1995, 5, 4))
             .relationShip(relationship)
             .active(true)
@@ -134,6 +141,7 @@ class UserServiceImplTest {
             "Aman Updated",
             "aman@example.com",
             Role.ROLE_ADMIN,
+            Gender.MALE,
             LocalDate.of(1995, 5, 4),
             "BROTHER",
             true,

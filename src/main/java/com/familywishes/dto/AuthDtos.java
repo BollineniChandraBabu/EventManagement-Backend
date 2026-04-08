@@ -9,7 +9,12 @@ public class AuthDtos {
   public record AdminLoginAsUserRequest(@Email String email) {}
 
   public record AuthResponse(
-      String accessToken, String refreshToken, String tokenType, String role, long expiresIn) {}
+      String accessToken,
+      String refreshToken,
+      String tokenType,
+      String role,
+      long expiresIn,
+      long unreadChatMessagesCount) {}
 
   public record RefreshRequest(@NotBlank String refreshToken) {}
 
@@ -26,4 +31,6 @@ public class AuthDtos {
 
   public record ChangePasswordRequest(
       @NotBlank String currentPassword, @NotBlank String newPassword) {}
+
+  public record GoogleSsoLoginRequest(@NotBlank String idToken) {}
 }

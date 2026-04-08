@@ -4,6 +4,7 @@ import com.familywishes.dto.AiWishRequest;
 import com.familywishes.dto.AiWishResponse;
 import com.familywishes.entity.FestivalWishMapping;
 import com.familywishes.entity.User;
+import com.familywishes.entity.enums.EmailType;
 import com.familywishes.repository.FestivalWishMappingRepository;
 import com.familywishes.service.AiService;
 import com.familywishes.service.GmailEmailService;
@@ -75,7 +76,12 @@ public class FestivalScheduler implements Job {
     AiWishResponse ai = aiService.generate(request);
     byte[] image = aiService.callGeminiImage(request);
     gmailEmailService.sendEmailWithAttachments(
-            festivalWishMapping.getUser().getEmail(), ai.subject(), ai.htmlMessage(), null, image);
+            festivalWishMapping.getUser().getEmail(),
+            ai.subject(),
+            ai.htmlMessage(),
+            null,
+            image,
+            EmailType.FESTIVAL_WISH);
     log.info("Birthday wish sent to {}", festivalWishMapping.getUser().getEmail());
   }
 

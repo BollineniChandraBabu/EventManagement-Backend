@@ -24,9 +24,30 @@ public interface GmailEmailService {
   PagedResponse<EmailDtos.EmailStatusResponse> getForgotPasswordStatus(
       int page, int size, String searchKey, String sortBy, String sortDir);
 
+  PagedResponse<EmailDtos.EmailStatusResponse> getFestivalWishStatus(
+      int page,
+      int size,
+      String searchKey,
+      String requesterEmail,
+      boolean isAdmin,
+      String sortBy,
+      String sortDir);
+
+  PagedResponse<EmailDtos.EmailStatusResponse> getUnreadChatMessageStatus(
+      int page,
+      int size,
+      String searchKey,
+      String requesterEmail,
+      boolean isAdmin,
+      String sortBy,
+      String sortDir);
+
   EmailDtos.EmailStatusResponse getStatusById(Long id, String requesterEmail);
 
   void sendTestEmail(String to);
 
   void sendEmailNow(EmailDtos.SendEmailNowRequest request);
+
+  void sendEmailWithAttachments(
+      String to, String subject, String html, Long logId, byte[] image, com.familywishes.entity.enums.EmailType emailType);
 }

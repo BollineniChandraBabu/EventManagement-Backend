@@ -7,7 +7,14 @@ import java.util.List;
 
 public class ChatDtos {
 
-  public record ChatUserResponse(Long userId, String name, String email, boolean active, boolean online, LocalDateTime lastSeenAt) {}
+  public record ChatUserResponse(
+      Long userId,
+      String name,
+      String email,
+      boolean active,
+      boolean online,
+      LocalDateTime lastSeenAt,
+      String profilePictureUrl) {}
 
   public record SendMessageRequest(
       @NotNull Long receiverId,
@@ -53,6 +60,7 @@ public class ChatDtos {
       String otherUserEmail,
       boolean otherUserOnline,
       LocalDateTime otherUserLastSeenAt,
+      String otherUserProfilePictureUrl,
       String lastMessage,
       LocalDateTime lastMessageAt,
       LocalDateTime lastSeenMessageAt,

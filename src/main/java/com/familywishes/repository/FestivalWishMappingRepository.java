@@ -16,6 +16,8 @@ public interface FestivalWishMappingRepository extends JpaRepository<FestivalWis
 
   Optional<FestivalWishMapping> findBySpecialEvent_IdAndUser_Id(Long specialEventId, Long userId);
 
+  List<FestivalWishMapping> findByUser_IdAndActiveTrue(Long userId);
+
   @Query(
       """
       SELECT f FROM FestivalWishMapping f
