@@ -506,10 +506,12 @@ public class ChatServiceImpl implements ChatService {
     if (lastSent == null) {
       throw new NotFoundException("No sent message found to delete");
     }
+    String attachmentKeyToDelete =
+        chatMessageRepository.findAttachmentKeyByMessageIdForUser(lastSent.messageId(), me.getId());
 
-    LocalDateTime deletableFrom = nowIst().minusMinutes(15);
+    LocalDateTime deletableFrom = nowIst().minusHours(24);
     if (lastSent.sentAt() == null || lastSent.sentAt().isBefore(deletableFrom)) {
-      throw new BadRequestException("Message can be deleted only within 15 minutes of sending");
+      throw new BadRequestException("Message can be deleted only within 24 hours of sending");
     }
 
     LocalDateTime deletedAt = nowIst();
@@ -518,8 +520,11 @@ public class ChatServiceImpl implements ChatService {
             conversationId, me.getId(), deletableFrom, deletedAt);
     if (deleted == null) {
       throw new NotFoundException("No sent message found to delete");
-    }else {
-      chatMessageRepository.removeAllReactions(deleted.messageId(),otherUserId);
+    } else {
+      chatMessageRepository.removeAllReactions(deleted.messageId(), otherUserId);
+      if (attachmentKeyToDelete != null && !attachmentKeyToDelete.isBlank()) {
+        storageService.deleteObject(attachmentKeyToDelete);
+      }
     }
 
     realtimePublisher.publishMessageDeleted(deleted.conversationId(), deleted.messageId(), me.getId());
@@ -544,9 +549,9 @@ public class ChatServiceImpl implements ChatService {
       throw new BadRequestException("Only sender can edit this message");
     }
 
-    LocalDateTime editableFrom = nowIst().minusMinutes(15);
+    LocalDateTime editableFrom = nowIst().minusHours(24);
     if (meta.sentAt() == null || meta.sentAt().isBefore(editableFrom)) {
-      throw new BadRequestException("Message can be edited only within 15 minutes of sending");
+      throw new BadRequestException("Message can be edited only within 24 hours of sending");
     }
 
     MessageResponse updated = chatMessageRepository.updateMessageText(messageId, me.getId(), text, me.getId());
