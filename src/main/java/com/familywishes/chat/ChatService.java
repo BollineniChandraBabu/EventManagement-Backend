@@ -53,6 +53,8 @@ public interface ChatService {
 
   DeleteMessageResponse deleteLastSentMessage(Long otherUserId);
 
+  DeleteMessageResponse deleteMessageById(Long messageId);
+
   MessageResponse editMessage(Long messageId, EditMessageRequest request);
 
   MessageReactionsResponse listReactions(Long messageId);

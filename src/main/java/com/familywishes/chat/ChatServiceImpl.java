@@ -575,6 +575,40 @@ public class ChatServiceImpl implements ChatService {
 
   @Override
   @Transactional
+  public DeleteMessageResponse deleteMessageById(Long messageId) {
+    User me = currentUser();
+    ChatMessageRepository.MessageMeta meta =
+        chatMessageRepository.findMessageMetaForParticipant(messageId, me.getId());
+    if (meta == null) {
+      throw new NotFoundException("Message not found");
+    }
+    if (!me.getId().equals(meta.senderId())) {
+      throw new BadRequestException("Only sender can delete this message");
+    }
+
+    LocalDateTime deletableFrom = nowIst().minusHours(24);
+    if (meta.sentAt() == null || meta.sentAt().isBefore(deletableFrom)) {
+      throw new BadRequestException("Message can be deleted only within 24 hours of sending");
+    }
+
+    String attachmentKeyToDelete =
+        chatMessageRepository.findAttachmentKeyByMessageIdForUser(messageId, me.getId());
+    LocalDateTime deletedAt = nowIst();
+    DeleteMessageResponse deleted =
+        chatMessageRepository.deleteMessageById(messageId, me.getId(), deletableFrom, deletedAt);
+    if (deleted == null) {
+      throw new NotFoundException("Message not found");
+    }
+    chatMessageRepository.removeAllReactions(deleted.messageId(), me.getId());
+    if (attachmentKeyToDelete != null && !attachmentKeyToDelete.isBlank()) {
+      storageService.deleteObject(attachmentKeyToDelete);
+    }
+    realtimePublisher.publishMessageDeleted(deleted.conversationId(), deleted.messageId(), me.getId());
+    return deleted;
+  }
+
+  @Override
+  @Transactional
   public MessageResponse editMessage(Long messageId, EditMessageRequest request) {
     User me = currentUser();
     String text = request.messageText() == null ? "" : request.messageText().trim();

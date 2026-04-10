@@ -325,6 +325,27 @@ public class ChatMessageRepository {
     return deleted.isEmpty() ? null : deleted.get(0);
   }
 
+  public DeleteMessageResponse deleteMessageById(
+      Long messageId, Long senderId, LocalDateTime minSentAt, LocalDateTime deletedAt) {
+    List<DeleteMessageResponse> deleted =
+        chatJdbc.query(
+            """
+            DELETE FROM chat_messages
+             WHERE id = :messageId
+               AND sender_id = :senderId
+               AND sent_at >= :minSentAt
+             RETURNING id, conversation_id
+            """,
+            new MapSqlParameterSource()
+                .addValue("messageId", messageId)
+                .addValue("senderId", senderId)
+                .addValue("minSentAt", Timestamp.valueOf(minSentAt)),
+            (rs, rowNum) ->
+                new DeleteMessageResponse(
+                    rs.getLong("id"), rs.getLong("conversation_id"), deletedAt));
+    return deleted.isEmpty() ? null : deleted.get(0);
+  }
+
   public MessageMeta findLastSentMessageMeta(Long conversationId, Long senderId) {
     List<MessageMeta> rows =
         chatJdbc.query(
