@@ -120,12 +120,14 @@ public class ChatMessageRepository {
   public List<MessageResponse> findConversationMessages(Long conversationId, int page, int size, Long me) {
     String query =
         """
-        SELECT id, conversation_id, sender_id, receiver_id, reply_to_message_id, message_text, attachment_key,
-               attachment_file_name, attachment_content_type, sent_at, seen_at, encrypted_message,
-               encryption_algorithm, encryption_key_id, message_type, voice_duration_seconds
-          FROM chat_messages
-         WHERE conversation_id = :conversationId
-         ORDER BY sent_at DESC
+        SELECT m.id, m.conversation_id, m.sender_id, m.receiver_id, m.reply_to_message_id, m.message_text,
+               r.message_text AS reply_message_text, m.attachment_key, m.attachment_file_name,
+               m.attachment_content_type, m.sent_at, m.seen_at, m.encrypted_message,
+               m.encryption_algorithm, m.encryption_key_id, m.message_type, m.voice_duration_seconds
+          FROM chat_messages m
+          LEFT JOIN chat_messages r ON r.id = m.reply_to_message_id
+         WHERE m.conversation_id = :conversationId
+         ORDER BY m.sent_at DESC
          LIMIT :limit OFFSET :offset
         """;
     return chatJdbc.query(
@@ -142,6 +144,7 @@ public class ChatMessageRepository {
               sender,
               rs.getLong("receiver_id"),
               rs.getObject("reply_to_message_id") == null ? null : rs.getLong("reply_to_message_id"),
+              rs.getString("reply_message_text"),
               rs.getString("message_text"),
               rs.getString("encrypted_message"),
               rs.getString("encryption_algorithm"),
@@ -391,13 +394,18 @@ public class ChatMessageRepository {
     List<MessageResponse> rows =
         chatJdbc.query(
             """
-            UPDATE chat_messages
-               SET message_text = :messageText
-             WHERE id = :messageId
-               AND sender_id = :senderId
-             RETURNING id, conversation_id, sender_id, receiver_id, reply_to_message_id, message_text, attachment_key,
-                       attachment_file_name, attachment_content_type, sent_at, seen_at, encrypted_message,
-                       encryption_algorithm, encryption_key_id, message_type, voice_duration_seconds
+            WITH updated AS (
+              UPDATE chat_messages
+                 SET message_text = :messageText
+               WHERE id = :messageId
+                 AND sender_id = :senderId
+               RETURNING id, conversation_id, sender_id, receiver_id, reply_to_message_id, message_text, attachment_key,
+                         attachment_file_name, attachment_content_type, sent_at, seen_at, encrypted_message,
+                         encryption_algorithm, encryption_key_id, message_type, voice_duration_seconds
+            )
+            SELECT u.*, r.message_text AS reply_message_text
+              FROM updated u
+              LEFT JOIN chat_messages r ON r.id = u.reply_to_message_id
             """,
             new MapSqlParameterSource()
                 .addValue("messageId", messageId)
@@ -411,6 +419,7 @@ public class ChatMessageRepository {
                   sender,
                   rs.getLong("receiver_id"),
                   rs.getObject("reply_to_message_id") == null ? null : rs.getLong("reply_to_message_id"),
+                  rs.getString("reply_message_text"),
                   rs.getString("message_text"),
                   rs.getString("encrypted_message"),
                   rs.getString("encryption_algorithm"),
