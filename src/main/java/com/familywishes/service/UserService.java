@@ -2,6 +2,7 @@ package com.familywishes.service;
 
 import com.familywishes.dto.CommonDtos.PagedResponse;
 import com.familywishes.dto.UserDtos.*;
+import org.springframework.web.multipart.MultipartFile;
 
 public interface UserService {
   UserResponse create(UserRequest request);
@@ -16,6 +17,12 @@ public interface UserService {
   UserResponse getCurrentUser();
 
   UserResponse updateCurrentUserWishSettings(WishSettingsUpdateRequest request);
+
+  WishPreviewResponse getCurrentUserWishPreview();
+
+  UserResponse uploadCurrentUserProfilePicture(MultipartFile file);
+
+  UserResponse removeCurrentUserProfilePicture();
 
   void deactivate(Long id);
 

@@ -1,6 +1,7 @@
 package com.familywishes.entity;
 
 import com.familywishes.entity.converter.BooleanToZeroOneConverter;
+import com.familywishes.entity.enums.Gender;
 import com.familywishes.entity.enums.Role;
 import jakarta.persistence.*;
 import java.time.LocalDate;
@@ -31,6 +32,11 @@ public class User extends ActivatableEntity {
 
   @Enumerated(EnumType.ORDINAL)
   @Column(nullable = false, columnDefinition = "SMALLINT")
+  @Builder.Default
+  private Gender gender = Gender.MALE;
+
+  @Enumerated(EnumType.ORDINAL)
+  @Column(nullable = false, columnDefinition = "SMALLINT")
   private Role role;
 
   @Column(nullable = false, columnDefinition = "SMALLINT")
@@ -57,6 +63,9 @@ public class User extends ActivatableEntity {
   private Boolean online = false;
 
   @Column private LocalDateTime lastSeenAt;
+
+  @Column(name = "profile_picture_url", columnDefinition = "TEXT")
+  private String profilePictureUrl;
 
   @OneToOne(mappedBy = "user", cascade = CascadeType.ALL)
   private UserWishSettings wishSettings;

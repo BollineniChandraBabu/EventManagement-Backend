@@ -33,19 +33,27 @@ public class ChatServiceImpl implements ChatService {
 
   @Override
   public List<ChatUserResponse> listAvailableUsers() {
+    markStaleUsersOffline();
     User me = currentUser();
     return userRepository.findAll().stream()
         .filter(u -> !u.isDeleted() && u.isActive() && !u.getId().equals(me.getId()))
         .map(
             u ->
                 new ChatUserResponse(
-                    u.getId(), u.getName(), u.getEmail(), !u.isDeleted() && u.isActive(), u.isOnline(), u.getLastSeenAt()))
+                    u.getId(),
+                    u.getName(),
+                    u.getEmail(),
+                    !u.isDeleted() && u.isActive(),
+                    isEffectivelyOnline(u),
+                    u.getLastSeenAt(),
+                    resolveProfilePictureUrl(u)))
         .toList();
   }
 
   @Override
   public PagedResponse<ChatUserResponse> listAvailableUsers(
       int page, int size, String searchKey, String sortBy, String sortDir) {
+    markStaleUsersOffline();
     User me = currentUser();
     Sort sort = resolveUserSort(sortBy, sortDir);
     var pageResult =
@@ -60,7 +68,13 @@ public class ChatServiceImpl implements ChatService {
             .map(
                 u ->
                     new ChatUserResponse(
-                        u.getId(), u.getName(), u.getEmail(), !u.isDeleted() && u.isActive(), u.isOnline(), u.getLastSeenAt()))
+                        u.getId(),
+                        u.getName(),
+                        u.getEmail(),
+                        !u.isDeleted() && u.isActive(),
+                        isEffectivelyOnline(u),
+                        u.getLastSeenAt(),
+                        resolveProfilePictureUrl(u)))
             .toList(),
         pageResult.getNumber(),
         pageResult.getSize(),
@@ -72,19 +86,32 @@ public class ChatServiceImpl implements ChatService {
 
   @Override
   public List<ChatUserResponse> listActiveUsers() {
+    markStaleUsersOffline();
     User me = currentUser();
     return userRepository.findAll().stream()
-        .filter(u -> !u.isDeleted() && u.isActive() && u.isOnline() && !u.getId().equals(me.getId()))
+        .filter(
+            u ->
+                !u.isDeleted()
+                    && u.isActive()
+                    && isEffectivelyOnline(u)
+                    && !u.getId().equals(me.getId()))
         .map(
             u ->
                 new ChatUserResponse(
-                    u.getId(), u.getName(), u.getEmail(), !u.isDeleted() && u.isActive(), u.isOnline(), u.getLastSeenAt()))
+                    u.getId(),
+                    u.getName(),
+                    u.getEmail(),
+                    !u.isDeleted() && u.isActive(),
+                    isEffectivelyOnline(u),
+                    u.getLastSeenAt(),
+                    resolveProfilePictureUrl(u)))
         .toList();
   }
 
   @Override
   public PagedResponse<ChatUserResponse> listActiveUsers(
       int page, int size, String searchKey, String sortBy, String sortDir) {
+    markStaleUsersOffline();
     User me = currentUser();
     Sort sort = resolveUserSort(sortBy, sortDir);
     var pageResult =
@@ -99,7 +126,13 @@ public class ChatServiceImpl implements ChatService {
             .map(
                 u ->
                     new ChatUserResponse(
-                        u.getId(), u.getName(), u.getEmail(), !u.isDeleted() && u.isActive(), u.isOnline(), u.getLastSeenAt()))
+                        u.getId(),
+                        u.getName(),
+                        u.getEmail(),
+                        !u.isDeleted() && u.isActive(),
+                        isEffectivelyOnline(u),
+                        u.getLastSeenAt(),
+                        resolveProfilePictureUrl(u)))
             .toList(),
         pageResult.getNumber(),
         pageResult.getSize(),
@@ -277,6 +310,7 @@ public class ChatServiceImpl implements ChatService {
 
   @Override
   public List<ConversationResponse> listConversations() {
+    markStaleUsersOffline();
     User me = currentUser();
     List<ChatMessageRepository.ConversationSummary> rows =
         chatMessageRepository.findConversationSummaries(me.getId());
@@ -287,6 +321,7 @@ public class ChatServiceImpl implements ChatService {
   @Override
   public PagedResponse<ConversationResponse> listConversations(
       int page, int size, String searchKey, String sortBy, String sortDir) {
+    markStaleUsersOffline();
     User me = currentUser();
     int safePage = Math.max(page, 0);
     int safeSize = Math.max(size, 1);
@@ -344,8 +379,9 @@ public class ChatServiceImpl implements ChatService {
         row.otherUserId(),
         other == null ? null : other.getName(),
         other == null ? null : other.getEmail(),
-        other != null && other.isOnline(),
+        other != null && isEffectivelyOnline(other),
         other == null ? null : other.getLastSeenAt(),
+        other == null ? storageService.getDefaultProfilePictureUrl(null) : resolveProfilePictureUrl(other),
         row.messageText(),
         row.sentAt(),
         row.seenAt(),
@@ -491,6 +527,12 @@ public class ChatServiceImpl implements ChatService {
   }
 
   @Override
+  public long unreadCount() {
+    User me = currentUser();
+    return chatMessageRepository.countUnreadMessagesForReceiver(me.getId());
+  }
+
+  @Override
   @Transactional
   public DeleteMessageResponse deleteLastSentMessage(Long otherUserId) {
     User me = currentUser();
@@ -527,6 +569,40 @@ public class ChatServiceImpl implements ChatService {
       }
     }
 
+    realtimePublisher.publishMessageDeleted(deleted.conversationId(), deleted.messageId(), me.getId());
+    return deleted;
+  }
+
+  @Override
+  @Transactional
+  public DeleteMessageResponse deleteMessageById(Long messageId) {
+    User me = currentUser();
+    ChatMessageRepository.MessageMeta meta =
+        chatMessageRepository.findMessageMetaForParticipant(messageId, me.getId());
+    if (meta == null) {
+      throw new NotFoundException("Message not found");
+    }
+    if (!me.getId().equals(meta.senderId())) {
+      throw new BadRequestException("Only sender can delete this message");
+    }
+
+    LocalDateTime deletableFrom = nowIst().minusHours(24);
+    if (meta.sentAt() == null || meta.sentAt().isBefore(deletableFrom)) {
+      throw new BadRequestException("Message can be deleted only within 24 hours of sending");
+    }
+
+    String attachmentKeyToDelete =
+        chatMessageRepository.findAttachmentKeyByMessageIdForUser(messageId, me.getId());
+    LocalDateTime deletedAt = nowIst();
+    DeleteMessageResponse deleted =
+        chatMessageRepository.deleteMessageById(messageId, me.getId(), deletableFrom, deletedAt);
+    if (deleted == null) {
+      throw new NotFoundException("Message not found");
+    }
+    chatMessageRepository.removeAllReactions(deleted.messageId(), me.getId());
+    if (attachmentKeyToDelete != null && !attachmentKeyToDelete.isBlank()) {
+      storageService.deleteObject(attachmentKeyToDelete);
+    }
     realtimePublisher.publishMessageDeleted(deleted.conversationId(), deleted.messageId(), me.getId());
     return deleted;
   }
@@ -653,6 +729,24 @@ public class ChatServiceImpl implements ChatService {
     return userRepository
         .findByEmailAndDeletedFalse(authentication.getName())
         .orElseThrow(() -> new NotFoundException("User not found"));
+  }
+
+  private void markStaleUsersOffline() {
+    userRepository.markStaleUsersOffline(nowIst().minusMinutes(2));
+  }
+
+  private boolean isEffectivelyOnline(User user) {
+    if (user == null || !user.isOnline() || user.getLastSeenAt() == null) {
+      return false;
+    }
+    return !user.getLastSeenAt().isBefore(nowIst().minusMinutes(2));
+  }
+
+  private String resolveProfilePictureUrl(User user) {
+    if (user == null || user.getProfilePictureUrl() == null || user.getProfilePictureUrl().isBlank()) {
+      return storageService.getDefaultProfilePictureUrl(user == null ? null : user.getGender());
+    }
+    return user.getProfilePictureUrl();
   }
 
   private Sort resolveUserSort(String sortBy, String sortDir) {

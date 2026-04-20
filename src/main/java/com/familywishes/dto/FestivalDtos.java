@@ -8,10 +8,7 @@ public class FestivalDtos {
   public record FestivalResponse(Long id, String eventName, LocalDate eventDate, boolean active) {}
 
   public record FestivalWishMappingRequest(
-      @NotNull Long specialEventId,
-      @NotNull Long userId,
-      String customMessage,
-      @NotNull Boolean active) {}
+      @NotNull Long specialEventId, @NotNull Long userId, @NotNull Boolean active) {}
 
   public record FestivalWishMappingResponse(
       Long id,
@@ -19,6 +16,5 @@ public class FestivalDtos {
       String festivalName,
       Long userId,
       String userName,
-      String customMessage,
       boolean active) {}
 }

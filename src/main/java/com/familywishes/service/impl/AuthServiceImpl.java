@@ -1,6 +1,7 @@
 package com.familywishes.service.impl;
 
 import com.familywishes.dto.AuthDtos.*;
+import com.familywishes.chat.ChatMessageRepository;
 import com.familywishes.entity.OtpCode;
 import com.familywishes.entity.PasswordResetToken;
 import com.familywishes.entity.RefreshToken;
@@ -12,9 +13,14 @@ import com.familywishes.repository.*;
 import com.familywishes.security.JwtService;
 import com.familywishes.service.AuthService;
 import com.familywishes.service.GmailEmailService;
+import com.google.api.client.googleapis.auth.oauth2.GoogleIdToken;
+import com.google.api.client.googleapis.auth.oauth2.GoogleIdTokenVerifier;
+import com.google.api.client.googleapis.javanet.GoogleNetHttpTransport;
+import com.google.api.client.json.jackson2.JacksonFactory;
 import java.security.SecureRandom;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
+import java.util.Collections;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
@@ -41,6 +47,7 @@ public class AuthServiceImpl implements AuthService {
   private final PasswordResetTokenRepository resetTokenRepository;
   private final PasswordEncoder passwordEncoder;
   private final GmailEmailService emailService;
+  private final ChatMessageRepository chatMessageRepository;
 
   @Value("${app.password-reset.ui-url:http://localhost:4200/reset-password}")
   private String passwordResetUiUrl;
@@ -50,6 +57,9 @@ public class AuthServiceImpl implements AuthService {
 
   @Value("${app.login.failed-attempt-threshold:5}")
   private int failedLoginAttemptThreshold;
+
+  @Value("${app.google.sso.client-id:${gmail.client-id:}}")
+  private String googleSsoClientId;
 
   private static final String CONTACT_ADMIN_MESSAGE =
       "Too many failed login attempts. Please contact the Administrator.";
@@ -100,8 +110,7 @@ public class AuthServiceImpl implements AuthService {
             .expiresAt(LocalDateTime.now(ZoneId.of("Asia/Kolkata")).plusDays(7))
             .revoked(false)
             .build());
-    return new AuthResponse(
-        access, refresh, "Bearer", user.getRole().name(), jwtService.getAccessTokenTtlSeconds());
+    return buildAuthResponse(user, access, refresh);
   }
 
   private String buildFailedLoginThresholdEmailBody() {
@@ -153,8 +162,7 @@ public class AuthServiceImpl implements AuthService {
             .expiresAt(LocalDateTime.now(ZoneId.of("Asia/Kolkata")).plusDays(7))
             .revoked(false)
             .build());
-    return new AuthResponse(
-        access, refresh, "Bearer", user.getRole().name(), jwtService.getAccessTokenTtlSeconds());
+    return buildAuthResponse(user, access, refresh);
   }
 
   @Override
@@ -197,12 +205,7 @@ public class AuthServiceImpl implements AuthService {
             .revoked(false)
             .build());
 
-    return new AuthResponse(
-        access,
-        refresh,
-        "Bearer",
-        adminUser.getRole().name(),
-        jwtService.getAccessTokenTtlSeconds());
+    return buildAuthResponse(adminUser, access, refresh);
   }
 
   @Override
@@ -219,7 +222,8 @@ public class AuthServiceImpl implements AuthService {
         rt.getToken(),
         "Bearer",
         rt.getUser().getRole().name(),
-        jwtService.getAccessTokenTtlSeconds());
+        jwtService.getAccessTokenTtlSeconds(),
+        chatMessageRepository.countUnreadMessagesForReceiver(rt.getUser().getId()));
   }
 
   @Override
@@ -279,8 +283,7 @@ public class AuthServiceImpl implements AuthService {
             .expiresAt(LocalDateTime.now(ZoneId.of("Asia/Kolkata")).plusDays(7))
             .revoked(false)
             .build());
-    return new AuthResponse(
-        access, refresh, "Bearer", user.getRole().name(), jwtService.getAccessTokenTtlSeconds());
+    return buildAuthResponse(user, access, refresh);
   }
 
   @Override
@@ -382,4 +385,81 @@ public class AuthServiceImpl implements AuthService {
 
     resetTokenRepository.invalidateAllByUserId(user.getId());
   }
+
+  @Override
+  @Transactional
+  public AuthResponse googleSsoLogin(GoogleSsoLoginRequest request) {
+    if (googleSsoClientId == null || googleSsoClientId.isBlank()) {
+      throw new BadRequestException("Google SSO is not configured");
+    }
+    String email = verifyGoogleIdTokenAndExtractEmail(request.idToken());
+
+    User user =
+        userRepository
+            .findByEmailAndDeletedFalse(email)
+            .orElseThrow(() -> new NotFoundException("User not found"));
+    if (!user.isActive()) {
+      throw new BadRequestException("User account is inactive");
+    }
+    if (user.getFailedLoginAttempts() > 0) {
+      user.setFailedLoginAttempts(0);
+      userRepository.save(user);
+    }
+
+    String access = jwtService.generateAccessToken(user, user.getEmail());
+    String refresh = jwtService.generateRefreshToken(user, user.getEmail());
+    refreshTokenRepository.save(
+        RefreshToken.builder()
+            .token(refresh)
+            .user(user)
+            .expiresAt(LocalDateTime.now(ZoneId.of("Asia/Kolkata")).plusDays(7))
+            .revoked(false)
+            .build());
+    return buildAuthResponse(user, access, refresh);
+  }
+
+  private String verifyGoogleIdTokenAndExtractEmail(String idTokenValue) {
+    try {
+      GoogleIdTokenVerifier verifier =
+          new GoogleIdTokenVerifier.Builder(
+                  GoogleNetHttpTransport.newTrustedTransport(), JacksonFactory.getDefaultInstance())
+              .setAudience(Collections.singletonList(googleSsoClientId))
+              .build();
+
+      GoogleIdToken idToken = verifier.verify(idTokenValue);
+      if (idToken == null) {
+        throw new BadRequestException("Invalid Google ID token");
+      }
+
+      GoogleIdToken.Payload payload = idToken.getPayload();
+      if (!Boolean.TRUE.equals(payload.getEmailVerified())) {
+        throw new BadRequestException("Google email is not verified");
+      }
+      String email = payload.getEmail();
+      if (email == null || email.isBlank()) {
+        throw new BadRequestException("Email not found in Google token");
+      }
+      return email;
+    } catch (BadRequestException ex) {
+      throw ex;
+    } catch (Exception ex) {
+      ex.printStackTrace();
+      throw new BadRequestException("Unable to verify Google ID token");
+    }
+  }
+
+  private AuthResponse buildAuthResponse(User user, String accessToken, String refreshToken) {
+    return new AuthResponse(
+        accessToken,
+        refreshToken,
+        "Bearer",
+        user.getRole().name(),
+        jwtService.getAccessTokenTtlSeconds(),
+        chatMessageRepository.countUnreadMessagesForReceiver(user.getId()));
+  }
+
+  public AuthSSOClientResponse getSSOAuthToken(){
+    return new AuthSSOClientResponse(googleSsoClientId);
+  }
+
 }

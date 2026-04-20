@@ -61,13 +61,22 @@ public class GmailEmailServiceImpl implements GmailEmailService {
   @Override
   public void sendEmailWithAttachments(
       String to, String subject, String html, Long logId, byte[] image) {
+    sendEmailWithAttachments(to, subject, html, logId, image, null);
+  }
+
+  @Override
+  public void sendEmailWithAttachments(
+      String to, String subject, String html, Long logId, byte[] image, EmailType emailType) {
 
     EmailLog logEntry =
         logId == null
-            ? createPendingEmailLog(to, subject, classifyEmailType(subject, html))
+            ? createPendingEmailLog(
+                to, subject, emailType == null ? classifyEmailType(subject, html) : emailType)
             : logRepository.findById(logId).orElseThrow();
 
-    if (logEntry.getEmailType() == null) {
+    if (emailType != null) {
+      logEntry.setEmailType(emailType);
+    } else if (logEntry.getEmailType() == null) {
       logEntry.setEmailType(classifyEmailType(subject, html));
     }
 
@@ -240,6 +249,46 @@ public class GmailEmailServiceImpl implements GmailEmailService {
   }
 
   @Override
+  public PagedResponse<EmailDtos.EmailStatusResponse> getFestivalWishStatus(
+      int page,
+      int size,
+      String searchKey,
+      String requesterEmail,
+      boolean isAdmin,
+      String sortBy,
+      String sortDir) {
+    return getStatusByTypesForRole(
+        page,
+        size,
+        searchKey,
+        requesterEmail,
+        isAdmin,
+        sortBy,
+        sortDir,
+        List.of(EmailType.FESTIVAL_WISH));
+  }
+
+  @Override
+  public PagedResponse<EmailDtos.EmailStatusResponse> getUnreadChatMessageStatus(
+      int page,
+      int size,
+      String searchKey,
+      String requesterEmail,
+      boolean isAdmin,
+      String sortBy,
+      String sortDir) {
+    return getStatusByTypesForRole(
+        page,
+        size,
+        searchKey,
+        requesterEmail,
+        isAdmin,
+        sortBy,
+        sortDir,
+        List.of(EmailType.UNREAD_CHAT_MESSAGE));
+  }
+
+  @Override
   public EmailDtos.EmailStatusResponse getStatusById(Long id, String requesterEmail) {
     EmailLog log =
         logRepository.findById(id).orElseThrow(() -> new NotFoundException("Email log not found"));
@@ -317,6 +366,37 @@ public class GmailEmailServiceImpl implements GmailEmailService {
         logs.hasPrevious());
   }
 
+  private PagedResponse<EmailDtos.EmailStatusResponse> getStatusByTypesForRole(
+      int page,
+      int size,
+      String searchKey,
+      String requesterEmail,
+      boolean isAdmin,
+      String sortBy,
+      String sortDir,
+      List<EmailType> types) {
+    String normalizedSearchKey = searchKey == null ? "" : searchKey.trim();
+    Sort.Direction direction =
+        "asc".equalsIgnoreCase(sortDir) ? Sort.Direction.ASC : Sort.Direction.DESC;
+    String normalizedSortBy = (sortBy == null || sortBy.isBlank()) ? "id" : sortBy.trim();
+    PageRequest pageRequest = PageRequest.of(page, size, Sort.by(direction, normalizedSortBy));
+
+    Page<EmailLog> logs =
+        isAdmin
+            ? logRepository.findAllBySearchKeyAndEmailTypeIn(normalizedSearchKey, types, pageRequest)
+            : logRepository.findAllByRecipientEmailAndSearchKeyAndEmailTypeIn(
+                requesterEmail, normalizedSearchKey, types, pageRequest);
+
+    return new PagedResponse<>(
+        logs.getContent().stream().map(this::toEmailStatusResponse).toList(),
+        logs.getNumber(),
+        logs.getSize(),
+        logs.getTotalElements(),
+        logs.getTotalPages(),
+        logs.hasNext(),
+        logs.hasPrevious());
+  }
+
   private List<EmailType> resolveNonSensitiveTypesFromTab(String mailTab) {
     String normalizedTab = mailTab == null ? "ALL" : mailTab.trim().toUpperCase(Locale.ROOT);
 
@@ -349,6 +429,12 @@ public class GmailEmailServiceImpl implements GmailEmailService {
     }
     if (content.contains("birthday")) {
       return EmailType.BIRTHDAY;
+    }
+    if (content.contains("festival")) {
+      return EmailType.FESTIVAL_WISH;
+    }
+    if (content.contains("unread") && content.contains("chat")) {
+      return EmailType.UNREAD_CHAT_MESSAGE;
     }
 
     return EmailType.EVENT;

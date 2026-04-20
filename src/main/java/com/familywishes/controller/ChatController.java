@@ -72,6 +72,11 @@ public class ChatController {
     return chatService.deleteLastSentMessage(otherUserId);
   }
 
+  @DeleteMapping("/messages/{messageId}")
+  public ChatDtos.DeleteMessageResponse deleteMessageById(@PathVariable Long messageId) {
+    return chatService.deleteMessageById(messageId);
+  }
+
   @PatchMapping("/messages/{messageId}")
   public ChatDtos.MessageResponse editMessage(
       @PathVariable Long messageId, @RequestBody @Valid ChatDtos.EditMessageRequest payload) {
@@ -117,5 +122,10 @@ public class ChatController {
       @RequestParam(defaultValue = "50") int size,
       @RequestParam(defaultValue = "") String searchKey) {
     return chatService.listAllMessages(page, size, searchKey);
+  }
+
+  @GetMapping("/unread-count")
+  public java.util.Map<String, Long> unreadCount() {
+    return java.util.Map.of("unreadCount", chatService.unreadCount());
   }
 }

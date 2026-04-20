@@ -60,4 +60,14 @@ public class AuthController {
   public void changePassword(@Valid @RequestBody ChangePasswordRequest request) {
     authService.changePassword(request);
   }
+
+  @PostMapping("/sso/google")
+  public AuthResponse googleSsoLogin(@Valid @RequestBody GoogleSsoLoginRequest request) {
+    return authService.googleSsoLogin(request);
+  }
+
+  @GetMapping("/sso/token")
+  public AuthSSOClientResponse getSSOAuthToken() {
+    return authService.getSSOAuthToken();
+  }
 }

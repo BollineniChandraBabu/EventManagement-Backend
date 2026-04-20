@@ -6,5 +6,7 @@ public enum EmailType {
   GOOD_MORNING,
   GOOD_NIGHT,
   BIRTHDAY,
-  EVENT
+  EVENT,
+  FESTIVAL_WISH,
+  UNREAD_CHAT_MESSAGE
 }

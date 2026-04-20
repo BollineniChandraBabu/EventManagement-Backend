@@ -8,7 +8,9 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.repository.query.Param;
+import org.springframework.transaction.annotation.Transactional;
 
 public interface UserRepository extends JpaRepository<User, Long> {
   Optional<User> findByEmailAndDeletedFalse(String email);
@@ -48,4 +50,16 @@ public interface UserRepository extends JpaRepository<User, Long> {
       @Param("onlyOnline") boolean onlyOnline,
       @Param("searchKey") String searchKey,
       Pageable pageable);
+
+  @Modifying
+  @Transactional
+  @Query(
+      """
+      UPDATE User u
+         SET u.online = false
+       WHERE u.online = true
+         AND u.lastSeenAt IS NOT NULL
+         AND u.lastSeenAt < :staleBefore
+      """)
+  int markStaleUsersOffline(@Param("staleBefore") java.time.LocalDateTime staleBefore);
 }

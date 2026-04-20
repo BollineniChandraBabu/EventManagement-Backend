@@ -15,6 +15,7 @@ import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -42,7 +43,7 @@ public class FestivalWishMappingServiceImpl implements FestivalWishMappingServic
 
     mapping.setSpecialEvent(specialEvent);
     mapping.setUser(user);
-    mapping.setCustomMessage(request.customMessage());
+    mapping.setCustomMessage(null);
     mapping.setActive(request.active());
 
     return toResponse(mappingRepository.save(mapping));
@@ -83,6 +84,21 @@ public class FestivalWishMappingServiceImpl implements FestivalWishMappingServic
     mappingRepository.deleteById(id);
   }
 
+  @Override
+  public List<FestivalWishMappingResponse> listForCurrentUser() {
+    var auth = SecurityContextHolder.getContext().getAuthentication();
+    if (auth == null || !auth.isAuthenticated()) {
+      throw new NotFoundException("Authenticated user not found");
+    }
+    User me =
+        userRepository
+            .findByEmailAndDeletedFalse(auth.getName())
+            .orElseThrow(() -> new NotFoundException("User not found"));
+    return mappingRepository.findByUser_IdAndActiveTrue(me.getId()).stream()
+        .map(this::toResponse)
+        .toList();
+  }
+
   private FestivalWishMappingResponse toResponse(FestivalWishMapping mapping) {
     return new FestivalWishMappingResponse(
         mapping.getId(),
@@ -90,7 +106,6 @@ public class FestivalWishMappingServiceImpl implements FestivalWishMappingServic
         mapping.getSpecialEvent().getEventName(),
         mapping.getUser().getId(),
         mapping.getUser().getName(),
-        mapping.getCustomMessage(),
         mapping.isActive());
   }
 
