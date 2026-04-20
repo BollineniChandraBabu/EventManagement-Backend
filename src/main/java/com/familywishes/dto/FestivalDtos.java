@@ -14,6 +14,7 @@ public class FestivalDtos {
       Long id,
       Long specialEventId,
       String festivalName,
+      LocalDate eventDate,
       Long userId,
       String userName,
       boolean active) {}
