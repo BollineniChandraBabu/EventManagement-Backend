@@ -25,6 +25,9 @@ public class UserDtos {
 
   public record UserStatusUpdateRequest(@NotNull Boolean active) {}
 
+  public record WishPreviewResponse(
+      boolean showMessage, String wishType, String subject, String htmlMessage, byte[] imageData) {}
+
   public record UserResponse(
       Long id,
       String name,

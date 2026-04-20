@@ -13,6 +13,7 @@ import com.familywishes.entity.UserWishSettings;
 import com.familywishes.entity.enums.Gender;
 import com.familywishes.entity.enums.Role;
 import com.familywishes.exception.BadRequestException;
+import com.familywishes.repository.FestivalWishMappingRepository;
 import com.familywishes.repository.RelationshipSeedRepository;
 import com.familywishes.repository.UserRepository;
 import java.time.LocalDate;
@@ -36,6 +37,8 @@ class UserServiceImplTest {
   @Mock private PasswordEncoder passwordEncoder;
   @Mock private RelationshipSeedRepository relationshipSeedRepository;
   @Mock private SupabaseStorageService supabaseStorageService;
+  @Mock private FestivalWishMappingRepository festivalWishMappingRepository;
+  @Mock private com.familywishes.service.AiService aiService;
 
   @InjectMocks private UserServiceImpl userService;
 

@@ -18,6 +18,8 @@ public interface UserService {
 
   UserResponse updateCurrentUserWishSettings(WishSettingsUpdateRequest request);
 
+  WishPreviewResponse getCurrentUserWishPreview();
+
   UserResponse uploadCurrentUserProfilePicture(MultipartFile file);
 
   UserResponse removeCurrentUserProfilePicture();

@@ -53,6 +53,11 @@ public class UserController {
     return userService.updateCurrentUserWishSettings(request);
   }
 
+  @GetMapping("/me/wish-preview")
+  public WishPreviewResponse myWishPreview() {
+    return userService.getCurrentUserWishPreview();
+  }
+
   @PostMapping("/me/profile-picture")
   public UserResponse uploadMyProfilePicture(@RequestPart("file") MultipartFile file) {
     return userService.uploadCurrentUserProfilePicture(file);

@@ -1,15 +1,22 @@
 package com.familywishes.service.impl;
 
 import com.familywishes.dto.CommonDtos.PagedResponse;
+import com.familywishes.dto.AiWishRequest;
+import com.familywishes.dto.AiWishResponse;
 import com.familywishes.dto.UserDtos.*;
+import com.familywishes.entity.FestivalWishMapping;
 import com.familywishes.entity.RelationshipSeed;
 import com.familywishes.entity.User;
 import com.familywishes.entity.UserWishSettings;
 import com.familywishes.exception.BadRequestException;
 import com.familywishes.exception.NotFoundException;
 import com.familywishes.repository.RelationshipSeedRepository;
+import com.familywishes.repository.FestivalWishMappingRepository;
 import com.familywishes.repository.UserRepository;
+import com.familywishes.service.AiService;
 import com.familywishes.service.UserService;
+import java.time.LocalDate;
+import java.time.ZoneId;
 import java.util.Objects;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -29,6 +36,8 @@ public class UserServiceImpl implements UserService {
   private final PasswordEncoder encoder;
   private final RelationshipSeedRepository relationshipSeedRepository;
   private final SupabaseStorageService supabaseStorageService;
+  private final FestivalWishMappingRepository festivalWishMappingRepository;
+  private final AiService aiService;
 
   @Override
   public UserResponse create(UserRequest request) {
@@ -178,6 +187,63 @@ public class UserServiceImpl implements UserService {
   }
 
   @Override
+  public WishPreviewResponse getCurrentUserWishPreview() {
+    User user = findAuthenticatedUser();
+    if (user.getWishSettings() == null) {
+      return new WishPreviewResponse(false, null, null, null, null);
+    }
+
+    FestivalWishMapping selectedFestival =
+        festivalWishMappingRepository.findByUser_IdAndActiveTrue(user.getId()).stream()
+            .filter(m -> m.getSpecialEvent() != null && m.getSpecialEvent().isActive())
+            .sorted(
+                java.util.Comparator.comparing(
+                    m -> daysUntil(m.getSpecialEvent().getEventDate(), LocalDate.now(ZoneId.of("Asia/Kolkata")))))
+            .findFirst()
+            .orElse(null);
+
+    boolean birthdayEnabled = user.getWishSettings().isBirthdayEnabled();
+    boolean festivalEnabled = selectedFestival != null;
+
+    if (!birthdayEnabled && !festivalEnabled) {
+      return new WishPreviewResponse(false, null, null, null, null);
+    }
+
+    try {
+      AiWishRequest request;
+      String wishType;
+      if (festivalEnabled) {
+        request =
+            new AiWishRequest(
+                user.getName(),
+                user.getRelationShip().getCode(),
+                "",
+                selectedFestival.getSpecialEvent().getEventName(),
+                "Emotional",
+                "EN");
+        wishType = "FESTIVAL";
+      } else {
+        request =
+            new AiWishRequest(
+                user.getName(),
+                user.getRelationShip().getCode(),
+                "BIRTHDAY",
+                "",
+                "Emotional",
+                "EN");
+        wishType = "BIRTHDAY";
+      }
+
+      AiWishResponse aiWishResponse = aiService.generate(request);
+      byte[] image = aiService.callGeminiImage(request);
+      return new WishPreviewResponse(
+          true, wishType, aiWishResponse.subject(), aiWishResponse.htmlMessage(), image);
+    } catch (Exception ex) {
+      throw new BadRequestException("Unable to generate wish preview");
+    }
+  }
+
+  @Override
   public UserResponse uploadCurrentUserProfilePicture(MultipartFile file) {
     if (file == null || file.isEmpty()) {
       throw new BadRequestException("Profile picture file is required");
@@ -231,6 +297,16 @@ public class UserServiceImpl implements UserService {
     return relationshipSeedRepository
         .findByCodeAndActiveTrue(relationship.trim().toUpperCase())
         .orElseThrow(() -> new BadRequestException("Invalid relationship"));
+  }
+
+  private long daysUntil(LocalDate targetDate, LocalDate today) {
+    if (targetDate == null) {
+      return Long.MAX_VALUE;
+    }
+    if (!targetDate.isBefore(today)) {
+      return java.time.temporal.ChronoUnit.DAYS.between(today, targetDate);
+    }
+    return java.time.temporal.ChronoUnit.DAYS.between(today, targetDate.plusYears(1));
   }
 
   private User findAuthenticatedUser() {
