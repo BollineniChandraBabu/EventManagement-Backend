@@ -58,6 +58,12 @@ public class UserController {
     return userService.getCurrentUserWishPreview();
   }
 
+  @PostMapping("/me/profile-picture/presigned-url")
+  public ProfilePictureUploadUrlResponse getMyProfilePictureUploadUrl(
+      @RequestBody(required = false) ProfilePictureUploadUrlRequest request) {
+    return userService.getCurrentUserProfilePictureUploadUrl(request);
+  }
+
   @PostMapping("/me/profile-picture")
   public UserResponse uploadMyProfilePicture(@RequestPart("file") MultipartFile file) {
     return userService.uploadCurrentUserProfilePicture(file);

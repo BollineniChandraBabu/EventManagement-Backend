@@ -245,6 +245,23 @@ public class UserServiceImpl implements UserService {
   }
 
   @Override
+  public ProfilePictureUploadUrlResponse getCurrentUserProfilePictureUploadUrl(
+      ProfilePictureUploadUrlRequest request) {
+    User user = findAuthenticatedUser();
+    SupabaseStorageService.PresignedUpload presignedUpload =
+        supabaseStorageService.generateUserProfilePictureUploadUrl(
+            user.getId(),
+            request == null ? null : request.fileName(),
+            request == null ? null : request.contentType());
+    return new ProfilePictureUploadUrlResponse(
+        presignedUpload.uploadUrl(),
+        presignedUpload.publicUrl(),
+        presignedUpload.objectKey(),
+        presignedUpload.method(),
+        presignedUpload.expiresInSeconds());
+  }
+
+  @Override
   public UserResponse uploadCurrentUserProfilePicture(MultipartFile file) {
     if (file == null || file.isEmpty()) {
       throw new BadRequestException("Profile picture file is required");
@@ -291,7 +308,7 @@ public class UserServiceImpl implements UserService {
     if (user.getProfilePictureUrl() == null || user.getProfilePictureUrl().isBlank()) {
       return supabaseStorageService.getDefaultProfilePictureUrl(user.getGender());
     }
-    return user.getProfilePictureUrl();
+    return supabaseStorageService.resolveProfilePictureUrl(user.getProfilePictureUrl());
   }
 
   private RelationshipSeed resolveRelationship(String relationship) {

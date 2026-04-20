@@ -180,6 +180,7 @@ public class ChatServiceImpl implements ChatService {
             me.getId(),
             receiver.getId(),
             request.replyToMessageId(),
+            null,
             text,
             encryptedMessage,
             normalizeNullable(request.encryptionAlgorithm()),
@@ -198,6 +199,7 @@ public class ChatServiceImpl implements ChatService {
             me.getId(),
             receiver.getId(),
             request.replyToMessageId(),
+            null,
             text,
             encryptedMessage,
             normalizeNullable(request.encryptionAlgorithm()),
@@ -270,6 +272,7 @@ public class ChatServiceImpl implements ChatService {
             conversationId,
             sender.getId(),
             receiver.getId(),
+            null,
             null,
             text,
             normalizedEncryptedMessage,
@@ -746,7 +749,7 @@ public class ChatServiceImpl implements ChatService {
     if (user == null || user.getProfilePictureUrl() == null || user.getProfilePictureUrl().isBlank()) {
       return storageService.getDefaultProfilePictureUrl(user == null ? null : user.getGender());
     }
-    return user.getProfilePictureUrl();
+    return storageService.resolveProfilePictureUrl(user.getProfilePictureUrl());
   }
 
   private Sort resolveUserSort(String sortBy, String sortDir) {

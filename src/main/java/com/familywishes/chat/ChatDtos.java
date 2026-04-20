@@ -34,6 +34,7 @@ public class ChatDtos {
       Long senderId,
       Long receiverId,
       Long replyToMessageId,
+      String replyMessageText,
       String messageText,
       String encryptedMessage,
       String encryptionAlgorithm,

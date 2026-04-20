@@ -104,6 +104,7 @@ public class FestivalWishMappingServiceImpl implements FestivalWishMappingServic
         mapping.getId(),
         mapping.getSpecialEvent().getId(),
         mapping.getSpecialEvent().getEventName(),
+        mapping.getSpecialEvent().getEventDate(),
         mapping.getUser().getId(),
         mapping.getUser().getName(),
         mapping.isActive());

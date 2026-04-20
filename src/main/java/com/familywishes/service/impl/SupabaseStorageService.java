@@ -3,7 +3,10 @@ package com.familywishes.service.impl;
 import com.familywishes.entity.enums.EmailType;
 import com.familywishes.entity.enums.Gender;
 import java.net.URI;
+import java.net.URLDecoder;
+import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
+import java.time.Duration;
 import java.time.format.DateTimeFormatter;
 import java.util.UUID;
 import lombok.extern.slf4j.Slf4j;
@@ -18,6 +21,9 @@ import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.DeleteObjectRequest;
 import software.amazon.awssdk.services.s3.model.GetObjectRequest;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
+import software.amazon.awssdk.services.s3.presigner.S3Presigner;
+import software.amazon.awssdk.services.s3.presigner.model.PresignedPutObjectRequest;
+import software.amazon.awssdk.services.s3.presigner.model.PutObjectPresignRequest;
 
 @Service
 @Slf4j
@@ -28,6 +34,7 @@ public class SupabaseStorageService {
   private final String maleDefaultImagePath;
   private final String femaleDefaultImagePath;
   private final String otherDefaultImagePath;
+  private final S3Presigner presigner;
 
   public SupabaseStorageService(
       @Value("${app.supabase.storage.endpoint}") String endpoint,
@@ -49,6 +56,15 @@ public class SupabaseStorageService {
     this.otherDefaultImagePath = otherDefaultImagePath;
     this.s3Client =
         S3Client.builder()
+            .endpointOverride(URI.create(endpoint))
+            .region(Region.of(region))
+            .credentialsProvider(
+                StaticCredentialsProvider.create(
+                    AwsBasicCredentials.create(accessKeyId, secretAccessKey)))
+            .forcePathStyle(true)
+            .build();
+    this.presigner =
+        S3Presigner.builder()
             .endpointOverride(URI.create(endpoint))
             .region(Region.of(region))
             .credentialsProvider(
@@ -130,6 +146,37 @@ public class SupabaseStorageService {
     }
   }
 
+  public PresignedUpload generateUserProfilePictureUploadUrl(
+      Long userId, String fileName, String contentType) {
+    String original = fileName == null || fileName.isBlank() ? "profile.png" : fileName;
+    String safeName = original.replaceAll("[^a-zA-Z0-9._-]", "_");
+    String datePrefix = LocalDate.now().format(DateTimeFormatter.ISO_DATE);
+    String objectKey =
+        "Profile Pictures/" + userId + "/" + datePrefix + "/" + UUID.randomUUID() + "-" + safeName;
+    String uploadContentType =
+        contentType == null || contentType.isBlank() ? "image/png" : contentType;
+
+    PutObjectRequest putObjectRequest =
+        PutObjectRequest.builder()
+            .bucket(bucket)
+            .key(objectKey)
+            .contentType(uploadContentType)
+            .build();
+    PutObjectPresignRequest presignRequest =
+        PutObjectPresignRequest.builder()
+            .signatureDuration(Duration.ofMinutes(10))
+            .putObjectRequest(putObjectRequest)
+            .build();
+    PresignedPutObjectRequest presignedPutObjectRequest =
+        presigner.presignPutObject(presignRequest);
+    return new PresignedUpload(
+        presignedPutObjectRequest.url().toString(),
+        toPublicUrl(objectKey),
+        objectKey,
+        "PUT",
+        600);
+  }
+
   public boolean deleteByPublicUrl(String publicUrl) {
     if (publicUrl == null || publicUrl.isBlank()) {
       return false;
@@ -144,6 +191,35 @@ public class SupabaseStorageService {
       case FEMALE -> toPublicUrl(femaleDefaultImagePath);
       case OTHER -> toPublicUrl(otherDefaultImagePath);
     };
+  }
+
+  public String resolveProfilePictureUrl(String profilePictureUrlOrObjectKey) {
+    if (profilePictureUrlOrObjectKey == null || profilePictureUrlOrObjectKey.isBlank()) {
+      return null;
+    }
+
+    String value = profilePictureUrlOrObjectKey.trim();
+    if (value.startsWith("http://") || value.startsWith("https://")) {
+      if (value.contains("X-Amz-Algorithm=") || value.contains("X-Amz-Signature=")) {
+        try {
+          String path = URI.create(value).getPath();
+          String normalizedPath = path.startsWith("/") ? path.substring(1) : path;
+          String marker = bucket + "/";
+          int markerIndex = normalizedPath.indexOf(marker);
+          if (markerIndex >= 0) {
+            String objectKey =
+                URLDecoder.decode(
+                    normalizedPath.substring(markerIndex + marker.length()),
+                    StandardCharsets.UTF_8);
+            return toPublicUrl(objectKey);
+          }
+        } catch (Exception ex) {
+          log.warn("Unable to parse presigned profile picture URL; returning original value");
+        }
+      }
+      return value;
+    }
+    return toPublicUrl(value);
   }
 
   public byte[] downloadImage(String objectKey) {
@@ -208,4 +284,7 @@ public class SupabaseStorageService {
     }
     return publicUrlOrObjectKey;
   }
+
+  public record PresignedUpload(
+      String uploadUrl, String publicUrl, String objectKey, String method, long expiresInSeconds) {}
 }

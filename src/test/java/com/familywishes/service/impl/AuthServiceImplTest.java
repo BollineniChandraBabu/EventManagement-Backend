@@ -9,12 +9,15 @@ import static org.mockito.Mockito.when;
 
 import com.familywishes.dto.AuthDtos.AdminLoginAsUserRequest;
 import com.familywishes.dto.AuthDtos.AuthResponse;
+import com.familywishes.dto.AuthDtos.ForgotPasswordRequest;
 import com.familywishes.dto.AuthDtos.LoginRequest;
+import com.familywishes.dto.AuthDtos.OtpSendRequest;
 import com.familywishes.chat.ChatMessageRepository;
 import com.familywishes.entity.RefreshToken;
 import com.familywishes.entity.User;
 import com.familywishes.entity.enums.Role;
 import com.familywishes.exception.BadRequestException;
+import com.familywishes.exception.NotFoundException;
 import com.familywishes.repository.OtpCodeRepository;
 import com.familywishes.repository.PasswordResetTokenRepository;
 import com.familywishes.repository.RefreshTokenRepository;
@@ -223,5 +226,63 @@ class AuthServiceImplTest {
     assertThrows(
         BadRequestException.class,
         () -> authService.switchBackToAdmin("Bearer plain-access-token"));
+  }
+
+  @Test
+  void sendOtpShouldFailWhenUserDoesNotExist() {
+    when(userRepository.findByEmailAndDeletedFalse("missing@example.com")).thenReturn(Optional.empty());
+
+    assertThrows(
+        NotFoundException.class, () -> authService.sendOtp(new OtpSendRequest("missing@example.com")));
+
+    verify(otpCodeRepository, never()).save(any());
+    verify(emailService, never())
+        .sendEmailWithAttachments(any(String.class), any(String.class), any(String.class), any(), any());
+  }
+
+  @Test
+  void sendOtpShouldSaveOtpAndSendMailForActiveUser() {
+    User user = User.builder().id(7L).email("user@example.com").active(true).deleted(false).build();
+    when(userRepository.findByEmailAndDeletedFalse("user@example.com")).thenReturn(Optional.of(user));
+
+    authService.sendOtp(new OtpSendRequest("user@example.com"));
+
+    verify(otpCodeRepository).save(any());
+    verify(emailService)
+        .sendEmailWithAttachments(
+            org.mockito.ArgumentMatchers.eq("user@example.com"),
+            any(String.class),
+            any(String.class),
+            any(),
+            any());
+  }
+
+  @Test
+  void forgotPasswordShouldFailWhenUserIsInactive() {
+    User inactiveUser =
+        User.builder().id(8L).email("inactive@example.com").active(false).deleted(false).build();
+    when(userRepository.findByEmailAndDeletedFalse("inactive@example.com"))
+        .thenReturn(Optional.of(inactiveUser));
+
+    assertThrows(
+        NotFoundException.class,
+        () -> authService.forgotPassword(new ForgotPasswordRequest("inactive@example.com")));
+
+    verify(resetTokenRepository, never()).save(any());
+    verify(emailService, never())
+        .sendEmailWithAttachments(any(String.class), any(String.class), any(String.class), any(), any());
+  }
+
+  @Test
+  void forgotPasswordShouldFailWhenUserDoesNotExist() {
+    when(userRepository.findByEmailAndDeletedFalse("missing@example.com")).thenReturn(Optional.empty());
+
+    assertThrows(
+        NotFoundException.class,
+        () -> authService.forgotPassword(new ForgotPasswordRequest("missing@example.com")));
+
+    verify(resetTokenRepository, never()).save(any());
+    verify(emailService, never())
+        .sendEmailWithAttachments(any(String.class), any(String.class), any(String.class), any(), any());
   }
 }

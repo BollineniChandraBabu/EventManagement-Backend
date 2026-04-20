@@ -28,6 +28,11 @@ public class UserDtos {
   public record WishPreviewResponse(
       boolean showMessage, String wishType, String subject, String htmlMessage, byte[] imageData) {}
 
+  public record ProfilePictureUploadUrlRequest(String fileName, String contentType) {}
+
+  public record ProfilePictureUploadUrlResponse(
+      String uploadUrl, String publicUrl, String objectKey, String method, long expiresInSeconds) {}
+
   public record UserResponse(
       Long id,
       String name,
