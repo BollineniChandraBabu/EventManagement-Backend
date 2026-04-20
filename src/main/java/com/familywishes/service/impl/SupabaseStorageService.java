@@ -18,10 +18,13 @@ import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;
 import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.s3.S3Client;
+import software.amazon.awssdk.services.s3.S3Configuration;
 import software.amazon.awssdk.services.s3.model.DeleteObjectRequest;
 import software.amazon.awssdk.services.s3.model.GetObjectRequest;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 import software.amazon.awssdk.services.s3.presigner.S3Presigner;
+import software.amazon.awssdk.services.s3.presigner.model.GetObjectPresignRequest;
+import software.amazon.awssdk.services.s3.presigner.model.PresignedGetObjectRequest;
 import software.amazon.awssdk.services.s3.presigner.model.PresignedPutObjectRequest;
 import software.amazon.awssdk.services.s3.presigner.model.PutObjectPresignRequest;
 
@@ -70,7 +73,11 @@ public class SupabaseStorageService {
             .credentialsProvider(
                 StaticCredentialsProvider.create(
                     AwsBasicCredentials.create(accessKeyId, secretAccessKey)))
-            .forcePathStyle(true)
+            .serviceConfiguration(
+                S3Configuration.builder()
+                .pathStyleAccessEnabled(true)
+                .build()
+            )
             .build();
   }
 
@@ -139,7 +146,7 @@ public class SupabaseStorageService {
               .contentType(file.getContentType() == null ? "image/png" : file.getContentType())
               .build();
       s3Client.putObject(request, RequestBody.fromBytes(file.getBytes()));
-      return toPublicUrl(objectKey);
+      return objectKey;
     } catch (Exception ex) {
       log.error("Failed to upload profile picture", ex);
       return null;
@@ -187,10 +194,29 @@ public class SupabaseStorageService {
 
   public String getDefaultProfilePictureUrl(Gender gender) {
     return switch (gender == null ? Gender.OTHER : gender) {
-      case MALE -> toPublicUrl(maleDefaultImagePath);
-      case FEMALE -> toPublicUrl(femaleDefaultImagePath);
-      case OTHER -> toPublicUrl(otherDefaultImagePath);
+      case MALE -> getSignedUrl(maleDefaultImagePath);
+      case FEMALE -> getSignedUrl(femaleDefaultImagePath);
+      case OTHER -> getSignedUrl(otherDefaultImagePath);
     };
+  }
+
+  public String getSignedUrl(String path) {
+
+    GetObjectRequest getObjectRequest = GetObjectRequest.builder()
+            .bucket(bucket)
+            .key(path)
+            .build();
+
+    GetObjectPresignRequest presignRequest =
+            GetObjectPresignRequest.builder()
+                    .signatureDuration(Duration.ofHours(5))
+                    .getObjectRequest(getObjectRequest)
+                    .build();
+
+    PresignedGetObjectRequest presignedRequest =
+            presigner.presignGetObject(presignRequest);
+
+      return presignedRequest.url().toString();
   }
 
   public String resolveProfilePictureUrl(String profilePictureUrlOrObjectKey) {

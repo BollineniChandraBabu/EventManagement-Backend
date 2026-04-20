@@ -180,7 +180,6 @@ public class ChatServiceImpl implements ChatService {
             me.getId(),
             receiver.getId(),
             request.replyToMessageId(),
-            null,
             text,
             encryptedMessage,
             normalizeNullable(request.encryptionAlgorithm()),

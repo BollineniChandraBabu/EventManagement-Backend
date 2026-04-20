@@ -308,7 +308,7 @@ public class UserServiceImpl implements UserService {
     if (user.getProfilePictureUrl() == null || user.getProfilePictureUrl().isBlank()) {
       return supabaseStorageService.getDefaultProfilePictureUrl(user.getGender());
     }
-    return supabaseStorageService.resolveProfilePictureUrl(user.getProfilePictureUrl());
+    return supabaseStorageService.getSignedUrl(user.getProfilePictureUrl());
   }
 
   private RelationshipSeed resolveRelationship(String relationship) {
