@@ -16,6 +16,8 @@ public class AuthDtos {
       long expiresIn,
       long unreadChatMessagesCount) {}
 
+  public record AuthSSOClientResponse(String clientId){}
+
   public record RefreshRequest(@NotBlank String refreshToken) {}
 
   public record OtpSendRequest(@Email String email) {}

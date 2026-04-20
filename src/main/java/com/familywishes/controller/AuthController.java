@@ -65,4 +65,9 @@ public class AuthController {
   public AuthResponse googleSsoLogin(@Valid @RequestBody GoogleSsoLoginRequest request) {
     return authService.googleSsoLogin(request);
   }
+
+  @GetMapping("/sso/token")
+  public AuthSSOClientResponse getSSOAuthToken() {
+    return authService.getSSOAuthToken();
+  }
 }

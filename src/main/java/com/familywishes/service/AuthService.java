@@ -24,4 +24,6 @@ public interface AuthService {
   void changePassword(ChangePasswordRequest request);
 
   AuthResponse googleSsoLogin(GoogleSsoLoginRequest request);
+
+  AuthSSOClientResponse getSSOAuthToken();
 }

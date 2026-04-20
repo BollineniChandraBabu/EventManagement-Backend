@@ -443,6 +443,7 @@ public class AuthServiceImpl implements AuthService {
     } catch (BadRequestException ex) {
       throw ex;
     } catch (Exception ex) {
+      ex.printStackTrace();
       throw new BadRequestException("Unable to verify Google ID token");
     }
   }
@@ -456,4 +457,9 @@ public class AuthServiceImpl implements AuthService {
         jwtService.getAccessTokenTtlSeconds(),
         chatMessageRepository.countUnreadMessagesForReceiver(user.getId()));
   }
+
+  public AuthSSOClientResponse getSSOAuthToken(){
+    return new AuthSSOClientResponse(googleSsoClientId);
+  }
+
 }

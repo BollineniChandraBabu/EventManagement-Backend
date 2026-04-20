@@ -30,10 +30,10 @@ public class User extends ActivatableEntity {
   @Column(nullable = false)
   private String password;
 
-  @Enumerated(EnumType.STRING)
-  @Column(nullable = false, length = 10)
+  @Enumerated(EnumType.ORDINAL)
+  @Column(nullable = false, columnDefinition = "SMALLINT")
   @Builder.Default
-  private Gender gender = Gender.OTHER;
+  private Gender gender = Gender.MALE;
 
   @Enumerated(EnumType.ORDINAL)
   @Column(nullable = false, columnDefinition = "SMALLINT")
