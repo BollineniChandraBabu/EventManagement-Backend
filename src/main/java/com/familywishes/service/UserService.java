@@ -20,6 +20,9 @@ public interface UserService {
 
   WishPreviewResponse getCurrentUserWishPreview();
 
+  ProfilePictureUploadUrlResponse getCurrentUserProfilePictureUploadUrl(
+      ProfilePictureUploadUrlRequest request);
+
   UserResponse uploadCurrentUserProfilePicture(MultipartFile file);
 
   UserResponse removeCurrentUserProfilePicture();

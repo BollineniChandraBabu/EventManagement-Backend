@@ -228,6 +228,11 @@ public class AuthServiceImpl implements AuthService {
 
   @Override
   public void sendOtp(OtpSendRequest request) {
+    userRepository
+        .findByEmailAndDeletedFalse(request.email())
+        .filter(User::isActive)
+        .orElseThrow(() -> new NotFoundException("User not found"));
+
     String otp = String.format("%06d", SECURE_RANDOM.nextInt(1_000_000));
     otpCodeRepository.save(
         OtpCode.builder()
