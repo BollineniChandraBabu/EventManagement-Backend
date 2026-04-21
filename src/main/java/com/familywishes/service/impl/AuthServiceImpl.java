@@ -23,6 +23,7 @@ import java.time.ZoneId;
 import java.util.Collections;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.BadCredentialsException;
@@ -35,6 +36,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class AuthServiceImpl implements AuthService {
   private static final SecureRandom SECURE_RANDOM = new SecureRandom();
   private static final int OTP_TTL_MINUTES = 5;
@@ -447,9 +449,10 @@ public class AuthServiceImpl implements AuthService {
       }
       return email;
     } catch (BadRequestException ex) {
+      log.error(ex.getMessage(), ex);
       throw ex;
     } catch (Exception ex) {
-      ex.printStackTrace();
+      log.error(ex.getMessage(), ex);
       throw new BadRequestException("Unable to verify Google ID token");
     }
   }

@@ -57,6 +57,7 @@ public class FestivalScheduler implements Job {
       try {
         sendFestivalWish(mapping);
       } catch (Exception e) {
+        log.error(e.getMessage(), e);
         sendErrorEmail(mapping.getUser(), e);
       }
 

@@ -17,8 +17,11 @@ import com.familywishes.service.AiService;
 import com.familywishes.service.UserService;
 import java.time.LocalDate;
 import java.time.ZoneId;
+import java.util.List;
 import java.util.Objects;
 import lombok.RequiredArgsConstructor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -33,6 +36,7 @@ import org.springframework.web.multipart.MultipartFile;
 @Service
 @RequiredArgsConstructor
 public class UserServiceImpl implements UserService {
+  private static final Logger log = LoggerFactory.getLogger(UserServiceImpl.class);
   private final UserRepository userRepository;
   private final PasswordEncoder encoder;
   private final RelationshipSeedRepository relationshipSeedRepository;
@@ -190,20 +194,18 @@ public class UserServiceImpl implements UserService {
   @Override
   public WishPreviewResponse getCurrentUserWishPreview() {
     User user = findAuthenticatedUser();
-    if (user.getWishSettings() == null) {
-      return new WishPreviewResponse(false, null, null, null, null);
-    }
+
+    LocalDate today = LocalDate.now(ZoneId.of("Asia/Kolkata"));
+
+    List<FestivalWishMapping> mappings =
+            festivalWishMappingRepository.findBySpecialEvent_EventDateAndActiveTrue(today);
 
     FestivalWishMapping selectedFestival =
-        festivalWishMappingRepository.findByUser_IdAndActiveTrue(user.getId()).stream()
-            .filter(m -> m.getSpecialEvent() != null && m.getSpecialEvent().isActive())
-            .sorted(
-                java.util.Comparator.comparing(
-                    m -> daysUntil(m.getSpecialEvent().getEventDate(), LocalDate.now(ZoneId.of("Asia/Kolkata")))))
+        mappings.stream().filter(festivalWishMapping -> Objects.equals(festivalWishMapping.getUser().getId(), user.getId()))
             .findFirst()
             .orElse(null);
 
-    boolean birthdayEnabled = user.getWishSettings().isBirthdayEnabled();
+    boolean birthdayEnabled = user.getWishSettings().isBirthdayEnabled() && Objects.equals(user.getBirthday().getMonthValue(),today.getMonthValue()) && Objects.equals(user.getBirthday().getDayOfMonth(),today.getDayOfMonth());
     boolean festivalEnabled = selectedFestival != null;
 
     if (!birthdayEnabled && !festivalEnabled) {
@@ -213,17 +215,7 @@ public class UserServiceImpl implements UserService {
     try {
       AiWishRequest request;
       String wishType;
-      if (festivalEnabled) {
-        request =
-            new AiWishRequest(
-                user.getName(),
-                user.getRelationShip().getCode(),
-                "",
-                selectedFestival.getSpecialEvent().getEventName(),
-                "Emotional",
-                "EN");
-        wishType = "FESTIVAL";
-      } else {
+      if (birthdayEnabled) {
         request =
             new AiWishRequest(
                 user.getName(),
@@ -233,6 +225,16 @@ public class UserServiceImpl implements UserService {
                 "Emotional",
                 "EN");
         wishType = "BIRTHDAY";
+      }else {
+        request =
+                new AiWishRequest(
+                        user.getName(),
+                        user.getRelationShip().getCode(),
+                        "",
+                        selectedFestival.getSpecialEvent().getEventName(),
+                        "Emotional",
+                        "EN");
+        wishType = "FESTIVAL";
       }
 
       AiWishResponse aiWishResponse = aiService.generate(request);
@@ -240,6 +242,7 @@ public class UserServiceImpl implements UserService {
       return new WishPreviewResponse(
           true, wishType, aiWishResponse.subject(), aiWishResponse.htmlMessage(), image);
     } catch (Exception ex) {
+      log.error(ex.getMessage(), ex);
       throw new BadRequestException("Unable to generate wish preview");
     }
   }

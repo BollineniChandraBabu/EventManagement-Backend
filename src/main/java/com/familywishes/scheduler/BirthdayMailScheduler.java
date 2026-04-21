@@ -55,6 +55,7 @@ public class BirthdayMailScheduler implements Job {
       try {
         sendBirthdayWish(user);
       } catch (Exception e) {
+        log.error(e.getMessage(), e);
         sendErrorEmail(user, e);
       }
     }

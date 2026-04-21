@@ -24,6 +24,9 @@ public interface UserRepository extends JpaRepository<User, Long> {
   @Query("SELECT u FROM User u WHERE MONTH(u.birthday) = :month AND DAY(u.birthday) = :day")
   List<User> findTodaysBirthdays(int month, int day);
 
+  @Query("SELECT u FROM User u WHERE MONTH(u.birthday) = :month AND DAY(u.birthday) = :day AND u.id = :uid")
+  User findTodaysBirthdaysForLoggedInUser(int month, int day, Long uid);
+
   @Query(
       """
             SELECT u FROM User u

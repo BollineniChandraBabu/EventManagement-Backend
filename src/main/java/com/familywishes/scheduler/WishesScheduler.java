@@ -41,6 +41,7 @@ public class WishesScheduler implements Job {
                         event.getFestivalName());
                 ai = aiService.generate(request);
               } catch (JsonProcessingException e) {
+                log.error(e.getMessage(), e);
                 throw new RuntimeException(e);
               }
 

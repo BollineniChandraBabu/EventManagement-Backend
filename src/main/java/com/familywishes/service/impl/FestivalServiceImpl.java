@@ -177,6 +177,7 @@ public class FestivalServiceImpl implements FestivalService {
       try {
         return LocalDate.parse(String.valueOf(isoNode));
       } catch (Exception ex) {
+        log.error(ex.getMessage(), ex);
         return null;
       }
     }
@@ -192,6 +193,7 @@ public class FestivalServiceImpl implements FestivalService {
       int day = Integer.parseInt(String.valueOf(datetimeMap.get("day")));
       return LocalDate.of(year, month, day);
     } catch (Exception ex) {
+      log.error(ex.getMessage(), ex);
       return null;
     }
   }

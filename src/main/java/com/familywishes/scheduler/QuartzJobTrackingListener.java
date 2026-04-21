@@ -3,6 +3,7 @@ package com.familywishes.scheduler;
 import com.familywishes.service.SchedulerTrackingService;
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.quartz.JobExecutionContext;
 import org.quartz.JobExecutionException;
 import org.quartz.Scheduler;
@@ -12,6 +13,7 @@ import org.springframework.stereotype.Component;
 
 @Component
 @RequiredArgsConstructor
+@Slf4j
 public class QuartzJobTrackingListener extends JobListenerSupport {
 
   private final Scheduler quartzScheduler;
@@ -27,6 +29,7 @@ public class QuartzJobTrackingListener extends JobListenerSupport {
     try {
       quartzScheduler.getListenerManager().addJobListener(this);
     } catch (SchedulerException e) {
+      log.error(e.getMessage(), e);
       throw new RuntimeException("Failed to register quartz tracking listener", e);
     }
   }

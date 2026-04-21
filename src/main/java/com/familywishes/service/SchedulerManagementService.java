@@ -17,6 +17,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.quartz.JobKey;
 import org.quartz.Scheduler;
 import org.quartz.SchedulerException;
@@ -28,6 +29,7 @@ import org.springframework.stereotype.Service;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class SchedulerManagementService {
 
   private final Scheduler quartzScheduler;
@@ -69,6 +71,7 @@ public class SchedulerManagementService {
         statuses.add(buildQuartzStatus(jobKey));
       }
     } catch (SchedulerException e) {
+      log.error(e.getMessage(), e);
       throw new RuntimeException("Failed to load quartz jobs", e);
     }
 
@@ -120,6 +123,7 @@ public class SchedulerManagementService {
     try {
       return buildQuartzStatus(resolveQuartzJobKey(jobName));
     } catch (SchedulerException e) {
+      log.error(e.getMessage(), e);
       throw new RuntimeException("Failed to load quartz scheduler: " + jobName, e);
     }
   }
@@ -137,6 +141,7 @@ public class SchedulerManagementService {
       quartzScheduler.triggerJob(key);
       return new SchedulerTriggerResponse(jobName, "Quartz scheduler triggered", Instant.now());
     } catch (SchedulerException e) {
+      log.error(e.getMessage(), e);
       throw new RuntimeException("Failed to trigger scheduler: " + jobName, e);
     }
   }
@@ -168,6 +173,7 @@ public class SchedulerManagementService {
         }
       }
     } catch (SchedulerException e) {
+      log.error(e.getMessage(), e);
       throw new RuntimeException("Failed to read trigger for scheduler: " + key.getName(), e);
     }
 

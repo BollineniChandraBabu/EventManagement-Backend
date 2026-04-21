@@ -6,9 +6,11 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLong;
 import lombok.Getter;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 @Service
+@Slf4j
 public class SchedulerTrackingService {
 
   private final Map<String, SchedulerExecutionStats> statsByJob = new ConcurrentHashMap<>();
@@ -47,6 +49,7 @@ public class SchedulerTrackingService {
       action.run();
       onComplete(jobName, null);
     } catch (RuntimeException ex) {
+      log.error(ex.getMessage(), ex);
       onComplete(jobName, ex);
       throw ex;
     }
