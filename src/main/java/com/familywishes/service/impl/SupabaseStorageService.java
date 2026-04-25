@@ -37,6 +37,7 @@ public class SupabaseStorageService {
   private final String maleDefaultImagePath;
   private final String femaleDefaultImagePath;
   private final String otherDefaultImagePath;
+  private final String emailSignaturePath;
   private final S3Presigner presigner;
 
   public SupabaseStorageService(
@@ -51,12 +52,14 @@ public class SupabaseStorageService {
       @Value("${app.default-profile-picture.female-path:Profile Pictures/default/female.png}")
           String femaleDefaultImagePath,
       @Value("${app.default-profile-picture.other-path:Profile Pictures/default/male.png}")
-          String otherDefaultImagePath) {
+          String otherDefaultImagePath,
+      @Value("${app.email.signature.path:signature.png}") String emailSignaturePath) {
     this.bucket = bucket;
     this.publicBaseUrl = publicBaseUrl == null ? "" : publicBaseUrl.trim();
     this.maleDefaultImagePath = maleDefaultImagePath;
     this.femaleDefaultImagePath = femaleDefaultImagePath;
     this.otherDefaultImagePath = otherDefaultImagePath;
+    this.emailSignaturePath = emailSignaturePath;
     this.s3Client =
         S3Client.builder()
             .endpointOverride(URI.create(endpoint))
@@ -246,6 +249,18 @@ public class SupabaseStorageService {
       return value;
     }
     return toPublicUrl(value);
+  }
+
+  public String getEmailSignatureUrl() {
+    if (emailSignaturePath == null || emailSignaturePath.isBlank()) {
+      return null;
+    }
+    try {
+      return getSignedUrl(emailSignaturePath);
+    } catch (Exception ex) {
+      log.warn("Failed to generate email signature URL from Supabase", ex);
+      return null;
+    }
   }
 
   public byte[] downloadImage(String objectKey) {
