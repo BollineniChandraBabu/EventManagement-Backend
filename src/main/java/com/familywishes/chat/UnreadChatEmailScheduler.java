@@ -57,7 +57,6 @@ public class UnreadChatEmailScheduler implements Job {
             + "<p style='margin:0 0 12px 0'><a href='"
             + loginUiUrl
             + "' style='color:#2563eb;font-weight:600'>Login to Golden Greetings</a></p>"
-            + "<p style='margin:0'>Thanks and regards,<br/>Golden Greetings Team</p>"
             + "</div>";
 
     gmailEmailService.sendEmailWithAttachments(

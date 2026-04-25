@@ -122,7 +122,6 @@ public class AuthServiceImpl implements AuthService {
               <p style='margin:0 0 12px 0'>We detected multiple unsuccessful login attempts on your account.</p>
               <p style='margin:0 0 12px 0'><b>Your account sign-in has been restricted for security reasons.</b></p>
               <p style='margin:0 0 12px 0'>Please contact the Administrator to restore access.</p>
-              <p style='margin:0'>Thanks and regards,<br/>Golden Greetings Team</p>
             </div>
             """;
   }
@@ -258,7 +257,6 @@ public class AuthServiceImpl implements AuthService {
               </p>
               <p style='margin:0 0 8px 0'>This OTP is valid for <b>%d minutes</b>.</p>
               <p style='margin:0 0 12px 0;color:#6b7280'>If you did not request this code, please ignore this email.</p>
-              <p style='margin:0'>Thanks and regards,<br/>Golden Greetings Team</p>
             </div>
             """
         .formatted(otp, OTP_TTL_MINUTES);
@@ -324,7 +322,6 @@ public class AuthServiceImpl implements AuthService {
                   <p><b>%s</b></p>
                   <p>This link/token expires in %d minutes.</p>
                   <p>If you did not request this, you can safely ignore this email.</p>
-                  <p>Thanks and regards,<br/>Golden Greetings Team</p>
                 </div>
                 """
             .formatted(user.getName(), resetUrl, token, passwordResetTtlMinutes);

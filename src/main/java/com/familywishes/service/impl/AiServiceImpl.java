@@ -140,9 +140,6 @@ public class AiServiceImpl implements AiService {
                         Instructions:
                         - Use the exact names provided.
                         - Do NOT use placeholders.
-                        - Email must end with:
-                          Regards,
-                          %s
                         - Return ONLY valid JSON.
                         - No markdown.
 
@@ -179,9 +176,6 @@ public class AiServiceImpl implements AiService {
 
                         Greeting message:
                         A warm and heartfelt %s wish for you.
-
-                        Signature at bottom:
-                        Regards, Chandra
 
                         Design requirements:
 
