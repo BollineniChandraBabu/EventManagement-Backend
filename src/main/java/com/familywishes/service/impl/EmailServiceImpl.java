@@ -4,6 +4,7 @@ import com.familywishes.entity.EmailLog;
 import com.familywishes.entity.enums.EmailStatus;
 import com.familywishes.repository.EmailLogRepository;
 import com.familywishes.service.EmailService;
+import com.familywishes.util.EmailTemplateBuilder;
 import jakarta.mail.internet.MimeMessage;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
@@ -25,6 +26,8 @@ public class EmailServiceImpl implements EmailService {
   private final EmailLogRepository logRepository;
   private final JavaMailSender sender;
   private final Environment env;
+  private final SupabaseStorageService supabaseStorageService;
+  private final EmailTemplateBuilder emailTemplateBuilder;
 
   @Override
   public void sendHtmlEmail(String to, String subject, String html, Long logId, byte[] image) {
@@ -39,11 +42,13 @@ public class EmailServiceImpl implements EmailService {
                     .build())
             : logRepository.findById(logId).orElseThrow();
     try {
+      String finalHtml =
+          emailTemplateBuilder.build(html, supabaseStorageService.getEmailSignatureUrl());
       MimeMessage message = mailSender.createMimeMessage();
       MimeMessageHelper helper = new MimeMessageHelper(message, true);
       helper.setTo(to);
       helper.setSubject(subject);
-      helper.setText(html, true);
+      helper.setText(finalHtml, true);
       if (Objects.nonNull(image)) {
         helper.addInline("birthdayImage", new ByteArrayResource(image), "image/png");
       }

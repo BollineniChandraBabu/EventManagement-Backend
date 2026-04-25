@@ -6,6 +6,7 @@ import com.familywishes.entity.enums.EmailStatus;
 import com.familywishes.entity.enums.EmailType;
 import com.familywishes.repository.EmailLogRepository;
 import com.familywishes.service.BrevoEmailService;
+import com.familywishes.util.EmailTemplateBuilder;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.*;
@@ -26,6 +27,7 @@ public class BrevoEmailServiceImpl implements BrevoEmailService {
   private final EmailLogRepository logRepository;
   private final RestTemplate restTemplate;
   private final SupabaseStorageService supabaseStorageService;
+  private final EmailTemplateBuilder emailTemplateBuilder;
 
   @Value("${brevo.api.key}")
   private String brevoApiKey;
@@ -63,6 +65,8 @@ public class BrevoEmailServiceImpl implements BrevoEmailService {
       logEntry.setEmailType(classifyEmailType(subject, html));
     }
     try {
+      String finalHtml =
+          emailTemplateBuilder.build(html, supabaseStorageService.getEmailSignatureUrl());
       HttpHeaders headers = new HttpHeaders();
       headers.set("api-key", brevoApiKey);
       headers.setContentType(MediaType.APPLICATION_JSON);
@@ -81,10 +85,10 @@ public class BrevoEmailServiceImpl implements BrevoEmailService {
       // ========================
       if (image != null) {
         String base64 = Base64.getEncoder().encodeToString(image);
-        body.put("htmlContent", html);
+        body.put("htmlContent", finalHtml);
         body.put("inlineImage", Map.of("birthdayImage", base64));
       } else {
-        body.put("htmlContent", html);
+        body.put("htmlContent", finalHtml);
       }
       HttpEntity<Map<String, Object>> request = new HttpEntity<>(body, headers);
       ResponseEntity<String> response = restTemplate.postForEntity(brevoUrl, request, String.class);

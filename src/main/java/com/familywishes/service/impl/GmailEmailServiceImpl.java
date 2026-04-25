@@ -11,6 +11,7 @@ import com.familywishes.repository.EmailLogRepository;
 import com.familywishes.repository.EventTypeSeedRepository;
 import com.familywishes.repository.UserRepository;
 import com.familywishes.service.GmailEmailService;
+import com.familywishes.util.EmailTemplateBuilder;
 import com.google.api.services.gmail.Gmail;
 import com.google.api.services.gmail.model.Message;
 import jakarta.mail.Session;
@@ -44,6 +45,7 @@ public class GmailEmailServiceImpl implements GmailEmailService {
 
   private final Gmail gmail;
   private final SupabaseStorageService supabaseStorageService;
+  private final EmailTemplateBuilder emailTemplateBuilder;
 
   @Value("${gmail.from-email}")
   private String senderEmail;
@@ -81,9 +83,10 @@ public class GmailEmailServiceImpl implements GmailEmailService {
     }
 
     try {
-
+      String finalHtml =
+          emailTemplateBuilder.build(html, supabaseStorageService.getEmailSignatureUrl());
       byte[] imageForEmail = resolveImageForEmail(logEntry, image);
-      MimeMessage mimeMessage = createMimeMessage(to, subject, html, imageForEmail);
+      MimeMessage mimeMessage = createMimeMessage(to, subject, finalHtml, imageForEmail);
 
       ByteArrayOutputStream buffer = new ByteArrayOutputStream();
 
