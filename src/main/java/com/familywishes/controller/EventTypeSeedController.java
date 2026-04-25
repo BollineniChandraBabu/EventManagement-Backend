@@ -12,16 +12,17 @@ import org.springframework.web.bind.annotation.*;
 @RestController
 @RequestMapping("/api/seed/event-types")
 @RequiredArgsConstructor
-@PreAuthorize("hasRole('ADMIN')")
 public class EventTypeSeedController {
   private final EventTypeSeedService eventTypeSeedService;
 
   @PostMapping
+  @PreAuthorize("hasRole('ADMIN')")
   public EnumSeedResponse create(@Valid @RequestBody EnumSeedRequest request) {
     return eventTypeSeedService.create(request);
   }
 
   @PutMapping("/{code}")
+  @PreAuthorize("hasRole('ADMIN')")
   public EnumSeedResponse update(
       @PathVariable String code, @Valid @RequestBody EnumSeedRequest request) {
     return eventTypeSeedService.update(code, request);
@@ -40,5 +41,11 @@ public class EventTypeSeedController {
   @GetMapping("/{id}")
   public EnumSeedResponse getById(@PathVariable Long id) {
     return eventTypeSeedService.getById(id);
+  }
+
+  @DeleteMapping("/{id}")
+  @PreAuthorize("hasRole('ADMIN')")
+  public void deleteById(@PathVariable Long id) {
+    eventTypeSeedService.deleteById(id);
   }
 }

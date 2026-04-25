@@ -8,6 +8,8 @@ public interface EventService {
 
   EventResponse getById(Long id);
 
+  void deleteById(Long id);
+
   PagedResponse<EventResponse> list(
-      int page, int size, String searchKey, String sortBy, String sortDir);
+      int page, int size, String searchKey, String sortBy, String sortDir, boolean isAdmin, String userEmail);
 }

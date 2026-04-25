@@ -41,4 +41,9 @@ public class RelationshipSeedController {
   public EnumSeedResponse getById(@PathVariable Long id) {
     return relationshipSeedService.getById(id);
   }
+
+  @DeleteMapping("/{id}")
+  public void deleteById(@PathVariable Long id) {
+    relationshipSeedService.deleteById(id);
+  }
 }

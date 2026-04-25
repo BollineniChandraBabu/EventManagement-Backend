@@ -2,12 +2,15 @@ package com.familywishes.scheduler;
 
 import com.familywishes.dto.AiWishRequest;
 import com.familywishes.dto.AiWishResponse;
+import com.familywishes.entity.Event;
 import com.familywishes.repository.EventRepository;
 import com.familywishes.service.AiService;
 import com.familywishes.service.GmailEmailService;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import java.time.LocalDate;
 import java.time.ZoneId;
+import java.util.List;
+
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.quartz.Job;
@@ -18,7 +21,6 @@ import org.springframework.stereotype.Component;
 @RequiredArgsConstructor
 @Slf4j
 public class WishesScheduler implements Job {
-  private static final String DEFAULT_RELATION = "Family";
   private static final String DEFAULT_TONE = "Emotional";
   private static final String DEFAULT_LANGUAGE = "EN";
 
@@ -28,8 +30,10 @@ public class WishesScheduler implements Job {
 
   @Override
   public void execute(JobExecutionContext context) {
-    eventRepository
-        .findByEventDateAndActiveTrue(LocalDate.now(ZoneId.of("Asia/Kolkata")))
+    LocalDate today = LocalDate.now(ZoneId.of("Asia/Kolkata"));
+    List<Event> eventList = eventRepository.findTodaysEvents(today.getMonthValue(), today.getDayOfMonth());
+    eventList = eventList.stream().filter(event -> event.isRecurring() || today.equals(event.getEventDate())).toList();
+    eventList
         .forEach(
             event -> {
               AiWishResponse ai;
@@ -37,8 +41,8 @@ public class WishesScheduler implements Job {
                 AiWishRequest request =
                     buildRequest(
                         event.getUser().getName(),
-                        event.getEventType().getCode(),
-                        event.getFestivalName());
+                        event.getUser().getRelationShip().getCode(),
+                        event.getEventType().getCode());
                 ai = aiService.generate(request);
               } catch (JsonProcessingException e) {
                 log.error(e.getMessage(), e);
@@ -52,8 +56,8 @@ public class WishesScheduler implements Job {
     log.info("Daily wish job completed");
   }
 
-  private AiWishRequest buildRequest(String name, String eventType, String festivalName) {
+  private AiWishRequest buildRequest(String name, String relation, String eventType) {
     return new AiWishRequest(
-        name, DEFAULT_RELATION, eventType, festivalName, DEFAULT_TONE, DEFAULT_LANGUAGE);
+        name, relation, eventType, "", DEFAULT_TONE, DEFAULT_LANGUAGE);
   }
 }

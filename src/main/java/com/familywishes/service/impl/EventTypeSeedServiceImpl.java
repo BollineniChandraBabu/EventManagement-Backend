@@ -97,4 +97,9 @@ public class EventTypeSeedServiceImpl implements EventTypeSeedService {
       default -> "displayName";
     };
   }
+
+  @Override
+  public void deleteById(Long id) {
+    eventTypeSeedRepository.deleteById(id);
+  }
 }

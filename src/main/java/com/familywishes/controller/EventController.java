@@ -6,6 +6,8 @@ import com.familywishes.service.EventService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.GrantedAuthority;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -26,13 +28,23 @@ public class EventController {
   }
 
   @GetMapping
-  @PreAuthorize("hasRole('ADMIN')")
   public PagedResponse<EventResponse> list(
+      Authentication authentication,
       @RequestParam(defaultValue = "0") int page,
       @RequestParam(defaultValue = "10") int size,
       @RequestParam(defaultValue = "") String searchKey,
       @RequestParam(defaultValue = "id") String sortBy,
       @RequestParam(defaultValue = "desc") String sortDir) {
-    return eventService.list(page, size, searchKey, sortBy, sortDir);
+    boolean isAdmin =
+            authentication.getAuthorities().stream()
+                    .map(GrantedAuthority::getAuthority)
+                    .anyMatch("ROLE_ADMIN"::equals);
+    return eventService.list(page, size, searchKey, sortBy, sortDir, isAdmin, authentication.getName());
+  }
+
+  @DeleteMapping("/{id}")
+  @PreAuthorize("hasRole('ADMIN')")
+  public void deleteById(@PathVariable Long id) {
+    eventService.deleteById(id);
   }
 }

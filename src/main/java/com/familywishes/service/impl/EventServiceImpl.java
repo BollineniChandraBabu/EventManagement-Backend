@@ -32,7 +32,6 @@ public class EventServiceImpl implements EventService {
     Event event =
         Event.builder()
             .eventType(resolveEventType(request.eventType()))
-            .festivalName(request.festivalName())
             .eventDate(request.eventDate())
             .recurring(request.recurring())
             .user(user)
@@ -50,16 +49,28 @@ public class EventServiceImpl implements EventService {
   }
 
   @Override
+  public void deleteById(Long id) {
+    eventRepository.deleteById(id);
+  }
+
+  @Override
   public PagedResponse<EventResponse> list(
-      int page, int size, String searchKey, String sortBy, String sortDir) {
+      int page, int size, String searchKey, String sortBy, String sortDir, boolean isAdmin, String userEmail) {
     Sort.Direction direction =
         "asc".equalsIgnoreCase(sortDir) ? Sort.Direction.ASC : Sort.Direction.DESC;
     String normalizedSortBy = (sortBy == null || sortBy.isBlank()) ? "id" : sortBy.trim();
-
-    Page<Event> events =
-        eventRepository.findAllBySearchKey(
-            searchKey == null ? "" : searchKey.trim(),
-            PageRequest.of(page, size, Sort.by(direction, normalizedSortBy)));
+    Page<Event> events;
+    if(isAdmin) {
+     events =
+              eventRepository.findAllBySearchKey(
+                      searchKey == null ? "" : searchKey.trim(),
+                      PageRequest.of(page, size, Sort.by(direction, normalizedSortBy)));
+    }else {
+      events =
+              eventRepository.findAllBySearchKeyAndUSer(userEmail,
+                      searchKey == null ? "" : searchKey.trim(),
+                      PageRequest.of(page, size, Sort.by(direction, normalizedSortBy)));
+    }
 
     return new PagedResponse<>(
         events.getContent().stream().map(this::toResponse).toList(),
@@ -81,10 +92,9 @@ public class EventServiceImpl implements EventService {
     return new EventResponse(
         event.getId(),
         event.getEventType().getCode(),
-        event.getFestivalName(),
         event.getEventDate(),
         event.isRecurring(),
-        event.getUser().getId(),
+        event.getUser().getName(),
         event.isActive());
   }
 }

@@ -97,4 +97,9 @@ public class RelationshipSeedServiceImpl implements RelationshipSeedService {
       default -> "displayName";
     };
   }
+
+  @Override
+  public void deleteById(Long id) {
+    relationshipSeedRepository.deleteById(id);
+  }
 }

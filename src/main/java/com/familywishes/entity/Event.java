@@ -21,8 +21,6 @@ public class Event extends ActivatableEntity {
   @ManyToOne(fetch = FetchType.EAGER)
   @JoinColumn(name = "event_type_seed_id", nullable = false)
   private EventTypeSeed eventType;
-
-  private String festivalName;
   @Column private LocalDate eventDate;
 
   @Column(nullable = false, columnDefinition = "SMALLINT")
