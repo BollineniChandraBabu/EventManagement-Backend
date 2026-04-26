@@ -65,8 +65,12 @@ public class BrevoEmailServiceImpl implements BrevoEmailService {
       logEntry.setEmailType(classifyEmailType(subject, html));
     }
     try {
-      String finalHtml =
-          emailTemplateBuilder.build(html, supabaseStorageService.getEmailSignatureUrl());
+      byte[] signatureImage = supabaseStorageService.getEmailSignatureImage();
+      String signatureSource =
+          signatureImage != null && signatureImage.length > 0
+              ? "cid:emailSignature"
+              : supabaseStorageService.getEmailSignatureUrl();
+      String finalHtml = emailTemplateBuilder.build(html, signatureSource);
       HttpHeaders headers = new HttpHeaders();
       headers.set("api-key", brevoApiKey);
       headers.setContentType(MediaType.APPLICATION_JSON);
@@ -83,12 +87,16 @@ public class BrevoEmailServiceImpl implements BrevoEmailService {
       // ========================
       // INLINE IMAGE SUPPORT
       // ========================
+      Map<String, String> inlineImages = new HashMap<>();
       if (image != null) {
-        String base64 = Base64.getEncoder().encodeToString(image);
-        body.put("htmlContent", finalHtml);
-        body.put("inlineImage", Map.of("birthdayImage", base64));
-      } else {
-        body.put("htmlContent", finalHtml);
+        inlineImages.put("birthdayImage", Base64.getEncoder().encodeToString(image));
+      }
+      if (signatureImage != null && signatureImage.length > 0) {
+        inlineImages.put("emailSignature", Base64.getEncoder().encodeToString(signatureImage));
+      }
+      body.put("htmlContent", finalHtml);
+      if (!inlineImages.isEmpty()) {
+        body.put("inlineImage", inlineImages);
       }
       HttpEntity<Map<String, Object>> request = new HttpEntity<>(body, headers);
       ResponseEntity<String> response = restTemplate.postForEntity(brevoUrl, request, String.class);

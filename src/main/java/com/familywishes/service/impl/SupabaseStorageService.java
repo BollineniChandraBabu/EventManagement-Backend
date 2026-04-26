@@ -263,6 +263,13 @@ public class SupabaseStorageService {
     }
   }
 
+  public byte[] getEmailSignatureImage() {
+    if (emailSignaturePath == null || emailSignaturePath.isBlank()) {
+      return null;
+    }
+    return downloadImage(emailSignaturePath);
+  }
+
   public byte[] downloadImage(String objectKey) {
     if (objectKey == null || objectKey.isBlank()) {
       return null;
