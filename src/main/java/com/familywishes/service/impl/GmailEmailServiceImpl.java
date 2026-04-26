@@ -83,10 +83,15 @@ public class GmailEmailServiceImpl implements GmailEmailService {
     }
 
     try {
-      String finalHtml =
-          emailTemplateBuilder.build(html, supabaseStorageService.getEmailSignatureUrl());
+      byte[] signatureImage = supabaseStorageService.getEmailSignatureImage();
+      String signatureSource =
+          signatureImage != null && signatureImage.length > 0
+              ? "cid:emailSignature"
+              : supabaseStorageService.getEmailSignatureUrl();
+      String finalHtml = emailTemplateBuilder.build(html, signatureSource);
       byte[] imageForEmail = resolveImageForEmail(logEntry, image);
-      MimeMessage mimeMessage = createMimeMessage(to, subject, finalHtml, imageForEmail);
+      MimeMessage mimeMessage =
+          createMimeMessage(to, subject, finalHtml, imageForEmail, signatureImage);
 
       ByteArrayOutputStream buffer = new ByteArrayOutputStream();
 
@@ -141,7 +146,8 @@ public class GmailEmailServiceImpl implements GmailEmailService {
   // CREATE MIME MESSAGE
   // ==========================
 
-  private MimeMessage createMimeMessage(String to, String subject, String html, byte[] image)
+  private MimeMessage createMimeMessage(
+      String to, String subject, String html, byte[] image, byte[] signatureImage)
       throws Exception {
 
     Session session = Session.getInstance(new Properties(), null);
@@ -174,6 +180,18 @@ public class GmailEmailServiceImpl implements GmailEmailService {
       imagePart.setHeader("Content-ID", "<birthdayImage>");
 
       multipart.addBodyPart(imagePart);
+    }
+
+    if (signatureImage != null && signatureImage.length > 0) {
+
+      MimeBodyPart signaturePart = new MimeBodyPart();
+
+      signaturePart.setDataHandler(
+          new jakarta.activation.DataHandler(new ByteArrayDataSource(signatureImage, "image/png")));
+
+      signaturePart.setHeader("Content-ID", "<emailSignature>");
+
+      multipart.addBodyPart(signaturePart);
     }
 
     message.setContent(multipart);

@@ -42,8 +42,12 @@ public class EmailServiceImpl implements EmailService {
                     .build())
             : logRepository.findById(logId).orElseThrow();
     try {
-      String finalHtml =
-          emailTemplateBuilder.build(html, supabaseStorageService.getEmailSignatureUrl());
+      byte[] signatureImage = supabaseStorageService.getEmailSignatureImage();
+      String signatureSource =
+          signatureImage != null && signatureImage.length > 0
+              ? "cid:emailSignature"
+              : supabaseStorageService.getEmailSignatureUrl();
+      String finalHtml = emailTemplateBuilder.build(html, signatureSource);
       MimeMessage message = mailSender.createMimeMessage();
       MimeMessageHelper helper = new MimeMessageHelper(message, true);
       helper.setTo(to);
@@ -51,6 +55,9 @@ public class EmailServiceImpl implements EmailService {
       helper.setText(finalHtml, true);
       if (Objects.nonNull(image)) {
         helper.addInline("birthdayImage", new ByteArrayResource(image), "image/png");
+      }
+      if (Objects.nonNull(signatureImage) && signatureImage.length > 0) {
+        helper.addInline("emailSignature", new ByteArrayResource(signatureImage), "image/png");
       }
       mailSender.send(message);
       logEntry.setBody(html);
