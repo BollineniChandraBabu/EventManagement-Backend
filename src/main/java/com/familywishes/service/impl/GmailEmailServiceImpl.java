@@ -314,7 +314,7 @@ public class GmailEmailServiceImpl implements GmailEmailService {
     EmailLog log =
         logRepository.findById(id).orElseThrow(() -> new NotFoundException("Email log not found"));
 
-    if (!log.getRecipientEmail().equalsIgnoreCase(requesterEmail)) {
+    if (log.getRecipientEmail() == null || !log.getRecipientEmail().equalsIgnoreCase(requesterEmail)) {
       throw new NotFoundException("Email log not found");
     }
     if (SENSITIVE_TYPES.contains(log.getEmailType())) {
@@ -461,10 +461,18 @@ public class GmailEmailServiceImpl implements GmailEmailService {
     return EmailType.EVENT;
   }
 
+
+
+  private com.familywishes.entity.User resolveRecipientUser(String to) {
+    if (to == null || to.isBlank()) {
+      return null;
+    }
+    return userRepository.findByEmailAndDeletedFalse(to).orElse(null);
+  }
   private EmailLog createPendingEmailLog(String to, String subject, EmailType emailType) {
     return logRepository.save(
         EmailLog.builder()
-            .recipientEmail(to)
+            .recipientUser(resolveRecipientUser(to))
             .subject(subject)
             .status(EmailStatus.PENDING)
             .emailType(emailType)

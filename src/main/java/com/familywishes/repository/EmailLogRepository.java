@@ -35,21 +35,21 @@ public interface EmailLogRepository extends JpaRepository<EmailLog, Long> {
 
   long countByStatusAndEmailTypeNotIn(EmailStatus status, List<EmailType> emailTypes);
 
-  long countByRecipientEmailAndStatusAndSentAtGreaterThanEqualAndSentAtLessThanAndEmailTypeNotIn(
+  long countByRecipientUserEmailAndStatusAndSentAtGreaterThanEqualAndSentAtLessThanAndEmailTypeNotIn(
       String recipientEmail,
       EmailStatus status,
       LocalDateTime startTime,
       LocalDateTime endTime,
       List<EmailType> emailTypes);
 
-  long countByRecipientEmailAndStatusAndEmailTypeNotIn(
+  long countByRecipientUserEmailAndStatusAndEmailTypeNotIn(
       String recipientEmail, EmailStatus status, List<EmailType> emailTypes);
 
   @Query(
       """
             SELECT e FROM EmailLog e
             WHERE :searchKey = ''
-               OR LOWER(e.recipientEmail) LIKE LOWER(CONCAT('%', :searchKey, '%'))
+               OR LOWER(e.recipientUser.email) LIKE LOWER(CONCAT('%', :searchKey, '%'))
                OR LOWER(e.subject) LIKE LOWER(CONCAT('%', :searchKey, '%'))
                OR LOWER(CAST(e.status as string)) LIKE LOWER(CONCAT('%', :searchKey, '%'))
                OR LOWER(CAST(e.emailType as string)) LIKE LOWER(CONCAT('%', :searchKey, '%'))
@@ -61,7 +61,7 @@ public interface EmailLogRepository extends JpaRepository<EmailLog, Long> {
             SELECT e FROM EmailLog e
             WHERE (
                     :searchKey = ''
-                    OR LOWER(e.recipientEmail) LIKE LOWER(CONCAT('%', :searchKey, '%'))
+                    OR LOWER(e.recipientUser.email) LIKE LOWER(CONCAT('%', :searchKey, '%'))
                     OR LOWER(e.subject) LIKE LOWER(CONCAT('%', :searchKey, '%'))
                     OR LOWER(CAST(e.status as string)) LIKE LOWER(CONCAT('%', :searchKey, '%'))
                     OR LOWER(CAST(e.emailType as string)) LIKE LOWER(CONCAT('%', :searchKey, '%'))
@@ -76,10 +76,10 @@ public interface EmailLogRepository extends JpaRepository<EmailLog, Long> {
   @Query(
       """
             SELECT e FROM EmailLog e
-            WHERE e.recipientEmail = :recipientEmail
+            WHERE e.recipientUser.email = :recipientEmail
               AND (
                     :searchKey = ''
-                    OR LOWER(e.recipientEmail) LIKE LOWER(CONCAT('%', :searchKey, '%'))
+                    OR LOWER(e.recipientUser.email) LIKE LOWER(CONCAT('%', :searchKey, '%'))
                     OR LOWER(e.subject) LIKE LOWER(CONCAT('%', :searchKey, '%'))
                     OR LOWER(CAST(e.status as string)) LIKE LOWER(CONCAT('%', :searchKey, '%'))
                     OR LOWER(CAST(e.emailType as string)) LIKE LOWER(CONCAT('%', :searchKey, '%'))
@@ -93,10 +93,10 @@ public interface EmailLogRepository extends JpaRepository<EmailLog, Long> {
   @Query(
       """
             SELECT e FROM EmailLog e
-            WHERE e.recipientEmail = :recipientEmail
+            WHERE e.recipientUser.email = :recipientEmail
               AND (
                     :searchKey = ''
-                    OR LOWER(e.recipientEmail) LIKE LOWER(CONCAT('%', :searchKey, '%'))
+                    OR LOWER(e.recipientUser.email) LIKE LOWER(CONCAT('%', :searchKey, '%'))
                     OR LOWER(e.subject) LIKE LOWER(CONCAT('%', :searchKey, '%'))
                     OR LOWER(CAST(e.status as string)) LIKE LOWER(CONCAT('%', :searchKey, '%'))
                     OR LOWER(CAST(e.emailType as string)) LIKE LOWER(CONCAT('%', :searchKey, '%'))
@@ -157,7 +157,7 @@ public interface EmailLogRepository extends JpaRepository<EmailLog, Long> {
             FROM EmailLog e
             WHERE e.sentAt >= :start
               AND e.status = :status
-              AND e.recipientEmail = :recipientEmail
+              AND e.recipientUser.email = :recipientEmail
               AND e.emailType NOT IN :emailTypes
             GROUP BY DATE(e.sentAt)
             ORDER BY DATE(e.sentAt)

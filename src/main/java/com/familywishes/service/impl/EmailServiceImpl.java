@@ -3,6 +3,7 @@ package com.familywishes.service.impl;
 import com.familywishes.entity.EmailLog;
 import com.familywishes.entity.enums.EmailStatus;
 import com.familywishes.repository.EmailLogRepository;
+import com.familywishes.repository.UserRepository;
 import com.familywishes.service.EmailService;
 import com.familywishes.util.EmailTemplateBuilder;
 import jakarta.mail.internet.MimeMessage;
@@ -25,6 +26,7 @@ public class EmailServiceImpl implements EmailService {
   private final JavaMailSender mailSender;
   private final EmailLogRepository logRepository;
   private final JavaMailSender sender;
+  private final UserRepository userRepository;
   private final Environment env;
   private final SupabaseStorageService supabaseStorageService;
   private final EmailTemplateBuilder emailTemplateBuilder;
@@ -35,7 +37,7 @@ public class EmailServiceImpl implements EmailService {
         logId == null
             ? logRepository.save(
                 EmailLog.builder()
-                    .recipientEmail(to)
+                    .recipientUser(resolveRecipientUser(to))
                     .subject(subject)
                     .status(EmailStatus.PENDING)
                     .retryCount(0)
@@ -72,6 +74,13 @@ public class EmailServiceImpl implements EmailService {
       logEntry.setSentAt(LocalDateTime.now(ZoneId.of("Asia/Kolkata")));
     }
     logRepository.save(logEntry);
+  }
+
+  private com.familywishes.entity.User resolveRecipientUser(String to) {
+    if (to == null || to.isBlank()) {
+      return null;
+    }
+    return userRepository.findByEmailAndDeletedFalse(to).orElse(null);
   }
 
   @Override
