@@ -18,8 +18,9 @@ public class EmailLog extends AuditableEntity {
   @GeneratedValue(strategy = GenerationType.IDENTITY)
   private Long id;
 
-  @Column(nullable = false)
-  private String recipientEmail;
+  @ManyToOne(fetch = FetchType.LAZY)
+  @JoinColumn(name = "recipient_user_id")
+  private User recipientUser;
 
   @Column(nullable = false)
   private String subject;
@@ -45,6 +46,10 @@ public class EmailLog extends AuditableEntity {
 
   @Column(name = "image_url", columnDefinition = "TEXT")
   private String imageUrl;
+
+  public String getRecipientEmail() {
+    return recipientUser == null ? null : recipientUser.getEmail();
+  }
 
   @PrePersist
   @PreUpdate

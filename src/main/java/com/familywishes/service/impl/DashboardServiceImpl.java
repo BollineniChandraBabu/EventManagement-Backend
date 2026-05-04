@@ -65,10 +65,10 @@ public class DashboardServiceImpl implements DashboardService {
 
     long emailsSentToday =
         emailLogRepository
-            .countByRecipientEmailAndStatusAndSentAtGreaterThanEqualAndSentAtLessThanAndEmailTypeNotIn(
+            .countByRecipientUserEmailAndStatusAndSentAtGreaterThanEqualAndSentAtLessThanAndEmailTypeNotIn(
                 requesterEmail, EmailStatus.SENT, startOfDay, startOfNextDay, SENSITIVE_TYPES);
     long failedEmails =
-        emailLogRepository.countByRecipientEmailAndStatusAndEmailTypeNotIn(
+        emailLogRepository.countByRecipientUserEmailAndStatusAndEmailTypeNotIn(
             requesterEmail, EmailStatus.FAILED, SENSITIVE_TYPES);
 
     return new DashboardResponse(userCount, upcomingEvents, emailsSentToday, failedEmails);

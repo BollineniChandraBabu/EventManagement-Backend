@@ -229,15 +229,16 @@ public class AuthServiceImpl implements AuthService {
 
   @Override
   public void sendOtp(OtpSendRequest request) {
-    userRepository
-        .findByEmailAndDeletedFalse(request.email())
-        .filter(User::isActive)
-        .orElseThrow(() -> new NotFoundException("User not found"));
+    User user =
+        userRepository
+            .findByEmailAndDeletedFalse(request.email())
+            .filter(User::isActive)
+            .orElseThrow(() -> new NotFoundException("User not found"));
 
     String otp = String.format("%06d", SECURE_RANDOM.nextInt(1_000_000));
     otpCodeRepository.save(
         OtpCode.builder()
-            .email(request.email())
+            .user(user)
             .code(otp)
             .expiresAt(LocalDateTime.now(ZoneId.of("Asia/Kolkata")).plusMinutes(OTP_TTL_MINUTES))
             .used(false)
@@ -264,9 +265,14 @@ public class AuthServiceImpl implements AuthService {
 
   @Override
   public AuthResponse verifyOtp(OtpVerifyRequest request) {
+    User user =
+        userRepository
+            .findByEmailAndDeletedFalse(request.email())
+            .orElseThrow(() -> new NotFoundException("User not found"));
+
     var otp =
         otpCodeRepository
-            .findTopByEmailOrderByIdDesc(request.email())
+            .findTopByUserIdOrderByIdDesc(user.getId())
             .orElseThrow(() -> new BadRequestException("OTP not found"));
     if (otp.isUsed()
         || otp.getExpiresAt().isBefore(LocalDateTime.now(ZoneId.of("Asia/Kolkata")))
@@ -275,10 +281,6 @@ public class AuthServiceImpl implements AuthService {
     }
     otp.setUsed(true);
     otpCodeRepository.save(otp);
-    User user =
-        userRepository
-            .findByEmailAndDeletedFalse(request.email())
-            .orElseThrow(() -> new NotFoundException("User not found"));
     String access = jwtService.generateAccessToken(user);
     String refresh = jwtService.generateRefreshToken(user);
     refreshTokenRepository.save(

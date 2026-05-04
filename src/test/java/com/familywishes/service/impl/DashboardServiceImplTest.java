@@ -70,10 +70,10 @@ class DashboardServiceImplTest {
     when(eventRepository.countByUser_IdAndEventDateGreaterThanEqualAndActiveTrue(eq(10L), any()))
         .thenReturn(6L);
     when(emailLogRepository
-            .countByRecipientEmailAndStatusAndSentAtGreaterThanEqualAndSentAtLessThanAndEmailTypeNotIn(
+            .countByRecipientUserEmailAndStatusAndSentAtGreaterThanEqualAndSentAtLessThanAndEmailTypeNotIn(
                 eq("user@test.com"), eq(EmailStatus.SENT), any(), any(), any()))
         .thenReturn(2L);
-    when(emailLogRepository.countByRecipientEmailAndStatusAndEmailTypeNotIn(
+    when(emailLogRepository.countByRecipientUserEmailAndStatusAndEmailTypeNotIn(
             eq("user@test.com"), eq(EmailStatus.FAILED), any()))
         .thenReturn(1L);
     var response = dashboardService.getDashboard("user@test.com", false);

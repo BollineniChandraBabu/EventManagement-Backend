@@ -5,6 +5,7 @@ import com.familywishes.entity.EmailLog;
 import com.familywishes.entity.enums.EmailStatus;
 import com.familywishes.entity.enums.EmailType;
 import com.familywishes.repository.EmailLogRepository;
+import com.familywishes.repository.UserRepository;
 import com.familywishes.service.BrevoEmailService;
 import com.familywishes.util.EmailTemplateBuilder;
 import java.time.LocalDateTime;
@@ -26,6 +27,7 @@ import org.springframework.web.client.RestTemplate;
 public class BrevoEmailServiceImpl implements BrevoEmailService {
   private final EmailLogRepository logRepository;
   private final RestTemplate restTemplate;
+  private final UserRepository userRepository;
   private final SupabaseStorageService supabaseStorageService;
   private final EmailTemplateBuilder emailTemplateBuilder;
 
@@ -53,7 +55,7 @@ public class BrevoEmailServiceImpl implements BrevoEmailService {
         logId == null
             ? logRepository.save(
                 EmailLog.builder()
-                    .recipientEmail(to)
+                    .recipientUser(resolveRecipientUser(to))
                     .subject(subject)
                     .status(EmailStatus.PENDING)
                     .emailType(classifyEmailType(subject, html))
@@ -156,6 +158,13 @@ public class BrevoEmailServiceImpl implements BrevoEmailService {
           emailStatusResponses.add(emailStatusResponse);
         });
     return emailStatusResponses;
+  }
+
+  private com.familywishes.entity.User resolveRecipientUser(String to) {
+    if (to == null || to.isBlank()) {
+      return null;
+    }
+    return userRepository.findByEmailAndDeletedFalse(to).orElse(null);
   }
 
   private EmailType classifyEmailType(String subject, String html) {
