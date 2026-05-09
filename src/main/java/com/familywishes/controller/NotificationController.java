@@ -45,4 +45,9 @@ public class NotificationController {
   public NotificationResponse publish(@PathVariable Long id) {
     return notificationService.publish(id);
   }
+
+  @PostMapping("/{id}/unpublish")
+  public NotificationResponse unpublish(@PathVariable Long id) {
+    return notificationService.unpublish(id);
+  }
 }
