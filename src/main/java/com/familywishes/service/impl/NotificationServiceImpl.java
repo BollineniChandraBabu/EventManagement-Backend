@@ -3,6 +3,7 @@ package com.familywishes.service.impl;
 import com.familywishes.dto.NotificationDtos.NotificationRequest;
 import com.familywishes.dto.NotificationDtos.NotificationResponse;
 import com.familywishes.entity.Notification;
+import com.familywishes.exception.BadRequestException;
 import com.familywishes.exception.NotFoundException;
 import com.familywishes.repository.NotificationRepository;
 import com.familywishes.repository.UserRepository;
@@ -42,6 +43,7 @@ public class NotificationServiceImpl implements NotificationService {
   @Override
   public NotificationResponse update(Long id, NotificationRequest request) {
     Notification notification = getEntity(id);
+    ensureNotPublished(notification, "Published notifications cannot be edited");
     notification.setTitle(request.title());
     notification.setMessage(request.message());
     notification.setCanSendEmail(Boolean.TRUE.equals(request.canSendEmail()));
@@ -61,7 +63,9 @@ public class NotificationServiceImpl implements NotificationService {
 
   @Override
   public void delete(Long id) {
-    notificationRepository.delete(getEntity(id));
+    Notification notification = getEntity(id);
+    ensureNotPublished(notification, "Published notifications cannot be deleted");
+    notificationRepository.delete(notification);
   }
 
   @Override
@@ -90,6 +94,26 @@ public class NotificationServiceImpl implements NotificationService {
     return response;
   }
 
+  @Override
+  public NotificationResponse unpublish(Long id) {
+    Notification notification = getEntity(id);
+    if (!Boolean.TRUE.equals(notification.getPublished())) {
+      throw new BadRequestException("Notification is already unpublished");
+    }
+    notification.setPublished(false);
+    notification.setUpdatedBy(currentActor());
+    return toResponse(notificationRepository.save(notification));
+  }
+
+  @Override
+  public NotificationResponse getPublished() {
+    Notification published =
+        notificationRepository
+            .findFirstByPublishedTrueOrderByPublishedAtDesc()
+            .orElseThrow(() -> new NotFoundException("No published notification found"));
+    return toResponse(published);
+  }
+
   private Notification getEntity(Long id) {
     return notificationRepository
         .findById(id)
@@ -98,6 +122,12 @@ public class NotificationServiceImpl implements NotificationService {
 
   private String currentActor() {
     return SecurityContextHolder.getContext().getAuthentication().getName();
+  }
+
+  private void ensureNotPublished(Notification notification, String message) {
+    if (Boolean.TRUE.equals(notification.getPublished())) {
+      throw new BadRequestException(message);
+    }
   }
 
 

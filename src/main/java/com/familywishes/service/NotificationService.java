@@ -16,4 +16,8 @@ public interface NotificationService {
   void delete(Long id);
 
   NotificationResponse publish(Long id);
+
+  NotificationResponse unpublish(Long id);
+
+  NotificationResponse getPublished();
 }
