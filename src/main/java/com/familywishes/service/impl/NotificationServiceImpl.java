@@ -28,12 +28,15 @@ public class NotificationServiceImpl implements NotificationService {
   @Override
   public NotificationResponse create(NotificationRequest request) {
     String actor = currentActor();
+    validateScheduleWindow(request.scheduledFrom(), request.scheduledTo());
     Notification saved =
         notificationRepository.save(
             Notification.builder()
                 .title(request.title())
-                                .message(request.message())
+                .message(request.message())
                 .canSendEmail(Boolean.TRUE.equals(request.canSendEmail()))
+                .scheduledFrom(request.scheduledFrom())
+                .scheduledTo(request.scheduledTo())
                 .createdBy(actor)
                 .updatedBy(actor)
                 .build());
@@ -47,7 +50,10 @@ public class NotificationServiceImpl implements NotificationService {
     notification.setTitle(request.title());
     notification.setMessage(request.message());
     notification.setCanSendEmail(Boolean.TRUE.equals(request.canSendEmail()));
+    notification.setScheduledFrom(request.scheduledFrom());
+    notification.setScheduledTo(request.scheduledTo());
     notification.setUpdatedBy(currentActor());
+    validateScheduleWindow(notification.getScheduledFrom(), notification.getScheduledTo());
     return toResponse(notificationRepository.save(notification));
   }
 
@@ -84,11 +90,20 @@ public class NotificationServiceImpl implements NotificationService {
             });
 
     Notification notification = getEntity(id);
+    validateScheduleWindow(notification.getScheduledFrom(), notification.getScheduledTo());
+    LocalDateTime now = LocalDateTime.now(ZoneId.of("Asia/Kolkata"));
+    LocalDateTime effectivePublishTime =
+        notification.getScheduledFrom() != null ? notification.getScheduledFrom() : now;
     notification.setPublished(true);
-    notification.setPublishedAt(LocalDateTime.now(ZoneId.of("Asia/Kolkata")));
+    notification.setPublishedAt(effectivePublishTime);
     notification.setUpdatedBy(actor);
     Notification saved = notificationRepository.save(notification);
     NotificationResponse response = toResponse(saved);
+
+    if (effectivePublishTime.isAfter(now)) {
+      return response;
+    }
+
     sendNotificationEmailIfEnabled(saved, response);
     notificationRealtimePublisher.publishNotification(response);
     return response;
@@ -105,15 +120,21 @@ public class NotificationServiceImpl implements NotificationService {
     Notification saved = notificationRepository.save(notification);
     NotificationResponse response = toResponse(saved);
     sendNotificationEmailIfEnabled(saved, response);
-    notificationRealtimePublisher.publishNotification(new NotificationResponse(null,null,null,null,null,null,null,null,null,null));
+    notificationRealtimePublisher.publishNotification(new NotificationResponse(null, null, null, null, null, null, null, null, null, null, null));
     return response;
   }
 
   @Override
   public NotificationResponse getPublished() {
+    LocalDateTime now = LocalDateTime.now(ZoneId.of("Asia/Kolkata"));
     Notification published =
         notificationRepository
             .findFirstByPublishedTrueOrderByPublishedAtDesc()
+            .filter(notification -> !notification.getPublishedAt().isAfter(now))
+            .filter(
+                notification ->
+                    notification.getScheduledTo() == null
+                        || !notification.getScheduledTo().isBefore(now))
             .orElseThrow(() -> new NotFoundException("No published notification found"));
     return toResponse(published);
   }
@@ -156,6 +177,12 @@ public class NotificationServiceImpl implements NotificationService {
         .forEach(email -> gmailEmailService.sendEmailWithAttachments(email, subject, html, null, null));
   }
 
+  private void validateScheduleWindow(LocalDateTime scheduledFrom, LocalDateTime scheduledTo) {
+    if (scheduledFrom != null && scheduledTo != null && scheduledTo.isBefore(scheduledFrom)) {
+      throw new BadRequestException("Scheduled to time must be after scheduled from time");
+    }
+  }
+
   private String escapeHtml(String value) {
     return value == null
         ? ""
@@ -170,6 +197,8 @@ public class NotificationServiceImpl implements NotificationService {
         n.getMessage(),
         n.getPublished(),
         n.getCanSendEmail(),
+        n.getScheduledFrom(),
+        n.getScheduledTo(),
         n.getPublishedAt(),
         n.getCreatedBy(),
         n.getUpdatedBy(),
