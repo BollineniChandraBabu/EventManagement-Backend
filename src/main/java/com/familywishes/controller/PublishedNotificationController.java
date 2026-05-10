@@ -15,7 +15,6 @@ public class PublishedNotificationController {
   private final NotificationService notificationService;
 
   @GetMapping("/published")
-  @PreAuthorize("hasAnyRole('ADMIN','USER')")
   public NotificationResponse getPublished() {
     return notificationService.getPublished();
   }
