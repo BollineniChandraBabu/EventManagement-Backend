@@ -102,7 +102,11 @@ public class NotificationServiceImpl implements NotificationService {
     }
     notification.setPublished(false);
     notification.setUpdatedBy(currentActor());
-    return toResponse(notificationRepository.save(notification));
+    Notification saved = notificationRepository.save(notification);
+    NotificationResponse response = toResponse(saved);
+    sendNotificationEmailIfEnabled(saved, response);
+    notificationRealtimePublisher.publishNotification(null);
+    return response;
   }
 
   @Override
