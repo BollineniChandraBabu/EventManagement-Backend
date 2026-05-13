@@ -19,9 +19,6 @@ import org.springframework.beans.factory.annotation.Value;
 @NoArgsConstructor
 public abstract class AuditableEntity {
 
-  @Value("${scheduler.time-zone:Asia/Kolkata}")
-  private String schedulerTimeZone;
-
   @Column(nullable = false, updatable = false)
   private LocalDateTime createdAt;
 
@@ -30,7 +27,7 @@ public abstract class AuditableEntity {
 
   @PrePersist
   protected void onCreate() {
-    LocalDateTime now = LocalDateTime.now(ZoneId.of(schedulerTimeZone));
+    LocalDateTime now = LocalDateTime.now(ZoneId.of("Asia/Kolkata"));
     if (createdAt == null) {
       createdAt = now;
     }
@@ -39,6 +36,6 @@ public abstract class AuditableEntity {
 
   @PreUpdate
   protected void onUpdate() {
-    updatedAt = LocalDateTime.now(ZoneId.of(schedulerTimeZone));
+    updatedAt = LocalDateTime.now(ZoneId.of("Asia/Kolkata"));
   }
 }

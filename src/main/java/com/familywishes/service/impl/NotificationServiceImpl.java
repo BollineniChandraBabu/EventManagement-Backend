@@ -143,10 +143,15 @@ public class NotificationServiceImpl implements NotificationService {
   private void pushUnPublishNotificationToQueue(NotificationResponse response) {
     Runnable task =
         () -> {
-          notificationRealtimePublisher.publishNotification(
-              new NotificationResponse(
-                  null, null, null, null, null, null, null, null, null, null, null, null));
-          System.out.println("Notification UnPublished: " + response.id());
+          Notification notification = getEntity(response.id());
+          if (Boolean.TRUE.equals(notification.getPublished())) {
+            notification.setPublished(false);
+            notificationRepository.save(notification);
+            notificationRealtimePublisher.publishNotification(
+                    new NotificationResponse(
+                            null, null, null, null, null, null, null, null, null, null, null, null));
+            System.out.println("Notification UnPublished: " + response.id());
+          }
         };
     LocalDateTime scheduledTime = response.scheduledTo();
     Date triggerTime = Date.from(scheduledTime.atZone(ZoneId.of(schedulerTimeZone)).toInstant());
