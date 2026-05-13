@@ -21,5 +21,4 @@ public class TemplateTypeSeed extends ActivatableEntity {
 
   @Column(nullable = false)
   private String displayName;
-
 }

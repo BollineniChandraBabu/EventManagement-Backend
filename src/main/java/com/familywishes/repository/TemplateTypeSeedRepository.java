@@ -23,5 +23,6 @@ public interface TemplateTypeSeedRepository extends JpaRepository<TemplateTypeSe
              OR LOWER(t.code) LIKE LOWER(CONCAT('%', :searchKey, '%'))
              OR LOWER(t.displayName) LIKE LOWER(CONCAT('%', :searchKey, '%')))
       """)
-  Page<TemplateTypeSeed> findAllBySearchKey(@Param("searchKey") String searchKey, Pageable pageable);
+  Page<TemplateTypeSeed> findAllBySearchKey(
+      @Param("searchKey") String searchKey, Pageable pageable);
 }

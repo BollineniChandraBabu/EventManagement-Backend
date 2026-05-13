@@ -9,11 +9,10 @@ import com.familywishes.repository.FestivalWishMappingRepository;
 import com.familywishes.service.AiService;
 import com.familywishes.service.GmailEmailService;
 import com.familywishes.service.SchedulerTrackingService;
+import com.fasterxml.jackson.core.JsonProcessingException;
 import java.time.LocalDate;
 import java.time.ZoneId;
 import java.util.List;
-
-import com.fasterxml.jackson.core.JsonProcessingException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.quartz.Job;
@@ -34,13 +33,16 @@ public class FestivalScheduler implements Job {
   @Value("${alert.email.to}")
   private String alertEmail;
 
+  @Value("${scheduler.time-zone:Asia/Kolkata}")
+  private String schedulerTimeZone;
+
   @Override
   public void execute(JobExecutionContext context) {
     schedulerTrackingService.track("festivalWishScheduler", this::sendFestivalWishes);
   }
 
   private void sendFestivalWishes() {
-    LocalDate today = LocalDate.now(ZoneId.of("Asia/Kolkata"));
+    LocalDate today = LocalDate.now(ZoneId.of(schedulerTimeZone));
 
     List<FestivalWishMapping> mappings =
         mappingRepository.findBySpecialEvent_EventDateAndActiveTrue(today);
@@ -70,28 +72,34 @@ public class FestivalScheduler implements Job {
     }
   }
 
-  private void sendFestivalWish(FestivalWishMapping festivalWishMapping) throws JsonProcessingException {
+  private void sendFestivalWish(FestivalWishMapping festivalWishMapping)
+      throws JsonProcessingException {
     AiWishRequest request =
-            new AiWishRequest(
-                    festivalWishMapping.getUser().getName(), festivalWishMapping.getUser().getRelationShip().getCode(), "", festivalWishMapping.getSpecialEvent().getEventName(), "Emotional", "EN");
+        new AiWishRequest(
+            festivalWishMapping.getUser().getName(),
+            festivalWishMapping.getUser().getRelationShip().getCode(),
+            "",
+            festivalWishMapping.getSpecialEvent().getEventName(),
+            "Emotional",
+            "EN");
     AiWishResponse ai = aiService.generate(request);
     byte[] image = aiService.callGeminiImage(request);
     gmailEmailService.sendEmailWithAttachments(
-            festivalWishMapping.getUser().getEmail(),
-            ai.subject(),
-            ai.htmlMessage(),
-            null,
-            image,
-            EmailType.FESTIVAL_WISH);
+        festivalWishMapping.getUser().getEmail(),
+        ai.subject(),
+        ai.htmlMessage(),
+        null,
+        image,
+        EmailType.FESTIVAL_WISH);
     log.info("Birthday wish sent to {}", festivalWishMapping.getUser().getEmail());
   }
 
   private void sendErrorEmail(User user, Exception e) {
     gmailEmailService.sendEmailWithAttachments(
-            alertEmail,
-            "Festival Job Failed",
-            "Failed for user: " + user.getEmail() + "<br>Error: " + e.getMessage(),
-            null,
-            null);
+        alertEmail,
+        "Festival Job Failed",
+        "Failed for user: " + user.getEmail() + "<br>Error: " + e.getMessage(),
+        null,
+        null);
   }
 }

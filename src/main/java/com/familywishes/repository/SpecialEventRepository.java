@@ -14,11 +14,14 @@ public interface SpecialEventRepository extends JpaRepository<SpecialEvent, Long
 
   List<SpecialEvent> findByEventDateAndActiveTrue(LocalDate eventDate);
 
-  @Query(value = """
+  @Query(
+      value =
+          """
     SELECT * FROM seed_special_events s
     WHERE (:month IS NULL OR EXTRACT(MONTH FROM s.event_date) = :month)
     ORDER BY s.event_date, s.event_name
-""", nativeQuery = true)
+""",
+      nativeQuery = true)
   List<SpecialEvent> findByMonth(@Param("month") Integer month);
 
   @Query(

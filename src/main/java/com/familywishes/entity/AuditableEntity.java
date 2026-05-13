@@ -10,6 +10,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.experimental.SuperBuilder;
+import org.springframework.beans.factory.annotation.Value;
 
 @MappedSuperclass
 @Getter
@@ -17,6 +18,9 @@ import lombok.experimental.SuperBuilder;
 @SuperBuilder
 @NoArgsConstructor
 public abstract class AuditableEntity {
+
+  @Value("${scheduler.time-zone:Asia/Kolkata}")
+  private String schedulerTimeZone;
 
   @Column(nullable = false, updatable = false)
   private LocalDateTime createdAt;
@@ -26,7 +30,7 @@ public abstract class AuditableEntity {
 
   @PrePersist
   protected void onCreate() {
-    LocalDateTime now = LocalDateTime.now(ZoneId.of("Asia/Kolkata"));
+    LocalDateTime now = LocalDateTime.now(ZoneId.of(schedulerTimeZone));
     if (createdAt == null) {
       createdAt = now;
     }
@@ -35,6 +39,6 @@ public abstract class AuditableEntity {
 
   @PreUpdate
   protected void onUpdate() {
-    updatedAt = LocalDateTime.now(ZoneId.of("Asia/Kolkata"));
+    updatedAt = LocalDateTime.now(ZoneId.of(schedulerTimeZone));
   }
 }

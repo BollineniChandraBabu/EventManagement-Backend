@@ -5,8 +5,8 @@ import com.familywishes.entity.enums.Gender;
 import java.net.URI;
 import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
-import java.time.LocalDate;
 import java.time.Duration;
+import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.UUID;
 import lombok.extern.slf4j.Slf4j;
@@ -76,11 +76,7 @@ public class SupabaseStorageService {
             .credentialsProvider(
                 StaticCredentialsProvider.create(
                     AwsBasicCredentials.create(accessKeyId, secretAccessKey)))
-            .serviceConfiguration(
-                S3Configuration.builder()
-                .pathStyleAccessEnabled(true)
-                .build()
-            )
+            .serviceConfiguration(S3Configuration.builder().pathStyleAccessEnabled(true).build())
             .build();
   }
 
@@ -94,16 +90,11 @@ public class SupabaseStorageService {
     String objectKey = folder + "/" + datePrefix + "/" + UUID.randomUUID() + ".png";
 
     PutObjectRequest request =
-        PutObjectRequest.builder()
-            .bucket(bucket)
-            .key(objectKey)
-            .contentType("image/png")
-            .build();
+        PutObjectRequest.builder().bucket(bucket).key(objectKey).contentType("image/png").build();
 
     s3Client.putObject(request, RequestBody.fromBytes(imageData));
     return objectKey;
   }
-
 
   public String uploadChatAttachment(MultipartFile file) {
     if (file == null || file.isEmpty()) {
@@ -137,11 +128,19 @@ public class SupabaseStorageService {
       return null;
     }
     try {
-      String original = file.getOriginalFilename() == null ? "profile.png" : file.getOriginalFilename();
+      String original =
+          file.getOriginalFilename() == null ? "profile.png" : file.getOriginalFilename();
       String safeName = original.replaceAll("[^a-zA-Z0-9._-]", "_");
       String datePrefix = LocalDate.now().format(DateTimeFormatter.ISO_DATE);
       String objectKey =
-          "Profile Pictures/" + userId + "/" + datePrefix + "/" + UUID.randomUUID() + "-" + safeName;
+          "Profile Pictures/"
+              + userId
+              + "/"
+              + datePrefix
+              + "/"
+              + UUID.randomUUID()
+              + "-"
+              + safeName;
       PutObjectRequest request =
           PutObjectRequest.builder()
               .bucket(bucket)
@@ -180,11 +179,7 @@ public class SupabaseStorageService {
     PresignedPutObjectRequest presignedPutObjectRequest =
         presigner.presignPutObject(presignRequest);
     return new PresignedUpload(
-        presignedPutObjectRequest.url().toString(),
-        toPublicUrl(objectKey),
-        objectKey,
-        "PUT",
-        600);
+        presignedPutObjectRequest.url().toString(), toPublicUrl(objectKey), objectKey, "PUT", 600);
   }
 
   public boolean deleteByPublicUrl(String publicUrl) {
@@ -205,21 +200,17 @@ public class SupabaseStorageService {
 
   public String getSignedUrl(String path) {
 
-    GetObjectRequest getObjectRequest = GetObjectRequest.builder()
-            .bucket(bucket)
-            .key(path)
-            .build();
+    GetObjectRequest getObjectRequest = GetObjectRequest.builder().bucket(bucket).key(path).build();
 
     GetObjectPresignRequest presignRequest =
-            GetObjectPresignRequest.builder()
-                    .signatureDuration(Duration.ofHours(5))
-                    .getObjectRequest(getObjectRequest)
-                    .build();
+        GetObjectPresignRequest.builder()
+            .signatureDuration(Duration.ofHours(5))
+            .getObjectRequest(getObjectRequest)
+            .build();
 
-    PresignedGetObjectRequest presignedRequest =
-            presigner.presignGetObject(presignRequest);
+    PresignedGetObjectRequest presignedRequest = presigner.presignGetObject(presignRequest);
 
-      return presignedRequest.url().toString();
+    return presignedRequest.url().toString();
   }
 
   public String resolveProfilePictureUrl(String profilePictureUrlOrObjectKey) {
@@ -318,7 +309,10 @@ public class SupabaseStorageService {
     if (publicBaseUrl.isBlank()) {
       return objectKey;
     }
-    String base = publicBaseUrl.endsWith("/") ? publicBaseUrl.substring(0, publicBaseUrl.length() - 1) : publicBaseUrl;
+    String base =
+        publicBaseUrl.endsWith("/")
+            ? publicBaseUrl.substring(0, publicBaseUrl.length() - 1)
+            : publicBaseUrl;
     return base + "/" + objectKey;
   }
 
@@ -326,7 +320,10 @@ public class SupabaseStorageService {
     if (publicBaseUrl.isBlank()) {
       return publicUrlOrObjectKey;
     }
-    String base = publicBaseUrl.endsWith("/") ? publicBaseUrl.substring(0, publicBaseUrl.length() - 1) : publicBaseUrl;
+    String base =
+        publicBaseUrl.endsWith("/")
+            ? publicBaseUrl.substring(0, publicBaseUrl.length() - 1)
+            : publicBaseUrl;
     if (publicUrlOrObjectKey.startsWith(base + "/")) {
       return publicUrlOrObjectKey.substring(base.length() + 1);
     }

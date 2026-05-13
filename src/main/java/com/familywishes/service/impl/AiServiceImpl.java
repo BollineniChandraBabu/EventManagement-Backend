@@ -201,6 +201,10 @@ public class AiServiceImpl implements AiService {
                         no distortion,
                         no watermark
                         """,
-        StringUtils.hasText(request.event())? request.event() : request.festival(), request.event(), request.name(), request.tone(), request.name());
+        StringUtils.hasText(request.event()) ? request.event() : request.festival(),
+        request.event(),
+        request.name(),
+        request.tone(),
+        request.name());
   }
 }

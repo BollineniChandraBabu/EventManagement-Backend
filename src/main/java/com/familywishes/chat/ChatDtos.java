@@ -67,7 +67,8 @@ public class ChatDtos {
       LocalDateTime lastSeenMessageAt,
       long unreadCount) {}
 
-  public record MessagePageResponse(List<MessageResponse> items, int page, int size, boolean hasNext) {}
+  public record MessagePageResponse(
+      List<MessageResponse> items, int page, int size, boolean hasNext) {}
 
   public record GlobalMessageResponse(
       Long messageId,
@@ -84,5 +85,6 @@ public class ChatDtos {
   public record GlobalMessagePageResponse(
       List<GlobalMessageResponse> items, int page, int size, boolean hasNext) {}
 
-  public record DeleteMessageResponse(Long messageId, Long conversationId, LocalDateTime deletedAt) {}
+  public record DeleteMessageResponse(
+      Long messageId, Long conversationId, LocalDateTime deletedAt) {}
 }

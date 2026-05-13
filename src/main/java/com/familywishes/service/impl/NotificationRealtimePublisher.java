@@ -13,6 +13,7 @@ public class NotificationRealtimePublisher {
 
   public void publishNotification(NotificationResponse notification) {
     messagingTemplate.convertAndSend(
-        "/topic/notifications", Map.of("type", "NOTIFICATION_PUBLISHED", "notification", notification));
+        "/topic/notifications",
+        Map.of("type", "NOTIFICATION_PUBLISHED", "notification", notification));
   }
 }

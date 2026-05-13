@@ -105,7 +105,8 @@ public class BrevoEmailServiceImpl implements BrevoEmailService {
       // SUCCESS
       logEntry.setBody(html);
       if (image != null) {
-        logEntry.setImageUrl(supabaseStorageService.uploadEmailImage(image, logEntry.getEmailType()));
+        logEntry.setImageUrl(
+            supabaseStorageService.uploadEmailImage(image, logEntry.getEmailType()));
       }
       logEntry.setStatus(EmailStatus.SENT);
       logEntry.setSentAt(LocalDateTime.now(ZoneId.of("Asia/Kolkata")));
@@ -115,7 +116,8 @@ public class BrevoEmailServiceImpl implements BrevoEmailService {
       logEntry.setStatus(EmailStatus.FAILED);
       logEntry.setBody(html);
       if (image != null) {
-        logEntry.setImageUrl(supabaseStorageService.uploadEmailImage(image, logEntry.getEmailType()));
+        logEntry.setImageUrl(
+            supabaseStorageService.uploadEmailImage(image, logEntry.getEmailType()));
       }
       logEntry.setRetryCount(logEntry.getRetryCount() + 1);
       logEntry.setErrorMessage(e.getMessage());

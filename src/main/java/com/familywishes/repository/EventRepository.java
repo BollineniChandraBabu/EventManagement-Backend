@@ -3,8 +3,6 @@ package com.familywishes.repository;
 import com.familywishes.entity.Event;
 import java.time.LocalDate;
 import java.util.List;
-
-import com.familywishes.entity.User;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -31,11 +29,14 @@ public interface EventRepository extends JpaRepository<Event, Long> {
   Page<Event> findAllBySearchKey(@Param("searchKey") String searchKey, Pageable pageable);
 
   @Query(
-          """
+      """
                 SELECT e FROM Event e
                 WHERE e.user.email = :userEmail
                 AND ( :searchKey = ''
                    OR LOWER(CAST(e.eventType.code as string)) LIKE LOWER(CONCAT('%', :searchKey, '%')))
                 """)
-  Page<Event> findAllBySearchKeyAndUSer( @Param("userEmail") String userEmail, @Param("searchKey") String searchKey, Pageable pageable);
+  Page<Event> findAllBySearchKeyAndUSer(
+      @Param("userEmail") String userEmail,
+      @Param("searchKey") String searchKey,
+      Pageable pageable);
 }

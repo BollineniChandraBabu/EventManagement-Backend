@@ -7,8 +7,8 @@ import java.util.Set;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.jpa.repository.Modifying;
+import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -24,7 +24,8 @@ public interface UserRepository extends JpaRepository<User, Long> {
   @Query("SELECT u FROM User u WHERE MONTH(u.birthday) = :month AND DAY(u.birthday) = :day")
   List<User> findTodaysBirthdays(int month, int day);
 
-  @Query("SELECT u FROM User u WHERE MONTH(u.birthday) = :month AND DAY(u.birthday) = :day AND u.id = :uid")
+  @Query(
+      "SELECT u FROM User u WHERE MONTH(u.birthday) = :month AND DAY(u.birthday) = :day AND u.id = :uid")
   User findTodaysBirthdaysForLoggedInUser(int month, int day, Long uid);
 
   @Query(

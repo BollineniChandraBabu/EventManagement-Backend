@@ -3,6 +3,7 @@ package com.familywishes.exception;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.Map;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -11,6 +12,10 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
+
+  @Value("${scheduler.time-zone:Asia/Kolkata}")
+  private String schedulerTimeZone;
+
   @ExceptionHandler(NotFoundException.class)
   public ResponseEntity<?> handleNotFound(NotFoundException ex) {
     return build(HttpStatus.NOT_FOUND, ex.getMessage());
@@ -37,7 +42,7 @@ public class GlobalExceptionHandler {
         .body(
             Map.of(
                 "timestamp",
-                LocalDateTime.now(ZoneId.of("Asia/Kolkata")),
+                LocalDateTime.now(ZoneId.of(schedulerTimeZone)),
                 "status",
                 status.value(),
                 "message",

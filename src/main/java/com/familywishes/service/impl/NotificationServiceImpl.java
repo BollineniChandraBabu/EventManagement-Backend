@@ -11,8 +11,16 @@ import com.familywishes.service.GmailEmailService;
 import com.familywishes.service.NotificationService;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
+import java.util.Date;
 import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ScheduledFuture;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.scheduling.TaskScheduler;
+import org.springframework.scheduling.concurrent.ConcurrentTaskScheduler;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -24,6 +32,13 @@ public class NotificationServiceImpl implements NotificationService {
   private final NotificationRealtimePublisher notificationRealtimePublisher;
   private final UserRepository userRepository;
   private final GmailEmailService gmailEmailService;
+
+  private final TaskScheduler scheduler = new ConcurrentTaskScheduler();
+  // Store scheduled tasks
+  private final Map<String, ScheduledFuture<?>> scheduledTasks = new ConcurrentHashMap<>();
+
+  @Value("${scheduler.time-zone:Asia/Kolkata}")
+  private String schedulerTimeZone;
 
   @Override
   public NotificationResponse create(NotificationRequest request) {
@@ -86,12 +101,12 @@ public class NotificationServiceImpl implements NotificationService {
                 previous.setPublished(false);
                 previous.setUpdatedBy(actor);
                 notificationRepository.save(previous);
+                cancelNotification(previous.getId());
               }
             });
-
     Notification notification = getEntity(id);
     validateScheduleWindow(notification.getScheduledFrom(), notification.getScheduledTo());
-    LocalDateTime now = LocalDateTime.now(ZoneId.of("Asia/Kolkata"));
+    LocalDateTime now = LocalDateTime.now(ZoneId.of(schedulerTimeZone));
     LocalDateTime effectivePublishTime =
         notification.getScheduledFrom() != null ? notification.getScheduledFrom() : now;
     notification.setPublished(true);
@@ -101,12 +116,58 @@ public class NotificationServiceImpl implements NotificationService {
     NotificationResponse response = toResponse(saved);
 
     if (effectivePublishTime.isAfter(now)) {
+      pushNotificationToQueue(response);
+      if (Objects.nonNull(response.scheduledTo())) {
+        pushUnPublishNotificationToQueue(response);
+      }
       return response;
     }
 
     sendNotificationEmailIfEnabled(saved, response);
     notificationRealtimePublisher.publishNotification(response);
     return response;
+  }
+
+  private void pushNotificationToQueue(NotificationResponse response) {
+    Runnable task =
+        () -> {
+          notificationRealtimePublisher.publishNotification(response);
+          System.out.println("Notification Published: " + response.id());
+        };
+    LocalDateTime scheduledTime = response.scheduledFrom();
+    Date triggerTime = Date.from(scheduledTime.atZone(ZoneId.of(schedulerTimeZone)).toInstant());
+    ScheduledFuture<?> future = scheduler.schedule(task, triggerTime);
+    scheduledTasks.put(response.id() + "Publish", future);
+  }
+
+  private void pushUnPublishNotificationToQueue(NotificationResponse response) {
+    Runnable task =
+        () -> {
+          notificationRealtimePublisher.publishNotification(
+              new NotificationResponse(
+                  null, null, null, null, null, null, null, null, null, null, null, null));
+          System.out.println("Notification UnPublished: " + response.id());
+        };
+    LocalDateTime scheduledTime = response.scheduledTo();
+    Date triggerTime = Date.from(scheduledTime.atZone(ZoneId.of(schedulerTimeZone)).toInstant());
+    ScheduledFuture<?> future = scheduler.schedule(task, triggerTime);
+    scheduledTasks.put(response.id() + "UnPublish", future);
+  }
+
+  private void cancelNotification(Long notificationId) {
+    String publishedNotificationId = notificationId + "Publish";
+    String unPublishedNotificationId = notificationId + "UnPublish";
+    ScheduledFuture<?> publishFuture = scheduledTasks.get(publishedNotificationId);
+    ScheduledFuture<?> unPublishFuture = scheduledTasks.get(unPublishedNotificationId);
+    if (publishFuture != null) {
+      publishFuture.cancel(false);
+      scheduledTasks.remove(publishedNotificationId);
+    }
+    if (unPublishFuture != null) {
+      unPublishFuture.cancel(false);
+      scheduledTasks.remove(unPublishedNotificationId);
+    }
+    System.out.println("Notification Cancelled");
   }
 
   @Override
@@ -120,13 +181,16 @@ public class NotificationServiceImpl implements NotificationService {
     Notification saved = notificationRepository.save(notification);
     NotificationResponse response = toResponse(saved);
     sendNotificationEmailIfEnabled(saved, response);
-    notificationRealtimePublisher.publishNotification(new NotificationResponse(null, null, null, null, null, null, null, null, null, null, null));
+    cancelNotification(id);
+    notificationRealtimePublisher.publishNotification(
+        new NotificationResponse(
+            null, null, null, null, null, null, null, null, null, null, null, null));
     return response;
   }
 
   @Override
   public NotificationResponse getPublished() {
-    LocalDateTime now = LocalDateTime.now(ZoneId.of("Asia/Kolkata"));
+    LocalDateTime now = LocalDateTime.now(ZoneId.of(schedulerTimeZone));
     Notification published =
         notificationRepository
             .findFirstByPublishedTrueOrderByPublishedAtDesc()
@@ -155,7 +219,6 @@ public class NotificationServiceImpl implements NotificationService {
     }
   }
 
-
   private void sendNotificationEmailIfEnabled(
       Notification notification, NotificationResponse response) {
     if (!Boolean.TRUE.equals(notification.getCanSendEmail())) {
@@ -174,7 +237,8 @@ public class NotificationServiceImpl implements NotificationService {
         .filter(user -> !user.isDeleted())
         .map(user -> user.getEmail())
         .filter(email -> email != null && !email.isBlank())
-        .forEach(email -> gmailEmailService.sendEmailWithAttachments(email, subject, html, null, null));
+        .forEach(
+            email -> gmailEmailService.sendEmailWithAttachments(email, subject, html, null, null));
   }
 
   private void validateScheduleWindow(LocalDateTime scheduledFrom, LocalDateTime scheduledTo) {
@@ -186,10 +250,9 @@ public class NotificationServiceImpl implements NotificationService {
   private String escapeHtml(String value) {
     return value == null
         ? ""
-        : value.replace("&", "&amp;")
-            .replace("<", "&lt;")
-            .replace(">", "&gt;");
+        : value.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;");
   }
+
   private NotificationResponse toResponse(Notification n) {
     return new NotificationResponse(
         n.getId(),

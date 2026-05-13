@@ -11,5 +11,11 @@ public interface EventService {
   void deleteById(Long id);
 
   PagedResponse<EventResponse> list(
-      int page, int size, String searchKey, String sortBy, String sortDir, boolean isAdmin, String userEmail);
+      int page,
+      int size,
+      String searchKey,
+      String sortBy,
+      String sortDir,
+      boolean isAdmin,
+      String userEmail);
 }

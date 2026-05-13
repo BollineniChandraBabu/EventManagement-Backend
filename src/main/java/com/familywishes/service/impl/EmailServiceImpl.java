@@ -12,6 +12,7 @@ import java.time.ZoneId;
 import java.util.Objects;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.env.Environment;
 import org.springframework.core.io.ByteArrayResource;
 import org.springframework.mail.SimpleMailMessage;
@@ -30,6 +31,9 @@ public class EmailServiceImpl implements EmailService {
   private final Environment env;
   private final SupabaseStorageService supabaseStorageService;
   private final EmailTemplateBuilder emailTemplateBuilder;
+
+  @Value("${scheduler.time-zone:Asia/Kolkata}")
+  private String schedulerTimeZone;
 
   @Override
   public void sendHtmlEmail(String to, String subject, String html, Long logId, byte[] image) {
@@ -64,14 +68,14 @@ public class EmailServiceImpl implements EmailService {
       mailSender.send(message);
       logEntry.setBody(html);
       logEntry.setStatus(EmailStatus.SENT);
-      logEntry.setSentAt(LocalDateTime.now(ZoneId.of("Asia/Kolkata")));
+      logEntry.setSentAt(LocalDateTime.now(ZoneId.of(schedulerTimeZone)));
     } catch (Exception e) {
       log.error("mail send failed", e);
       logEntry.setStatus(EmailStatus.FAILED);
       logEntry.setBody(html);
       logEntry.setRetryCount(logEntry.getRetryCount() + 1);
       logEntry.setErrorMessage(e.getMessage());
-      logEntry.setSentAt(LocalDateTime.now(ZoneId.of("Asia/Kolkata")));
+      logEntry.setSentAt(LocalDateTime.now(ZoneId.of(schedulerTimeZone)));
     }
     logRepository.save(logEntry);
   }

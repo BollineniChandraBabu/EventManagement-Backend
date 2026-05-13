@@ -26,5 +26,6 @@ public interface FestivalWishMappingRepository extends JpaRepository<FestivalWis
              OR LOWER(f.user.name) LIKE LOWER(CONCAT('%', :searchKey, '%'))
              OR LOWER(COALESCE(f.customMessage, '')) LIKE LOWER(CONCAT('%', :searchKey, '%')))
       """)
-  Page<FestivalWishMapping> findAllBySearchKey(@Param("searchKey") String searchKey, Pageable pageable);
+  Page<FestivalWishMapping> findAllBySearchKey(
+      @Param("searchKey") String searchKey, Pageable pageable);
 }

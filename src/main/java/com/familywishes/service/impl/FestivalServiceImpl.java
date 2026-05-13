@@ -14,10 +14,10 @@ import java.util.Map;
 import java.util.Set;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Sort;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.ParameterizedTypeReference;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
@@ -109,10 +109,7 @@ public class FestivalServiceImpl implements FestivalService {
 
     ResponseEntity<Map<String, Object>> response =
         restTemplate.exchange(
-            url,
-            HttpMethod.GET,
-            null,
-            new ParameterizedTypeReference<Map<String, Object>>() {});
+            url, HttpMethod.GET, null, new ParameterizedTypeReference<Map<String, Object>>() {});
 
     if (!response.getStatusCode().is2xxSuccessful() || response.getBody() == null) {
       return List.of();
@@ -203,7 +200,8 @@ public class FestivalServiceImpl implements FestivalService {
   }
 
   private FestivalResponse toFestivalResponse(SpecialEvent event) {
-    return new FestivalResponse(event.getId(), event.getEventName(), event.getEventDate(), event.isActive());
+    return new FestivalResponse(
+        event.getId(), event.getEventName(), event.getEventDate(), event.isActive());
   }
 
   private String resolveSortBy(String sortBy) {

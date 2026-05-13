@@ -33,6 +33,9 @@ public class BirthdayMailScheduler implements Job {
   @Value("${alert.email.to}")
   private String alertEmail;
 
+  @Value("${scheduler.time-zone:Asia/Kolkata}")
+  private String schedulerTimeZone;
+
   @Override
   public void execute(JobExecutionContext context) {
     System.out.println("BIRTHDAY JOB TRIGGERED: " + new Date());
@@ -43,7 +46,7 @@ public class BirthdayMailScheduler implements Job {
   }
 
   private void triggerMessages(UserWishSettings event) {
-    LocalDate today = LocalDate.now(ZoneId.of("Asia/Kolkata"));
+    LocalDate today = LocalDate.now(ZoneId.of(schedulerTimeZone));
     List<User> users =
         userRepository.findTodaysBirthdays(today.getMonthValue(), today.getDayOfMonth());
     log.info("Birthday users found: {}", users.size());
@@ -70,7 +73,7 @@ public class BirthdayMailScheduler implements Job {
     emailService.sendEmailWithAttachments(
         user.getEmail(), ai.subject(), ai.htmlMessage(), null, image);
     log.info("Birthday wish sent to {}", user.getEmail());
-    user.setLastBirthdayWishSent(LocalDate.now(ZoneId.of("Asia/Kolkata")));
+    user.setLastBirthdayWishSent(LocalDate.now(ZoneId.of(schedulerTimeZone)));
     userRepository.save(user);
   }
 

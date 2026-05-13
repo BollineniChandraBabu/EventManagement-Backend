@@ -23,5 +23,6 @@ public interface RelationshipSeedRepository extends JpaRepository<RelationshipSe
              OR LOWER(r.code) LIKE LOWER(CONCAT('%', :searchKey, '%'))
              OR LOWER(r.displayName) LIKE LOWER(CONCAT('%', :searchKey, '%')))
       """)
-  Page<RelationshipSeed> findAllBySearchKey(@Param("searchKey") String searchKey, Pageable pageable);
+  Page<RelationshipSeed> findAllBySearchKey(
+      @Param("searchKey") String searchKey, Pageable pageable);
 }

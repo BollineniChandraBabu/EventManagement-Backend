@@ -50,6 +50,9 @@ public class GmailEmailServiceImpl implements GmailEmailService {
   @Value("${gmail.from-email}")
   private String senderEmail;
 
+  @Value("${scheduler.time-zone:Asia/Kolkata}")
+  private String schedulerTimeZone;
+
   private static final List<EmailType> SENSITIVE_TYPES =
       List.of(EmailType.OTP, EmailType.FORGOT_PASSWORD);
 
@@ -107,11 +110,12 @@ public class GmailEmailServiceImpl implements GmailEmailService {
 
       logEntry.setBody(html);
       if (image != null) {
-        logEntry.setImageUrl(supabaseStorageService.uploadEmailImage(image, logEntry.getEmailType()));
+        logEntry.setImageUrl(
+            supabaseStorageService.uploadEmailImage(image, logEntry.getEmailType()));
       }
       logEntry.setStatus(EmailStatus.SENT);
 
-      logEntry.setSentAt(LocalDateTime.now(ZoneId.of("Asia/Kolkata")));
+      logEntry.setSentAt(LocalDateTime.now(ZoneId.of(schedulerTimeZone)));
 
       log.info("Email sent successfully to {}", to);
 
@@ -123,7 +127,8 @@ public class GmailEmailServiceImpl implements GmailEmailService {
 
       logEntry.setBody(html);
       if (image != null) {
-        logEntry.setImageUrl(supabaseStorageService.uploadEmailImage(image, logEntry.getEmailType()));
+        logEntry.setImageUrl(
+            supabaseStorageService.uploadEmailImage(image, logEntry.getEmailType()));
       }
       logEntry.setRetryCount(logEntry.getRetryCount() + 1);
 
@@ -132,7 +137,6 @@ public class GmailEmailServiceImpl implements GmailEmailService {
 
     logRepository.save(logEntry);
   }
-
 
   private byte[] resolveImageForEmail(EmailLog logEntry, byte[] incomingImage) {
     if (incomingImage != null && incomingImage.length > 0) {
@@ -211,11 +215,7 @@ public class GmailEmailServiceImpl implements GmailEmailService {
         .forEach(
             log ->
                 sendEmailWithAttachments(
-                    log.getRecipientEmail(),
-                    log.getSubject(),
-                    log.getBody(),
-                    log.getId(),
-                    null));
+                    log.getRecipientEmail(), log.getSubject(), log.getBody(), log.getId(), null));
   }
 
   // ==========================
@@ -314,7 +314,8 @@ public class GmailEmailServiceImpl implements GmailEmailService {
     EmailLog log =
         logRepository.findById(id).orElseThrow(() -> new NotFoundException("Email log not found"));
 
-    if (log.getRecipientEmail() == null || !log.getRecipientEmail().equalsIgnoreCase(requesterEmail)) {
+    if (log.getRecipientEmail() == null
+        || !log.getRecipientEmail().equalsIgnoreCase(requesterEmail)) {
       throw new NotFoundException("Email log not found");
     }
     if (SENSITIVE_TYPES.contains(log.getEmailType())) {
@@ -326,7 +327,8 @@ public class GmailEmailServiceImpl implements GmailEmailService {
 
   @Override
   public void sendTestEmail(String to) {
-    sendEmailWithAttachments(to, "Test Email", "<h3>Golden Greetings Gmail API test</h3>", null, null);
+    sendEmailWithAttachments(
+        to, "Test Email", "<h3>Golden Greetings Gmail API test</h3>", null, null);
   }
 
   @Override
@@ -404,7 +406,8 @@ public class GmailEmailServiceImpl implements GmailEmailService {
 
     Page<EmailLog> logs =
         isAdmin
-            ? logRepository.findAllBySearchKeyAndEmailTypeIn(normalizedSearchKey, types, pageRequest)
+            ? logRepository.findAllBySearchKeyAndEmailTypeIn(
+                normalizedSearchKey, types, pageRequest)
             : logRepository.findAllByRecipientEmailAndSearchKeyAndEmailTypeIn(
                 requesterEmail, normalizedSearchKey, types, pageRequest);
 
@@ -461,14 +464,13 @@ public class GmailEmailServiceImpl implements GmailEmailService {
     return EmailType.EVENT;
   }
 
-
-
   private com.familywishes.entity.User resolveRecipientUser(String to) {
     if (to == null || to.isBlank()) {
       return null;
     }
     return userRepository.findByEmailAndDeletedFalse(to).orElse(null);
   }
+
   private EmailLog createPendingEmailLog(String to, String subject, EmailType emailType) {
     return logRepository.save(
         EmailLog.builder()

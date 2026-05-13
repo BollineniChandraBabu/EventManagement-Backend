@@ -17,8 +17,10 @@ public class ChatSchemaInitializer {
 
   @PostConstruct
   public void init() {
-    chatJdbc.getJdbcTemplate().execute(
-        """
+    chatJdbc
+        .getJdbcTemplate()
+        .execute(
+            """
         CREATE TABLE IF NOT EXISTS chat_conversations (
           id BIGSERIAL PRIMARY KEY,
           user_a_id BIGINT NOT NULL,
@@ -28,8 +30,10 @@ public class ChatSchemaInitializer {
         )
         """);
 
-    chatJdbc.getJdbcTemplate().execute(
-        """
+    chatJdbc
+        .getJdbcTemplate()
+        .execute(
+            """
         CREATE TABLE IF NOT EXISTS chat_messages (
           id BIGSERIAL PRIMARY KEY,
           conversation_id BIGINT NOT NULL,
@@ -44,21 +48,33 @@ public class ChatSchemaInitializer {
         )
         """);
 
-    chatJdbc.getJdbcTemplate().execute(
-        "ALTER TABLE chat_messages ADD COLUMN IF NOT EXISTS reply_to_message_id BIGINT NULL");
-    chatJdbc.getJdbcTemplate().execute(
-        "ALTER TABLE chat_messages ADD COLUMN IF NOT EXISTS encrypted_message TEXT NULL");
-    chatJdbc.getJdbcTemplate().execute(
-        "ALTER TABLE chat_messages ADD COLUMN IF NOT EXISTS encryption_algorithm TEXT NULL");
-    chatJdbc.getJdbcTemplate().execute(
-        "ALTER TABLE chat_messages ADD COLUMN IF NOT EXISTS encryption_key_id TEXT NULL");
-    chatJdbc.getJdbcTemplate().execute(
-        "ALTER TABLE chat_messages ADD COLUMN IF NOT EXISTS message_type TEXT NOT NULL DEFAULT 'TEXT'");
-    chatJdbc.getJdbcTemplate().execute(
-        "ALTER TABLE chat_messages ADD COLUMN IF NOT EXISTS voice_duration_seconds INTEGER NULL");
+    chatJdbc
+        .getJdbcTemplate()
+        .execute(
+            "ALTER TABLE chat_messages ADD COLUMN IF NOT EXISTS reply_to_message_id BIGINT NULL");
+    chatJdbc
+        .getJdbcTemplate()
+        .execute("ALTER TABLE chat_messages ADD COLUMN IF NOT EXISTS encrypted_message TEXT NULL");
+    chatJdbc
+        .getJdbcTemplate()
+        .execute(
+            "ALTER TABLE chat_messages ADD COLUMN IF NOT EXISTS encryption_algorithm TEXT NULL");
+    chatJdbc
+        .getJdbcTemplate()
+        .execute("ALTER TABLE chat_messages ADD COLUMN IF NOT EXISTS encryption_key_id TEXT NULL");
+    chatJdbc
+        .getJdbcTemplate()
+        .execute(
+            "ALTER TABLE chat_messages ADD COLUMN IF NOT EXISTS message_type TEXT NOT NULL DEFAULT 'TEXT'");
+    chatJdbc
+        .getJdbcTemplate()
+        .execute(
+            "ALTER TABLE chat_messages ADD COLUMN IF NOT EXISTS voice_duration_seconds INTEGER NULL");
 
-    chatJdbc.getJdbcTemplate().execute(
-        """
+    chatJdbc
+        .getJdbcTemplate()
+        .execute(
+            """
         CREATE TABLE IF NOT EXISTS chat_message_reactions (
           id BIGSERIAL PRIMARY KEY,
           message_id BIGINT NOT NULL,
@@ -69,14 +85,20 @@ public class ChatSchemaInitializer {
         )
         """);
 
-    chatJdbc.getJdbcTemplate().execute(
-        "CREATE INDEX IF NOT EXISTS idx_chat_messages_conv_sent ON chat_messages(conversation_id, sent_at DESC)");
+    chatJdbc
+        .getJdbcTemplate()
+        .execute(
+            "CREATE INDEX IF NOT EXISTS idx_chat_messages_conv_sent ON chat_messages(conversation_id, sent_at DESC)");
 
-    chatJdbc.getJdbcTemplate().execute(
-        "CREATE INDEX IF NOT EXISTS idx_chat_messages_receiver_seen ON chat_messages(receiver_id, seen_at)");
+    chatJdbc
+        .getJdbcTemplate()
+        .execute(
+            "CREATE INDEX IF NOT EXISTS idx_chat_messages_receiver_seen ON chat_messages(receiver_id, seen_at)");
 
-    chatJdbc.getJdbcTemplate().execute(
-        "CREATE INDEX IF NOT EXISTS idx_chat_reactions_message ON chat_message_reactions(message_id)");
+    chatJdbc
+        .getJdbcTemplate()
+        .execute(
+            "CREATE INDEX IF NOT EXISTS idx_chat_reactions_message ON chat_message_reactions(message_id)");
 
     log.info("Supabase chat schema initialized");
   }

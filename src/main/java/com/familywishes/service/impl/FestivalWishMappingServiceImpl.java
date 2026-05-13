@@ -34,7 +34,9 @@ public class FestivalWishMappingServiceImpl implements FestivalWishMappingServic
             .orElseThrow(() -> new NotFoundException("Festival not found"));
 
     User user =
-        userRepository.findById(request.userId()).orElseThrow(() -> new NotFoundException("User not found"));
+        userRepository
+            .findById(request.userId())
+            .orElseThrow(() -> new NotFoundException("User not found"));
 
     FestivalWishMapping mapping =
         mappingRepository

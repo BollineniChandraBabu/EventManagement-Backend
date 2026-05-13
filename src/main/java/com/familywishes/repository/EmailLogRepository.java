@@ -35,12 +35,13 @@ public interface EmailLogRepository extends JpaRepository<EmailLog, Long> {
 
   long countByStatusAndEmailTypeNotIn(EmailStatus status, List<EmailType> emailTypes);
 
-  long countByRecipientUserEmailAndStatusAndSentAtGreaterThanEqualAndSentAtLessThanAndEmailTypeNotIn(
-      String recipientEmail,
-      EmailStatus status,
-      LocalDateTime startTime,
-      LocalDateTime endTime,
-      List<EmailType> emailTypes);
+  long
+      countByRecipientUserEmailAndStatusAndSentAtGreaterThanEqualAndSentAtLessThanAndEmailTypeNotIn(
+          String recipientEmail,
+          EmailStatus status,
+          LocalDateTime startTime,
+          LocalDateTime endTime,
+          List<EmailType> emailTypes);
 
   long countByRecipientUserEmailAndStatusAndEmailTypeNotIn(
       String recipientEmail, EmailStatus status, List<EmailType> emailTypes);

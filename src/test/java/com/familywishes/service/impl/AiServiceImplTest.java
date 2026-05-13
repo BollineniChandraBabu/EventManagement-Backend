@@ -96,8 +96,8 @@ class AiServiceImplTest {
     Map<String, Object> balance = aiService.getPollinationsBalance();
 
     assertEquals(expected, balance);
-    verify(restTemplate).exchange(
-        anyString(), eq(HttpMethod.GET), any(HttpEntity.class), eq(Map.class));
+    verify(restTemplate)
+        .exchange(anyString(), eq(HttpMethod.GET), any(HttpEntity.class), eq(Map.class));
   }
 
   @Test

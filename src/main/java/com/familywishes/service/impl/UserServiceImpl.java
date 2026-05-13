@@ -1,8 +1,8 @@
 package com.familywishes.service.impl;
 
-import com.familywishes.dto.CommonDtos.PagedResponse;
 import com.familywishes.dto.AiWishRequest;
 import com.familywishes.dto.AiWishResponse;
+import com.familywishes.dto.CommonDtos.PagedResponse;
 import com.familywishes.dto.UserDtos.*;
 import com.familywishes.entity.FestivalWishMapping;
 import com.familywishes.entity.RelationshipSeed;
@@ -10,8 +10,8 @@ import com.familywishes.entity.User;
 import com.familywishes.entity.UserWishSettings;
 import com.familywishes.exception.BadRequestException;
 import com.familywishes.exception.NotFoundException;
-import com.familywishes.repository.RelationshipSeedRepository;
 import com.familywishes.repository.FestivalWishMappingRepository;
+import com.familywishes.repository.RelationshipSeedRepository;
 import com.familywishes.repository.UserRepository;
 import com.familywishes.service.AiService;
 import com.familywishes.service.UserService;
@@ -43,6 +43,9 @@ public class UserServiceImpl implements UserService {
   private final SupabaseStorageService supabaseStorageService;
   private final FestivalWishMappingRepository festivalWishMappingRepository;
   private final AiService aiService;
+
+  @Value("${scheduler.time-zone:Asia/Kolkata}")
+  private String schedulerTimeZone;
 
   @Override
   public UserResponse create(UserRequest request) {
@@ -195,17 +198,23 @@ public class UserServiceImpl implements UserService {
   public WishPreviewResponse getCurrentUserWishPreview() {
     User user = findAuthenticatedUser();
 
-    LocalDate today = LocalDate.now(ZoneId.of("Asia/Kolkata"));
+    LocalDate today = LocalDate.now(ZoneId.of(schedulerTimeZone));
 
     List<FestivalWishMapping> mappings =
-            festivalWishMappingRepository.findBySpecialEvent_EventDateAndActiveTrue(today);
+        festivalWishMappingRepository.findBySpecialEvent_EventDateAndActiveTrue(today);
 
     FestivalWishMapping selectedFestival =
-        mappings.stream().filter(festivalWishMapping -> Objects.equals(festivalWishMapping.getUser().getId(), user.getId()))
+        mappings.stream()
+            .filter(
+                festivalWishMapping ->
+                    Objects.equals(festivalWishMapping.getUser().getId(), user.getId()))
             .findFirst()
             .orElse(null);
 
-    boolean birthdayEnabled = user.getWishSettings().isBirthdayEnabled() && Objects.equals(user.getBirthday().getMonthValue(),today.getMonthValue()) && Objects.equals(user.getBirthday().getDayOfMonth(),today.getDayOfMonth());
+    boolean birthdayEnabled =
+        user.getWishSettings().isBirthdayEnabled()
+            && Objects.equals(user.getBirthday().getMonthValue(), today.getMonthValue())
+            && Objects.equals(user.getBirthday().getDayOfMonth(), today.getDayOfMonth());
     boolean festivalEnabled = selectedFestival != null;
 
     if (!birthdayEnabled && !festivalEnabled) {
@@ -225,15 +234,15 @@ public class UserServiceImpl implements UserService {
                 "Emotional",
                 "EN");
         wishType = "BIRTHDAY";
-      }else {
+      } else {
         request =
-                new AiWishRequest(
-                        user.getName(),
-                        user.getRelationShip().getCode(),
-                        "",
-                        selectedFestival.getSpecialEvent().getEventName(),
-                        "Emotional",
-                        "EN");
+            new AiWishRequest(
+                user.getName(),
+                user.getRelationShip().getCode(),
+                "",
+                selectedFestival.getSpecialEvent().getEventName(),
+                "Emotional",
+                "EN");
         wishType = "FESTIVAL";
       }
 

@@ -12,7 +12,8 @@ public interface EventTypeSeedService {
 
   List<EnumSeedResponse> listActive();
 
-  PagedResponse<EnumSeedResponse> list(int page, int size, String searchKey, String sortBy, String sortDir);
+  PagedResponse<EnumSeedResponse> list(
+      int page, int size, String searchKey, String sortBy, String sortDir);
 
   EnumSeedResponse getById(Long id);
 

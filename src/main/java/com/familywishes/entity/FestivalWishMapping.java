@@ -35,5 +35,4 @@ public class FestivalWishMapping extends ActivatableEntity {
   private String customMessage;
 
   private LocalDate lastWishSentOn;
-
 }

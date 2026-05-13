@@ -21,11 +21,16 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 @Service
 @RequiredArgsConstructor
 public class DashboardServiceImpl implements DashboardService {
+
+  @Value("${scheduler.time-zone:Asia/Kolkata}")
+  private String schedulerTimeZone;
+
   private static final List<EmailType> SENSITIVE_TYPES =
       List.of(EmailType.OTP, EmailType.FORGOT_PASSWORD);
 
@@ -37,7 +42,7 @@ public class DashboardServiceImpl implements DashboardService {
 
   @Override
   public DashboardResponse getDashboard(String requesterEmail, boolean isAdmin) {
-    LocalDate today = LocalDate.now(ZoneId.of("Asia/Kolkata"));
+    LocalDate today = LocalDate.now(ZoneId.of(schedulerTimeZone));
     LocalDateTime startOfDay = today.atStartOfDay();
     LocalDateTime startOfNextDay = today.plusDays(1).atStartOfDay();
 
@@ -81,9 +86,9 @@ public class DashboardServiceImpl implements DashboardService {
           instagramUserRepository.countByInstagramUserIdIsNotNullAndInstagramUserIdNot("");
       long upcomingEvents =
           eventRepository.countByEventDateGreaterThanEqualAndActiveTrue(
-              LocalDate.now(ZoneId.of("Asia/Kolkata")));
+              LocalDate.now(ZoneId.of(schedulerTimeZone)));
 
-      LocalDate today = LocalDate.now(ZoneId.of("Asia/Kolkata"));
+      LocalDate today = LocalDate.now(ZoneId.of(schedulerTimeZone));
       LocalDateTime startOfDay = today.atStartOfDay();
       LocalDateTime startOfNextDay = today.plusDays(1).atStartOfDay();
 
@@ -96,7 +101,7 @@ public class DashboardServiceImpl implements DashboardService {
           totalInstaUsers, upcomingEvents, messagesSentToday, failedMessages);
     }
 
-    LocalDate today = LocalDate.now(ZoneId.of("Asia/Kolkata"));
+    LocalDate today = LocalDate.now(ZoneId.of(schedulerTimeZone));
     User user = userRepository.findByEmailAndDeletedFalse(requesterEmail).orElse(null);
     long upcomingEvents =
         user == null
@@ -110,7 +115,8 @@ public class DashboardServiceImpl implements DashboardService {
   @Override
   public DashboardGraphResponse getMailChart(int days, String requesterEmail, boolean isAdmin) {
     int normalizedDays = Math.max(1, days);
-    LocalDate startDate = LocalDate.now(ZoneId.of("Asia/Kolkata")).minusDays(normalizedDays - 1L);
+    LocalDate startDate =
+        LocalDate.now(ZoneId.of(schedulerTimeZone)).minusDays(normalizedDays - 1L);
     LocalDateTime start = startDate.atStartOfDay();
 
     Map<LocalDate, Long> sentByDate;
@@ -143,12 +149,14 @@ public class DashboardServiceImpl implements DashboardService {
   public DashboardGraphResponse getInstaChart(int days, String requesterEmail, boolean isAdmin) {
     if (!isAdmin) {
       int normalizedDays = Math.max(1, days);
-      LocalDate startDate = LocalDate.now(ZoneId.of("Asia/Kolkata")).minusDays(normalizedDays - 1L);
+      LocalDate startDate =
+          LocalDate.now(ZoneId.of(schedulerTimeZone)).minusDays(normalizedDays - 1L);
       return buildGraphResponse(normalizedDays, startDate, Map.of(), Map.of());
     }
 
     int normalizedDays = Math.max(1, days);
-    LocalDate startDate = LocalDate.now(ZoneId.of("Asia/Kolkata")).minusDays(normalizedDays - 1L);
+    LocalDate startDate =
+        LocalDate.now(ZoneId.of(schedulerTimeZone)).minusDays(normalizedDays - 1L);
     LocalDateTime start = startDate.atStartOfDay();
 
     Map<LocalDate, Long> sentByDate =
@@ -180,7 +188,7 @@ public class DashboardServiceImpl implements DashboardService {
   }
 
   private DashboardResponse getSensitiveDashboard(EmailType emailType) {
-    LocalDate today = LocalDate.now(ZoneId.of("Asia/Kolkata"));
+    LocalDate today = LocalDate.now(ZoneId.of(schedulerTimeZone));
     LocalDateTime startOfDay = today.atStartOfDay();
     LocalDateTime startOfNextDay = today.plusDays(1).atStartOfDay();
     List<EmailType> types = List.of(emailType);
@@ -195,7 +203,8 @@ public class DashboardServiceImpl implements DashboardService {
 
   private DashboardGraphResponse getSensitiveChart(int days, EmailType emailType) {
     int normalizedDays = Math.max(1, days);
-    LocalDate startDate = LocalDate.now(ZoneId.of("Asia/Kolkata")).minusDays(normalizedDays - 1L);
+    LocalDate startDate =
+        LocalDate.now(ZoneId.of(schedulerTimeZone)).minusDays(normalizedDays - 1L);
     LocalDateTime start = startDate.atStartOfDay();
     List<EmailType> types = List.of(emailType);
 

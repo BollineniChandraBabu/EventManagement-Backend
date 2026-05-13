@@ -16,6 +16,7 @@ public class FestivalSyncScheduler implements Job {
 
   @Override
   public void execute(JobExecutionContext context) {
-    schedulerTrackingService.track("festivalMonthlySyncScheduler", festivalService::syncCalendarificFestivals);
+    schedulerTrackingService.track(
+        "festivalMonthlySyncScheduler", festivalService::syncCalendarificFestivals);
   }
 }

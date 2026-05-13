@@ -49,5 +49,10 @@ public interface GmailEmailService {
   void sendEmailNow(EmailDtos.SendEmailNowRequest request);
 
   void sendEmailWithAttachments(
-      String to, String subject, String html, Long logId, byte[] image, com.familywishes.entity.enums.EmailType emailType);
+      String to,
+      String subject,
+      String html,
+      Long logId,
+      byte[] image,
+      com.familywishes.entity.enums.EmailType emailType);
 }
