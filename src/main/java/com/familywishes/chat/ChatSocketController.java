@@ -33,7 +33,12 @@ public class ChatSocketController {
     messagingTemplate.convertAndSend(
         "/topic/chat/" + payload.conversationId(),
         java.util.Map.of(
-            "type", "SEEN", "conversationId", payload.conversationId(), "viewerId", payload.viewerId()));
+            "type",
+            "SEEN",
+            "conversationId",
+            payload.conversationId(),
+            "viewerId",
+            payload.viewerId()));
   }
 
   @MessageMapping("/chat.presence")

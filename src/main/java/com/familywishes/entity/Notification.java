@@ -30,6 +30,10 @@ public class Notification extends AuditableEntity {
   @Builder.Default
   private Boolean canSendEmail = false;
 
+  private LocalDateTime scheduledFrom;
+
+  private LocalDateTime scheduledTo;
+
   private LocalDateTime publishedAt;
 
   @Column(nullable = false, updatable = false)

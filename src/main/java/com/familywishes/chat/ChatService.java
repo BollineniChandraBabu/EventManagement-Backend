@@ -28,7 +28,8 @@ public interface ChatService {
       String messageType,
       Integer voiceDurationSeconds);
 
-  MessagePageResponse getConversationMessages(Long otherUserId, int page, int size, boolean markSeen);
+  MessagePageResponse getConversationMessages(
+      Long otherUserId, int page, int size, boolean markSeen);
 
   java.util.List<ConversationResponse> listConversations();
 

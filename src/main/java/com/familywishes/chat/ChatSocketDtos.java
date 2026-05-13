@@ -18,5 +18,6 @@ public class ChatSocketDtos {
 
   public record PresenceEventRequest(@NotNull Long userId, boolean online) {}
 
-  public record TypingEventRequest(@NotNull Long conversationId, @NotNull Long userId, boolean typing) {}
+  public record TypingEventRequest(
+      @NotNull Long conversationId, @NotNull Long userId, boolean typing) {}
 }

@@ -73,5 +73,4 @@ public class User extends ActivatableEntity {
   public boolean isOnline() {
     return Boolean.TRUE.equals(online);
   }
-
 }

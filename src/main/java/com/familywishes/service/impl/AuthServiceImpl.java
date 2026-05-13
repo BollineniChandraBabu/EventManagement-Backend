@@ -1,7 +1,7 @@
 package com.familywishes.service.impl;
 
-import com.familywishes.dto.AuthDtos.*;
 import com.familywishes.chat.ChatMessageRepository;
+import com.familywishes.dto.AuthDtos.*;
 import com.familywishes.entity.OtpCode;
 import com.familywishes.entity.PasswordResetToken;
 import com.familywishes.entity.RefreshToken;
@@ -63,6 +63,9 @@ public class AuthServiceImpl implements AuthService {
   @Value("${app.google.sso.client-id:${gmail.client-id:}}")
   private String googleSsoClientId;
 
+  @Value("${scheduler.time-zone:Asia/Kolkata}")
+  private String schedulerTimeZone;
+
   private static final String CONTACT_ADMIN_MESSAGE =
       "Too many failed login attempts. Please contact the Administrator.";
 
@@ -109,7 +112,7 @@ public class AuthServiceImpl implements AuthService {
         RefreshToken.builder()
             .token(refresh)
             .user(user)
-            .expiresAt(LocalDateTime.now(ZoneId.of("Asia/Kolkata")).plusDays(7))
+            .expiresAt(LocalDateTime.now(ZoneId.of(schedulerTimeZone)).plusDays(7))
             .revoked(false)
             .build());
     return buildAuthResponse(user, access, refresh);
@@ -160,7 +163,7 @@ public class AuthServiceImpl implements AuthService {
         RefreshToken.builder()
             .token(refresh)
             .user(user)
-            .expiresAt(LocalDateTime.now(ZoneId.of("Asia/Kolkata")).plusDays(7))
+            .expiresAt(LocalDateTime.now(ZoneId.of(schedulerTimeZone)).plusDays(7))
             .revoked(false)
             .build());
     return buildAuthResponse(user, access, refresh);
@@ -202,7 +205,7 @@ public class AuthServiceImpl implements AuthService {
         RefreshToken.builder()
             .token(refresh)
             .user(adminUser)
-            .expiresAt(LocalDateTime.now(ZoneId.of("Asia/Kolkata")).plusDays(7))
+            .expiresAt(LocalDateTime.now(ZoneId.of(schedulerTimeZone)).plusDays(7))
             .revoked(false)
             .build());
 
@@ -215,7 +218,7 @@ public class AuthServiceImpl implements AuthService {
         refreshTokenRepository
             .findByTokenAndRevokedFalse(request.refreshToken())
             .orElseThrow(() -> new BadRequestException("Invalid refresh token"));
-    if (rt.getExpiresAt().isBefore(LocalDateTime.now(ZoneId.of("Asia/Kolkata"))))
+    if (rt.getExpiresAt().isBefore(LocalDateTime.now(ZoneId.of(schedulerTimeZone))))
       throw new BadRequestException("Refresh token expired");
     String access = jwtService.generateAccessToken(rt.getUser());
     return new AuthResponse(
@@ -240,7 +243,7 @@ public class AuthServiceImpl implements AuthService {
         OtpCode.builder()
             .user(user)
             .code(otp)
-            .expiresAt(LocalDateTime.now(ZoneId.of("Asia/Kolkata")).plusMinutes(OTP_TTL_MINUTES))
+            .expiresAt(LocalDateTime.now(ZoneId.of(schedulerTimeZone)).plusMinutes(OTP_TTL_MINUTES))
             .used(false)
             .build());
 
@@ -275,7 +278,7 @@ public class AuthServiceImpl implements AuthService {
             .findTopByUserIdOrderByIdDesc(user.getId())
             .orElseThrow(() -> new BadRequestException("OTP not found"));
     if (otp.isUsed()
-        || otp.getExpiresAt().isBefore(LocalDateTime.now(ZoneId.of("Asia/Kolkata")))
+        || otp.getExpiresAt().isBefore(LocalDateTime.now(ZoneId.of(schedulerTimeZone)))
         || !otp.getCode().equals(request.otp())) {
       throw new BadRequestException("Invalid or expired OTP");
     }
@@ -287,7 +290,7 @@ public class AuthServiceImpl implements AuthService {
         RefreshToken.builder()
             .token(refresh)
             .user(user)
-            .expiresAt(LocalDateTime.now(ZoneId.of("Asia/Kolkata")).plusDays(7))
+            .expiresAt(LocalDateTime.now(ZoneId.of(schedulerTimeZone)).plusDays(7))
             .revoked(false)
             .build());
     return buildAuthResponse(user, access, refresh);
@@ -308,7 +311,8 @@ public class AuthServiceImpl implements AuthService {
             .token(token)
             .user(user)
             .expiresAt(
-                LocalDateTime.now(ZoneId.of("Asia/Kolkata")).plusMinutes(passwordResetTtlMinutes))
+                LocalDateTime.now(ZoneId.of(schedulerTimeZone))
+                    .plusMinutes(passwordResetTtlMinutes))
             .used(false)
             .build());
 
@@ -340,7 +344,7 @@ public class AuthServiceImpl implements AuthService {
             .findByToken(request.token())
             .orElseThrow(() -> new BadRequestException("Invalid token"));
     if (token.isUsed()
-        || token.getExpiresAt().isBefore(LocalDateTime.now(ZoneId.of("Asia/Kolkata"))))
+        || token.getExpiresAt().isBefore(LocalDateTime.now(ZoneId.of(schedulerTimeZone))))
       throw new BadRequestException("Expired token");
     User user = token.getUser();
     user.setPassword(passwordEncoder.encode(request.newPassword()));
@@ -382,7 +386,7 @@ public class AuthServiceImpl implements AuthService {
             .findByTokenAndUserEmailAndUsedFalse(request.token(), request.email())
             .orElseThrow(() -> new BadRequestException("Invalid token"));
 
-    if (resetToken.getExpiresAt().isBefore(LocalDateTime.now(ZoneId.of("Asia/Kolkata")))) {
+    if (resetToken.getExpiresAt().isBefore(LocalDateTime.now(ZoneId.of(schedulerTimeZone)))) {
       throw new BadRequestException("Expired token");
     }
 
@@ -419,7 +423,7 @@ public class AuthServiceImpl implements AuthService {
         RefreshToken.builder()
             .token(refresh)
             .user(user)
-            .expiresAt(LocalDateTime.now(ZoneId.of("Asia/Kolkata")).plusDays(7))
+            .expiresAt(LocalDateTime.now(ZoneId.of(schedulerTimeZone)).plusDays(7))
             .revoked(false)
             .build());
     return buildAuthResponse(user, access, refresh);
@@ -466,8 +470,7 @@ public class AuthServiceImpl implements AuthService {
         chatMessageRepository.countUnreadMessagesForReceiver(user.getId()));
   }
 
-  public AuthSSOClientResponse getSSOAuthToken(){
+  public AuthSSOClientResponse getSSOAuthToken() {
     return new AuthSSOClientResponse(googleSsoClientId);
   }
-
 }

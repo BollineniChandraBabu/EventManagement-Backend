@@ -16,8 +16,11 @@ import org.springframework.stereotype.Repository;
 @RequiredArgsConstructor
 public class ChatMessageRepository {
 
-  public record MessageMeta(Long messageId, Long conversationId, Long senderId, LocalDateTime sentAt) {}
+  public record MessageMeta(
+      Long messageId, Long conversationId, Long senderId, LocalDateTime sentAt) {}
+
   public record MessageReactionSummary(String emoji, long count, boolean mine) {}
+
   public record ConversationSummary(
       Long conversationId,
       Long otherUserId,
@@ -117,7 +120,8 @@ public class ChatMessageRepository {
             .addValue("seenAt", Timestamp.valueOf(seenAt)));
   }
 
-  public List<MessageResponse> findConversationMessages(Long conversationId, int page, int size, Long me) {
+  public List<MessageResponse> findConversationMessages(
+      Long conversationId, int page, int size, Long me) {
     String query =
         """
         SELECT m.id, m.conversation_id, m.sender_id, m.receiver_id, m.reply_to_message_id, m.message_text,
@@ -143,19 +147,27 @@ public class ChatMessageRepository {
               rs.getLong("conversation_id"),
               sender,
               rs.getLong("receiver_id"),
-              rs.getObject("reply_to_message_id") == null ? null : rs.getLong("reply_to_message_id"),
+              rs.getObject("reply_to_message_id") == null
+                  ? null
+                  : rs.getLong("reply_to_message_id"),
               rs.getString("reply_message_text"),
               rs.getString("message_text"),
               rs.getString("encrypted_message"),
               rs.getString("encryption_algorithm"),
               rs.getString("encryption_key_id"),
               rs.getString("message_type"),
-              rs.getObject("voice_duration_seconds") == null ? null : rs.getInt("voice_duration_seconds"),
+              rs.getObject("voice_duration_seconds") == null
+                  ? null
+                  : rs.getInt("voice_duration_seconds"),
               rs.getString("attachment_key"),
               rs.getString("attachment_file_name"),
               rs.getString("attachment_content_type"),
-              rs.getTimestamp("sent_at") == null ? null : rs.getTimestamp("sent_at").toLocalDateTime(),
-              rs.getTimestamp("seen_at") == null ? null : rs.getTimestamp("seen_at").toLocalDateTime(),
+              rs.getTimestamp("sent_at") == null
+                  ? null
+                  : rs.getTimestamp("sent_at").toLocalDateTime(),
+              rs.getTimestamp("seen_at") == null
+                  ? null
+                  : rs.getTimestamp("seen_at").toLocalDateTime(),
               sender.equals(me));
         });
   }
@@ -200,8 +212,12 @@ public class ChatMessageRepository {
                 false,
                 null,
                 rs.getString("message_text"),
-                rs.getTimestamp("sent_at") == null ? null : rs.getTimestamp("sent_at").toLocalDateTime(),
-                rs.getTimestamp("seen_at") == null ? null : rs.getTimestamp("seen_at").toLocalDateTime(),
+                rs.getTimestamp("sent_at") == null
+                    ? null
+                    : rs.getTimestamp("sent_at").toLocalDateTime(),
+                rs.getTimestamp("seen_at") == null
+                    ? null
+                    : rs.getTimestamp("seen_at").toLocalDateTime(),
                 rs.getLong("unread_count")));
   }
 
@@ -262,8 +278,12 @@ public class ChatMessageRepository {
                 false,
                 null,
                 rs.getString("message_text"),
-                rs.getTimestamp("sent_at") == null ? null : rs.getTimestamp("sent_at").toLocalDateTime(),
-                rs.getTimestamp("seen_at") == null ? null : rs.getTimestamp("seen_at").toLocalDateTime(),
+                rs.getTimestamp("sent_at") == null
+                    ? null
+                    : rs.getTimestamp("sent_at").toLocalDateTime(),
+                rs.getTimestamp("seen_at") == null
+                    ? null
+                    : rs.getTimestamp("seen_at").toLocalDateTime(),
                 rs.getLong("unread_count")));
   }
 
@@ -366,7 +386,9 @@ public class ChatMessageRepository {
                     rs.getLong("id"),
                     rs.getLong("conversation_id"),
                     rs.getLong("sender_id"),
-                    rs.getTimestamp("sent_at") == null ? null : rs.getTimestamp("sent_at").toLocalDateTime()));
+                    rs.getTimestamp("sent_at") == null
+                        ? null
+                        : rs.getTimestamp("sent_at").toLocalDateTime()));
     return rows.isEmpty() ? null : rows.get(0);
   }
 
@@ -385,12 +407,15 @@ public class ChatMessageRepository {
                     rs.getLong("id"),
                     rs.getLong("conversation_id"),
                     rs.getLong("sender_id"),
-                    rs.getTimestamp("sent_at") == null ? null : rs.getTimestamp("sent_at").toLocalDateTime()));
+                    rs.getTimestamp("sent_at") == null
+                        ? null
+                        : rs.getTimestamp("sent_at").toLocalDateTime()));
 
     return rows.isEmpty() ? null : rows.get(0);
   }
 
-  public MessageResponse updateMessageText(Long messageId, Long senderId, String messageText, Long me) {
+  public MessageResponse updateMessageText(
+      Long messageId, Long senderId, String messageText, Long me) {
     List<MessageResponse> rows =
         chatJdbc.query(
             """
@@ -418,7 +443,9 @@ public class ChatMessageRepository {
                   rs.getLong("conversation_id"),
                   sender,
                   rs.getLong("receiver_id"),
-                  rs.getObject("reply_to_message_id") == null ? null : rs.getLong("reply_to_message_id"),
+                  rs.getObject("reply_to_message_id") == null
+                      ? null
+                      : rs.getLong("reply_to_message_id"),
                   rs.getString("reply_message_text"),
                   rs.getString("message_text"),
                   rs.getString("encrypted_message"),
@@ -431,8 +458,12 @@ public class ChatMessageRepository {
                   rs.getString("attachment_key"),
                   rs.getString("attachment_file_name"),
                   rs.getString("attachment_content_type"),
-                  rs.getTimestamp("sent_at") == null ? null : rs.getTimestamp("sent_at").toLocalDateTime(),
-                  rs.getTimestamp("seen_at") == null ? null : rs.getTimestamp("seen_at").toLocalDateTime(),
+                  rs.getTimestamp("sent_at") == null
+                      ? null
+                      : rs.getTimestamp("sent_at").toLocalDateTime(),
+                  rs.getTimestamp("seen_at") == null
+                      ? null
+                      : rs.getTimestamp("seen_at").toLocalDateTime(),
                   sender.equals(me));
             });
 
@@ -495,12 +526,12 @@ public class ChatMessageRepository {
 
   public int removeAllReactions(Long messageId, Long userId) {
     return chatJdbc.update(
-            """
+        """
             DELETE FROM chat_message_reactions
              WHERE message_id = :messageId
                AND user_id = :userId
             """,
-            Map.of("messageId", messageId, "userId", userId));
+        Map.of("messageId", messageId, "userId", userId));
   }
 
   public List<MessageReactionSummary> findReactions(Long messageId, Long me) {
@@ -556,8 +587,12 @@ public class ChatMessageRepository {
                 rs.getString("receiver_name"),
                 rs.getString("message_text"),
                 rs.getString("attachment_file_name"),
-                rs.getTimestamp("sent_at") == null ? null : rs.getTimestamp("sent_at").toLocalDateTime(),
-                rs.getTimestamp("seen_at") == null ? null : rs.getTimestamp("seen_at").toLocalDateTime()));
+                rs.getTimestamp("sent_at") == null
+                    ? null
+                    : rs.getTimestamp("sent_at").toLocalDateTime(),
+                rs.getTimestamp("seen_at") == null
+                    ? null
+                    : rs.getTimestamp("seen_at").toLocalDateTime()));
   }
 
   public long countUnreadMessagesForReceiver(Long receiverId) {

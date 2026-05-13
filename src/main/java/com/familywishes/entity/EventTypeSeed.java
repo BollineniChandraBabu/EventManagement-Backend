@@ -21,5 +21,4 @@ public class EventTypeSeed extends ActivatableEntity {
 
   @Column(nullable = false)
   private String displayName;
-
 }

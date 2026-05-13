@@ -7,6 +7,7 @@ import com.familywishes.service.SchedulerTrackingService;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
@@ -16,6 +17,9 @@ public class EmailAlertScheduler {
   private final IGMessageLogRepository repo;
   private final EmailService emailService;
   private final SchedulerTrackingService schedulerTrackingService;
+
+  @Value("${scheduler.time-zone:Asia/Kolkata}")
+  private String schedulerTimeZone;
 
   public EmailAlertScheduler(
       IGMessageLogRepository repo,
@@ -31,11 +35,11 @@ public class EmailAlertScheduler {
     schedulerTrackingService.track(
         "instagramEmailAlertScheduler",
         () -> {
-          LocalDateTime start = LocalDate.now(ZoneId.of("Asia/Kolkata")).atStartOfDay();
+          LocalDateTime start = LocalDate.now(ZoneId.of(schedulerTimeZone)).atStartOfDay();
 
           long failed =
               repo.countByStatusAndCreatedAtBetween(
-                  MessageStatus.FAILED, start, LocalDateTime.now(ZoneId.of("Asia/Kolkata")));
+                  MessageStatus.FAILED, start, LocalDateTime.now(ZoneId.of(schedulerTimeZone)));
 
           if (failed > 5) {
             emailService.sendFailureAlert(failed);

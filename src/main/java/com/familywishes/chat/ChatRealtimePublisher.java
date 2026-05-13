@@ -33,6 +33,7 @@ public class ChatRealtimePublisher {
   public void publishMessageEdited(MessageResponse message, Long editedByUserId) {
     messagingTemplate.convertAndSend(
         "/topic/chat/" + message.conversationId(),
-        java.util.Map.of("type", "MESSAGE_EDITED", "message", message, "editedByUserId", editedByUserId));
+        java.util.Map.of(
+            "type", "MESSAGE_EDITED", "message", message, "editedByUserId", editedByUserId));
   }
 }

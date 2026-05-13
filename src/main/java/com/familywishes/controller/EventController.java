@@ -36,10 +36,11 @@ public class EventController {
       @RequestParam(defaultValue = "id") String sortBy,
       @RequestParam(defaultValue = "desc") String sortDir) {
     boolean isAdmin =
-            authentication.getAuthorities().stream()
-                    .map(GrantedAuthority::getAuthority)
-                    .anyMatch("ROLE_ADMIN"::equals);
-    return eventService.list(page, size, searchKey, sortBy, sortDir, isAdmin, authentication.getName());
+        authentication.getAuthorities().stream()
+            .map(GrantedAuthority::getAuthority)
+            .anyMatch("ROLE_ADMIN"::equals);
+    return eventService.list(
+        page, size, searchKey, sortBy, sortDir, isAdmin, authentication.getName());
   }
 
   @DeleteMapping("/{id}")

@@ -9,6 +9,7 @@ import java.time.LocalDate;
 import java.time.ZoneId;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
@@ -18,6 +19,9 @@ import org.springframework.web.bind.annotation.*;
 @PreAuthorize("hasRole('ADMIN')")
 public class SpecialEventSeedController {
   private final SpecialEventSeedService specialEventSeedService;
+
+  @Value("${scheduler.time-zone:Asia/Kolkata}")
+  private String schedulerTimeZone;
 
   @PostMapping
   public SpecialEventSeedResponse create(@Valid @RequestBody SpecialEventSeedRequest request) {
@@ -41,7 +45,7 @@ public class SpecialEventSeedController {
 
   @GetMapping("/today")
   public List<SpecialEventSeedResponse> listTodayActive() {
-    LocalDate today = LocalDate.now(ZoneId.of("Asia/Kolkata"));
+    LocalDate today = LocalDate.now(ZoneId.of(schedulerTimeZone));
     return specialEventSeedService.listTodayActive(today);
   }
 

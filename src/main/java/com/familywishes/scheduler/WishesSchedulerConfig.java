@@ -49,7 +49,7 @@ public class WishesSchedulerConfig {
         .withIdentity("goodMorningTrigger")
         .withSchedule(
             CronScheduleBuilder.cronSchedule("0 0 6 * * ?")
-                .inTimeZone(TimeZone.getTimeZone("Asia/Kolkata"))
+                .inTimeZone(TimeZone.getTimeZone(schedulerTimeZone))
                 .withMisfireHandlingInstructionFireAndProceed())
         .build();
   }
@@ -71,7 +71,7 @@ public class WishesSchedulerConfig {
         .withIdentity("goodNightTrigger")
         .withSchedule(
             CronScheduleBuilder.cronSchedule("0 0 22 * * ?")
-                .inTimeZone(TimeZone.getTimeZone("Asia/Kolkata"))
+                .inTimeZone(TimeZone.getTimeZone(schedulerTimeZone))
                 .withMisfireHandlingInstructionFireAndProceed())
         .build();
   }
@@ -93,7 +93,7 @@ public class WishesSchedulerConfig {
         .withIdentity("birthdayTrigger")
         .withSchedule(
             CronScheduleBuilder.cronSchedule("0 30 6 * * ?")
-                .inTimeZone(TimeZone.getTimeZone("Asia/Kolkata"))
+                .inTimeZone(TimeZone.getTimeZone(schedulerTimeZone))
                 .withMisfireHandlingInstructionFireAndProceed())
         .build();
   }
@@ -113,7 +113,7 @@ public class WishesSchedulerConfig {
         .withIdentity("refreshTokenCleanupTrigger")
         .withSchedule(
             CronScheduleBuilder.cronSchedule("0 0 0 * * ?")
-                .inTimeZone(TimeZone.getTimeZone("Asia/Kolkata"))
+                .inTimeZone(TimeZone.getTimeZone(schedulerTimeZone))
                 .withMisfireHandlingInstructionFireAndProceed())
         .build();
   }
@@ -133,7 +133,7 @@ public class WishesSchedulerConfig {
         .withIdentity("festivalWishTrigger")
         .withSchedule(
             CronScheduleBuilder.cronSchedule("0 30 7 * * ?")
-                .inTimeZone(TimeZone.getTimeZone("Asia/Kolkata"))
+                .inTimeZone(TimeZone.getTimeZone(schedulerTimeZone))
                 .withMisfireHandlingInstructionFireAndProceed())
         .build();
   }
@@ -153,7 +153,7 @@ public class WishesSchedulerConfig {
         .withIdentity("festivalMonthlySyncTrigger")
         .withSchedule(
             CronScheduleBuilder.cronSchedule("0 0 2 1 * ?")
-                .inTimeZone(TimeZone.getTimeZone("Asia/Kolkata"))
+                .inTimeZone(TimeZone.getTimeZone(schedulerTimeZone))
                 .withMisfireHandlingInstructionFireAndProceed())
         .build();
   }
@@ -188,8 +188,7 @@ public class WishesSchedulerConfig {
     if (fields.length == 6 && "*".equals(fields[3]) && "*".equals(fields[5])) {
       String patched =
           String.join(
-              " ",
-              Arrays.asList(fields[0], fields[1], fields[2], fields[3], fields[4], "?"));
+              " ", Arrays.asList(fields[0], fields[1], fields[2], fields[3], fields[4], "?"));
       if (CronExpression.isValidExpression(patched)) {
         return patched;
       }

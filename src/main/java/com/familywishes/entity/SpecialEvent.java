@@ -23,5 +23,4 @@ public class SpecialEvent extends ActivatableEntity {
 
   @Column(length = 1000)
   private String message;
-
 }

@@ -14,6 +14,7 @@ import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
@@ -27,12 +28,15 @@ public class BirthdayScheduler {
   private final TimeUtil timeUtil;
   private final SchedulerTrackingService schedulerTrackingService;
 
+  @Value("${scheduler.time-zone:Asia/Kolkata}")
+  private String schedulerTimeZone;
+
   @Scheduled(cron = "0 0 7 * * ?", zone = "${scheduler.time-zone}")
   public void sendBirthdayWishes() {
     schedulerTrackingService.track(
         "instagramBirthdayScheduler",
         () -> {
-          LocalDate today = LocalDate.now(ZoneId.of("Asia/Kolkata"));
+          LocalDate today = LocalDate.now(ZoneId.of(schedulerTimeZone));
 
           List<InstagramUser> users =
               userRepo.findTodaysBirthdays(today.getMonthValue(), today.getDayOfMonth());
@@ -45,7 +49,7 @@ public class BirthdayScheduler {
               log.setInstagramUserId(user.getInstagramUserId());
               log.setMessage("🎂 Happy Birthday " + user.getName());
               log.setStatus(MessageStatus.PENDING);
-              log.setCreatedAt(LocalDateTime.now(ZoneId.of("Asia/Kolkata")));
+              log.setCreatedAt(LocalDateTime.now(ZoneId.of(schedulerTimeZone)));
               log.setMessageType(MessageType.BIRTHDAY);
               logRepo.save(log);
               dispatcher.sendAsync(log);

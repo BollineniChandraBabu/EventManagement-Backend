@@ -12,5 +12,6 @@ public interface TemplateTypeSeedService {
 
   List<EnumSeedResponse> listActive();
 
-  PagedResponse<EnumSeedResponse> list(int page, int size, String searchKey, String sortBy, String sortDir);
+  PagedResponse<EnumSeedResponse> list(
+      int page, int size, String searchKey, String sortBy, String sortDir);
 }

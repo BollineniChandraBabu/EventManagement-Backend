@@ -19,7 +19,8 @@ public class FestivalWishMappingController {
 
   @PostMapping
   @PreAuthorize("hasRole('ADMIN')")
-  public FestivalWishMappingResponse upsert(@Valid @RequestBody FestivalWishMappingRequest request) {
+  public FestivalWishMappingResponse upsert(
+      @Valid @RequestBody FestivalWishMappingRequest request) {
     return festivalWishMappingService.upsert(request);
   }
 

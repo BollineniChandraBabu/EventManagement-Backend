@@ -55,21 +55,28 @@ public class EventServiceImpl implements EventService {
 
   @Override
   public PagedResponse<EventResponse> list(
-      int page, int size, String searchKey, String sortBy, String sortDir, boolean isAdmin, String userEmail) {
+      int page,
+      int size,
+      String searchKey,
+      String sortBy,
+      String sortDir,
+      boolean isAdmin,
+      String userEmail) {
     Sort.Direction direction =
         "asc".equalsIgnoreCase(sortDir) ? Sort.Direction.ASC : Sort.Direction.DESC;
     String normalizedSortBy = (sortBy == null || sortBy.isBlank()) ? "id" : sortBy.trim();
     Page<Event> events;
-    if(isAdmin) {
-     events =
-              eventRepository.findAllBySearchKey(
-                      searchKey == null ? "" : searchKey.trim(),
-                      PageRequest.of(page, size, Sort.by(direction, normalizedSortBy)));
-    }else {
+    if (isAdmin) {
       events =
-              eventRepository.findAllBySearchKeyAndUSer(userEmail,
-                      searchKey == null ? "" : searchKey.trim(),
-                      PageRequest.of(page, size, Sort.by(direction, normalizedSortBy)));
+          eventRepository.findAllBySearchKey(
+              searchKey == null ? "" : searchKey.trim(),
+              PageRequest.of(page, size, Sort.by(direction, normalizedSortBy)));
+    } else {
+      events =
+          eventRepository.findAllBySearchKeyAndUSer(
+              userEmail,
+              searchKey == null ? "" : searchKey.trim(),
+              PageRequest.of(page, size, Sort.by(direction, normalizedSortBy)));
     }
 
     return new PagedResponse<>(

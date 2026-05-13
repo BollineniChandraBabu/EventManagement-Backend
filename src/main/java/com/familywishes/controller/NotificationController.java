@@ -32,7 +32,8 @@ public class NotificationController {
   }
 
   @PutMapping("/{id}")
-  public NotificationResponse update(@PathVariable Long id, @Valid @RequestBody NotificationRequest request) {
+  public NotificationResponse update(
+      @PathVariable Long id, @Valid @RequestBody NotificationRequest request) {
     return notificationService.update(id, request);
   }
 

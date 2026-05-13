@@ -17,6 +17,7 @@ import java.util.Set;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
@@ -30,6 +31,9 @@ public class ChatServiceImpl implements ChatService {
   private final UserRepository userRepository;
   private final SupabaseStorageService storageService;
   private final ChatRealtimePublisher realtimePublisher;
+
+  @Value("${scheduler.time-zone:Asia/Kolkata}")
+  private String schedulerTimeZone;
 
   @Override
   public List<ChatUserResponse> listAvailableUsers() {
@@ -153,14 +157,18 @@ public class ChatServiceImpl implements ChatService {
             .orElseThrow(() -> new NotFoundException("Receiver not found"));
 
     String text = request.messageText() == null ? "" : request.messageText().trim();
-    String encryptedMessage = request.encryptedMessage() == null ? null : request.encryptedMessage().trim();
+    String encryptedMessage =
+        request.encryptedMessage() == null ? null : request.encryptedMessage().trim();
     if (encryptedMessage != null && encryptedMessage.isBlank()) {
       encryptedMessage = null;
     }
-    if (text.isBlank() && encryptedMessage == null && (attachment == null || attachment.isEmpty())) {
+    if (text.isBlank()
+        && encryptedMessage == null
+        && (attachment == null || attachment.isEmpty())) {
       throw new BadRequestException("Message text, encrypted payload or attachment is required");
     }
-    String messageType = resolveMessageType(request.messageType(), attachment, encryptedMessage != null);
+    String messageType =
+        resolveMessageType(request.messageType(), attachment, encryptedMessage != null);
 
     Long conversationId = resolveConversationId(me.getId(), receiver.getId());
     String attachmentKey = null;
@@ -296,7 +304,9 @@ public class ChatServiceImpl implements ChatService {
       Long otherUserId, int page, int size, boolean markSeen) {
     User me = currentUser();
     User other =
-        userRepository.findById(otherUserId).orElseThrow(() -> new NotFoundException("User not found"));
+        userRepository
+            .findById(otherUserId)
+            .orElseThrow(() -> new NotFoundException("User not found"));
 
     Long conversationId = resolveConversationId(me.getId(), other.getId());
 
@@ -365,7 +375,9 @@ public class ChatServiceImpl implements ChatService {
 
   private Map<Long, User> loadUsersById(List<ChatMessageRepository.ConversationSummary> rows) {
     Set<Long> otherUserIds =
-        rows.stream().map(ChatMessageRepository.ConversationSummary::otherUserId).collect(Collectors.toSet());
+        rows.stream()
+            .map(ChatMessageRepository.ConversationSummary::otherUserId)
+            .collect(Collectors.toSet());
     if (otherUserIds.isEmpty()) {
       return Map.of();
     }
@@ -383,7 +395,9 @@ public class ChatServiceImpl implements ChatService {
         other == null ? null : other.getEmail(),
         other != null && isEffectivelyOnline(other),
         other == null ? null : other.getLastSeenAt(),
-        other == null ? storageService.getDefaultProfilePictureUrl(null) : resolveProfilePictureUrl(other),
+        other == null
+            ? storageService.getDefaultProfilePictureUrl(null)
+            : resolveProfilePictureUrl(other),
         row.messageText(),
         row.sentAt(),
         row.seenAt(),
@@ -432,7 +446,8 @@ public class ChatServiceImpl implements ChatService {
 
   @Override
   public GlobalMessagePageResponse listAllMessages(int page, int size, String searchKey) {
-    List<GlobalMessageResponse> rows = chatMessageRepository.findGlobalMessages(page, size, searchKey);
+    List<GlobalMessageResponse> rows =
+        chatMessageRepository.findGlobalMessages(page, size, searchKey);
     Set<Long> userIds =
         rows.stream()
             .flatMap(r -> java.util.stream.Stream.of(r.senderId(), r.receiverId()))
@@ -571,7 +586,8 @@ public class ChatServiceImpl implements ChatService {
       }
     }
 
-    realtimePublisher.publishMessageDeleted(deleted.conversationId(), deleted.messageId(), me.getId());
+    realtimePublisher.publishMessageDeleted(
+        deleted.conversationId(), deleted.messageId(), me.getId());
     return deleted;
   }
 
@@ -605,7 +621,8 @@ public class ChatServiceImpl implements ChatService {
     if (attachmentKeyToDelete != null && !attachmentKeyToDelete.isBlank()) {
       storageService.deleteObject(attachmentKeyToDelete);
     }
-    realtimePublisher.publishMessageDeleted(deleted.conversationId(), deleted.messageId(), me.getId());
+    realtimePublisher.publishMessageDeleted(
+        deleted.conversationId(), deleted.messageId(), me.getId());
     return deleted;
   }
 
@@ -632,7 +649,8 @@ public class ChatServiceImpl implements ChatService {
       throw new BadRequestException("Message can be edited only within 24 hours of sending");
     }
 
-    MessageResponse updated = chatMessageRepository.updateMessageText(messageId, me.getId(), text, me.getId());
+    MessageResponse updated =
+        chatMessageRepository.updateMessageText(messageId, me.getId(), text, me.getId());
     if (updated == null) {
       throw new NotFoundException("Message not found");
     }
@@ -712,7 +730,7 @@ public class ChatServiceImpl implements ChatService {
   }
 
   private LocalDateTime nowIst() {
-    return LocalDateTime.now(ZoneId.of("Asia/Kolkata"));
+    return LocalDateTime.now(ZoneId.of(schedulerTimeZone));
   }
 
   private void updatePresence(User user, boolean online) {
@@ -724,7 +742,8 @@ public class ChatServiceImpl implements ChatService {
 
   private User currentUser() {
     var authentication =
-        org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
+        org.springframework.security.core.context.SecurityContextHolder.getContext()
+            .getAuthentication();
     if (authentication == null || !authentication.isAuthenticated()) {
       throw new NotFoundException("Authenticated user not found");
     }
@@ -745,7 +764,9 @@ public class ChatServiceImpl implements ChatService {
   }
 
   private String resolveProfilePictureUrl(User user) {
-    if (user == null || user.getProfilePictureUrl() == null || user.getProfilePictureUrl().isBlank()) {
+    if (user == null
+        || user.getProfilePictureUrl() == null
+        || user.getProfilePictureUrl().isBlank()) {
       return storageService.getDefaultProfilePictureUrl(user == null ? null : user.getGender());
     }
     return storageService.resolveProfilePictureUrl(user.getProfilePictureUrl());

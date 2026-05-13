@@ -7,12 +7,12 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.familywishes.chat.ChatMessageRepository;
 import com.familywishes.dto.AuthDtos.AdminLoginAsUserRequest;
 import com.familywishes.dto.AuthDtos.AuthResponse;
 import com.familywishes.dto.AuthDtos.ForgotPasswordRequest;
 import com.familywishes.dto.AuthDtos.LoginRequest;
 import com.familywishes.dto.AuthDtos.OtpSendRequest;
-import com.familywishes.chat.ChatMessageRepository;
 import com.familywishes.entity.RefreshToken;
 import com.familywishes.entity.User;
 import com.familywishes.entity.enums.Role;
@@ -70,20 +70,20 @@ class AuthServiceImplTest {
             .failedLoginAttempts(1)
             .build();
 
-    when(userRepository.findByEmailAndDeletedFalse("user@example.com")).thenReturn(Optional.of(user));
+    when(userRepository.findByEmailAndDeletedFalse("user@example.com"))
+        .thenReturn(Optional.of(user));
     when(authManager.authenticate(any(UsernamePasswordAuthenticationToken.class)))
         .thenThrow(new BadCredentialsException("bad credentials"));
 
     assertThrows(
         BadRequestException.class,
-        () ->
-            authService.login(
-                new LoginRequest("user@example.com", "wrong")));
+        () -> authService.login(new LoginRequest("user@example.com", "wrong")));
 
     assertEquals(2, user.getFailedLoginAttempts());
     verify(userRepository).save(user);
     verify(emailService, never())
-        .sendEmailWithAttachments(any(String.class), any(String.class), any(String.class), any(), any());
+        .sendEmailWithAttachments(
+            any(String.class), any(String.class), any(String.class), any(), any());
   }
 
   @Test
@@ -97,18 +97,19 @@ class AuthServiceImplTest {
             .failedLoginAttempts(4)
             .build();
 
-    when(userRepository.findByEmailAndDeletedFalse("user@example.com")).thenReturn(Optional.of(user));
+    when(userRepository.findByEmailAndDeletedFalse("user@example.com"))
+        .thenReturn(Optional.of(user));
     when(authManager.authenticate(any(UsernamePasswordAuthenticationToken.class)))
         .thenThrow(new BadCredentialsException("bad credentials"));
 
     BadRequestException exception =
         assertThrows(
             BadRequestException.class,
-            () ->
-                authService.login(
-                    new LoginRequest("user@example.com", "wrong")));
+            () -> authService.login(new LoginRequest("user@example.com", "wrong")));
 
-    assertEquals("Too many failed login attempts. Please contact the Administrator.", exception.getMessage());
+    assertEquals(
+        "Too many failed login attempts. Please contact the Administrator.",
+        exception.getMessage());
     assertEquals(5, user.getFailedLoginAttempts());
     verify(emailService)
         .sendEmailWithAttachments(
@@ -126,16 +127,17 @@ class AuthServiceImplTest {
             .failedLoginAttempts(5)
             .build();
 
-    when(userRepository.findByEmailAndDeletedFalse("user@example.com")).thenReturn(Optional.of(user));
+    when(userRepository.findByEmailAndDeletedFalse("user@example.com"))
+        .thenReturn(Optional.of(user));
 
     BadRequestException exception =
         assertThrows(
             BadRequestException.class,
-            () ->
-                authService.login(
-                    new LoginRequest("user@example.com", "password")));
+            () -> authService.login(new LoginRequest("user@example.com", "password")));
 
-    assertEquals("Too many failed login attempts. Please contact the Administrator.", exception.getMessage());
+    assertEquals(
+        "Too many failed login attempts. Please contact the Administrator.",
+        exception.getMessage());
     verify(authManager, never()).authenticate(any(UsernamePasswordAuthenticationToken.class));
   }
 
@@ -230,20 +232,24 @@ class AuthServiceImplTest {
 
   @Test
   void sendOtpShouldFailWhenUserDoesNotExist() {
-    when(userRepository.findByEmailAndDeletedFalse("missing@example.com")).thenReturn(Optional.empty());
+    when(userRepository.findByEmailAndDeletedFalse("missing@example.com"))
+        .thenReturn(Optional.empty());
 
     assertThrows(
-        NotFoundException.class, () -> authService.sendOtp(new OtpSendRequest("missing@example.com")));
+        NotFoundException.class,
+        () -> authService.sendOtp(new OtpSendRequest("missing@example.com")));
 
     verify(otpCodeRepository, never()).save(any());
     verify(emailService, never())
-        .sendEmailWithAttachments(any(String.class), any(String.class), any(String.class), any(), any());
+        .sendEmailWithAttachments(
+            any(String.class), any(String.class), any(String.class), any(), any());
   }
 
   @Test
   void sendOtpShouldSaveOtpAndSendMailForActiveUser() {
     User user = User.builder().id(7L).email("user@example.com").active(true).deleted(false).build();
-    when(userRepository.findByEmailAndDeletedFalse("user@example.com")).thenReturn(Optional.of(user));
+    when(userRepository.findByEmailAndDeletedFalse("user@example.com"))
+        .thenReturn(Optional.of(user));
 
     authService.sendOtp(new OtpSendRequest("user@example.com"));
 
@@ -270,12 +276,14 @@ class AuthServiceImplTest {
 
     verify(resetTokenRepository, never()).save(any());
     verify(emailService, never())
-        .sendEmailWithAttachments(any(String.class), any(String.class), any(String.class), any(), any());
+        .sendEmailWithAttachments(
+            any(String.class), any(String.class), any(String.class), any(), any());
   }
 
   @Test
   void forgotPasswordShouldFailWhenUserDoesNotExist() {
-    when(userRepository.findByEmailAndDeletedFalse("missing@example.com")).thenReturn(Optional.empty());
+    when(userRepository.findByEmailAndDeletedFalse("missing@example.com"))
+        .thenReturn(Optional.empty());
 
     assertThrows(
         NotFoundException.class,
@@ -283,6 +291,7 @@ class AuthServiceImplTest {
 
     verify(resetTokenRepository, never()).save(any());
     verify(emailService, never())
-        .sendEmailWithAttachments(any(String.class), any(String.class), any(String.class), any(), any());
+        .sendEmailWithAttachments(
+            any(String.class), any(String.class), any(String.class), any(), any());
   }
 }
