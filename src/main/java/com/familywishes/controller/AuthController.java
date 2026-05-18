@@ -46,6 +46,11 @@ public class AuthController {
     return authService.verifyOtp(request);
   }
 
+  @PostMapping("/otp/verify-login")
+  public AuthResponse verifyLoginOtp(@Valid @RequestBody LoginOtpVerifyRequest request) {
+    return authService.verifyLoginOtp(request);
+  }
+
   @PostMapping("/forgot-password")
   public void forgotPassword(@Valid @RequestBody ForgotPasswordRequest request) {
     authService.forgotPassword(request);

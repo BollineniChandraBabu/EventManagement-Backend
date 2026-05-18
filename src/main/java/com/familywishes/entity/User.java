@@ -48,6 +48,11 @@ public class User extends ActivatableEntity {
   @Builder.Default
   private int failedLoginAttempts = 0;
 
+  @Column(name = "mfa_enabled", nullable = false, columnDefinition = "SMALLINT")
+  @Convert(converter = BooleanToZeroOneConverter.class)
+  @Builder.Default
+  private boolean mfaEnabled = false;
+
   @ManyToOne(fetch = FetchType.EAGER)
   @JoinColumn(name = "relationship_seed_id", nullable = false)
   private RelationshipSeed relationShip;

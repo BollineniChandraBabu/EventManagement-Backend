@@ -3,6 +3,8 @@ package com.familywishes.service.impl;
 import com.familywishes.dto.DashboardDtos.DashboardGraphPoint;
 import com.familywishes.dto.DashboardDtos.DashboardGraphResponse;
 import com.familywishes.dto.DashboardDtos.DashboardResponse;
+import com.familywishes.dto.DashboardDtos.LoginLocationChartPoint;
+import com.familywishes.dto.DashboardDtos.LoginLocationChartResponse;
 import com.familywishes.entity.MessageStatus;
 import com.familywishes.entity.User;
 import com.familywishes.entity.enums.EmailStatus;
@@ -11,6 +13,7 @@ import com.familywishes.repository.EmailLogRepository;
 import com.familywishes.repository.EventRepository;
 import com.familywishes.repository.IGMessageLogRepository;
 import com.familywishes.repository.InstagramUserRepository;
+import com.familywishes.repository.LoginLocationEventRepository;
 import com.familywishes.repository.UserRepository;
 import com.familywishes.service.DashboardService;
 import java.sql.Date;
@@ -20,6 +23,7 @@ import java.time.ZoneId;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -39,6 +43,7 @@ public class DashboardServiceImpl implements DashboardService {
   private final EmailLogRepository emailLogRepository;
   private final IGMessageLogRepository igMessageLogRepository;
   private final InstagramUserRepository instagramUserRepository;
+  private final LoginLocationEventRepository loginLocationEventRepository;
 
   @Override
   public DashboardResponse getDashboard(String requesterEmail, boolean isAdmin) {
@@ -237,6 +242,27 @@ public class DashboardServiceImpl implements DashboardService {
             .toList();
 
     return new DashboardGraphResponse(days, points);
+  }
+
+
+  @Override
+  public LoginLocationChartResponse getLoginLocationChart(
+      Long userId, String fromDate, String toDate) {
+    LocalDateTime from =
+        (fromDate == null || fromDate.isBlank()) ? null : LocalDate.parse(fromDate).atStartOfDay();
+    String normalizedToDate =
+        (toDate == null || toDate.isBlank())
+            ? LocalDate.now(ZoneId.of(schedulerTimeZone)).toString()
+            : toDate;
+    LocalDateTime to =
+        LocalDate.parse(normalizedToDate).plusDays(1).atStartOfDay().minusNanos(1);
+
+    List<LoginLocationChartPoint> points =
+        loginLocationEventRepository.countByLocationWithFilters(userId, from, to).stream()
+            .map(row -> new LoginLocationChartPoint(String.valueOf(row[0]), ((Number) row[1]).longValue()))
+            .collect(Collectors.toList());
+
+    return new LoginLocationChartResponse(userId, fromDate, normalizedToDate, points);
   }
 
   private Map<LocalDate, Long> toDateCountMap(List<Object[]> rows) {

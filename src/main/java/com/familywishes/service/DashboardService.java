@@ -1,6 +1,7 @@
 package com.familywishes.service;
 
 import com.familywishes.dto.DashboardDtos.DashboardGraphResponse;
+import com.familywishes.dto.DashboardDtos.LoginLocationChartResponse;
 import com.familywishes.dto.DashboardDtos.DashboardResponse;
 
 public interface DashboardService {
@@ -19,4 +20,6 @@ public interface DashboardService {
   DashboardGraphResponse getOtpChart(int days);
 
   DashboardGraphResponse getForgotPasswordChart(int days);
+
+  LoginLocationChartResponse getLoginLocationChart(Long userId, String fromDate, String toDate);
 }

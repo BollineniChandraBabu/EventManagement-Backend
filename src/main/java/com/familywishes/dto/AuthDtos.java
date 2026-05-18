@@ -4,7 +4,8 @@ import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 
 public class AuthDtos {
-  public record LoginRequest(@Email String email, @NotBlank String password) {}
+  public record LoginRequest(
+      @Email String email, @NotBlank String password, String loginLocation) {}
 
   public record AdminLoginAsUserRequest(@Email String email) {}
 
@@ -23,6 +24,8 @@ public class AuthDtos {
   public record OtpSendRequest(@Email String email) {}
 
   public record OtpVerifyRequest(@Email String email, @NotBlank String otp) {}
+
+  public record LoginOtpVerifyRequest(@Email String email, @NotBlank String otp, String loginLocation) {}
 
   public record ForgotPasswordRequest(@Email String email) {}
 
