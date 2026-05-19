@@ -2,6 +2,7 @@ package com.familywishes.service.impl;
 
 import com.familywishes.chat.ChatMessageRepository;
 import com.familywishes.dto.AuthDtos.*;
+import com.familywishes.entity.LoginLocationEvent;
 import com.familywishes.entity.OtpCode;
 import com.familywishes.entity.PasswordResetToken;
 import com.familywishes.entity.RefreshToken;
@@ -50,6 +51,7 @@ public class AuthServiceImpl implements AuthService {
   private final PasswordEncoder passwordEncoder;
   private final GmailEmailService emailService;
   private final ChatMessageRepository chatMessageRepository;
+  private final LoginLocationEventRepository loginLocationEventRepository;
 
   @Value("${app.password-reset.ui-url:http://localhost:4200/reset-password}")
   private String passwordResetUiUrl;
@@ -106,6 +108,11 @@ public class AuthServiceImpl implements AuthService {
       userRepository.save(user);
     }
 
+    if (user.isMfaEnabled()) {
+      sendOtp(new OtpSendRequest(user.getEmail()));
+      throw new BadRequestException("MFA_OTP_REQUIRED");
+    }
+
     String access = jwtService.generateAccessToken(user, user.getEmail());
     String refresh = jwtService.generateRefreshToken(user, user.getEmail());
     refreshTokenRepository.save(
@@ -115,6 +122,7 @@ public class AuthServiceImpl implements AuthService {
             .expiresAt(LocalDateTime.now(ZoneId.of(schedulerTimeZone)).plusDays(7))
             .revoked(false)
             .build());
+    recordLoginLocation(user, request.loginLocation());
     return buildAuthResponse(user, access, refresh);
   }
 
@@ -296,6 +304,49 @@ public class AuthServiceImpl implements AuthService {
     return buildAuthResponse(user, access, refresh);
   }
 
+
+  @Override
+  public AuthResponse verifyLoginOtp(LoginOtpVerifyRequest request) {
+    User user =
+        userRepository
+            .findByEmailAndDeletedFalse(request.email())
+            .orElseThrow(() -> new NotFoundException("User not found"));
+
+    var otp =
+        otpCodeRepository
+            .findTopByUserIdOrderByIdDesc(user.getId())
+            .orElseThrow(() -> new BadRequestException("OTP not found"));
+    if (otp.isUsed()
+        || otp.getExpiresAt().isBefore(LocalDateTime.now(ZoneId.of(schedulerTimeZone)))
+        || !otp.getCode().equals(request.otp())) {
+      throw new BadRequestException("Invalid or expired OTP");
+    }
+    otp.setUsed(true);
+    otpCodeRepository.save(otp);
+    String access = jwtService.generateAccessToken(user);
+    String refresh = jwtService.generateRefreshToken(user);
+    refreshTokenRepository.save(
+        RefreshToken.builder()
+            .token(refresh)
+            .user(user)
+            .expiresAt(LocalDateTime.now(ZoneId.of(schedulerTimeZone)).plusDays(7))
+            .revoked(false)
+            .build());
+    recordLoginLocation(user, request.loginLocation());
+    return buildAuthResponse(user, access, refresh);
+  }
+
+  private void recordLoginLocation(User user, String loginLocation) {
+    if (loginLocation == null || loginLocation.isBlank()) {
+      return;
+    }
+    loginLocationEventRepository.save(
+        LoginLocationEvent.builder()
+            .user(user)
+            .loginLocation(loginLocation.strip())
+            .loggedInAt(LocalDateTime.now(ZoneId.of(schedulerTimeZone)))
+            .build());
+  }
   @Override
   @Transactional
   public void forgotPassword(ForgotPasswordRequest request) {
@@ -415,6 +466,11 @@ public class AuthServiceImpl implements AuthService {
     if (user.getFailedLoginAttempts() > 0) {
       user.setFailedLoginAttempts(0);
       userRepository.save(user);
+    }
+
+    if (user.isMfaEnabled()) {
+      sendOtp(new OtpSendRequest(user.getEmail()));
+      throw new BadRequestException("MFA_OTP_REQUIRED");
     }
 
     String access = jwtService.generateAccessToken(user, user.getEmail());

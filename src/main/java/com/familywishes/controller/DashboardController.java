@@ -3,6 +3,7 @@ package com.familywishes.controller;
 import com.familywishes.chat.ChatDtos;
 import com.familywishes.chat.ChatService;
 import com.familywishes.dto.DashboardDtos.DashboardGraphResponse;
+import com.familywishes.dto.DashboardDtos.LoginLocationChartResponse;
 import com.familywishes.dto.DashboardDtos.DashboardResponse;
 import com.familywishes.service.DashboardService;
 import lombok.RequiredArgsConstructor;
@@ -72,6 +73,15 @@ public class DashboardController {
   public DashboardGraphResponse forgotPasswordMailChart(
       @RequestParam(defaultValue = "7") int days) {
     return dashboardService.getForgotPasswordChart(days);
+  }
+
+  @GetMapping("/chart/login-locations")
+  @PreAuthorize("hasRole('ADMIN')")
+  public LoginLocationChartResponse loginLocationChart(
+      @RequestParam(required = false) Long userId,
+      @RequestParam(required = false) String fromDate,
+      @RequestParam(required = false) String toDate) {
+    return dashboardService.getLoginLocationChart(userId, fromDate, toDate);
   }
 
   @GetMapping("/chat/messages")

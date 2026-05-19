@@ -15,6 +15,8 @@ public interface AuthService {
 
   AuthResponse verifyOtp(OtpVerifyRequest request);
 
+  AuthResponse verifyLoginOtp(LoginOtpVerifyRequest request);
+
   void forgotPassword(ForgotPasswordRequest request);
 
   void resetPassword(ResetPasswordRequest request);
