@@ -29,10 +29,12 @@ import java.util.Locale;
 import java.util.Properties;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -46,6 +48,7 @@ public class GmailEmailServiceImpl implements GmailEmailService {
   private final Gmail gmail;
   private final SupabaseStorageService supabaseStorageService;
   private final EmailTemplateBuilder emailTemplateBuilder;
+  private final @Lazy GmailEmailService asyncEmailService;
 
   @Value("${gmail.from-email}")
   private String senderEmail;
@@ -64,12 +67,14 @@ public class GmailEmailServiceImpl implements GmailEmailService {
   // ==========================
 
   @Override
+  @Async
   public void sendEmailWithAttachments(
       String to, String subject, String html, Long logId, byte[] image) {
     sendEmailWithAttachments(to, subject, html, logId, image, null);
   }
 
   @Override
+  @Async
   public void sendEmailWithAttachments(
       String to, String subject, String html, Long logId, byte[] image, EmailType emailType) {
 
@@ -214,7 +219,7 @@ public class GmailEmailServiceImpl implements GmailEmailService {
         .findByStatusAndRetryCountLessThan(EmailStatus.FAILED, 3)
         .forEach(
             log ->
-                sendEmailWithAttachments(
+                asyncEmailService.sendEmailWithAttachments(
                     log.getRecipientEmail(), log.getSubject(), log.getBody(), log.getId(), null));
   }
 
@@ -327,7 +332,7 @@ public class GmailEmailServiceImpl implements GmailEmailService {
 
   @Override
   public void sendTestEmail(String to) {
-    sendEmailWithAttachments(
+    asyncEmailService.sendEmailWithAttachments(
         to, "Test Email", "<h3>Golden Greetings Gmail API test</h3>", null, null);
   }
 
@@ -352,7 +357,7 @@ public class GmailEmailServiceImpl implements GmailEmailService {
 
     EmailLog logEntry =
         createPendingEmailLog(request.userEmail(), request.subject(), EmailType.EVENT);
-    sendEmailWithAttachments(
+    asyncEmailService.sendEmailWithAttachments(
         request.userEmail(), request.subject(), htmlBody, logEntry.getId(), null);
   }
 
