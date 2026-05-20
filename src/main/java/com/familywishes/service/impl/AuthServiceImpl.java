@@ -109,7 +109,6 @@ public class AuthServiceImpl implements AuthService {
     }
 
     if (user.isMfaEnabled()) {
-      sendOtp(new OtpSendRequest(user.getEmail()));
       throw new BadRequestException("MFA_OTP_REQUIRED");
     }
 
@@ -469,7 +468,6 @@ public class AuthServiceImpl implements AuthService {
     }
 
     if (user.isMfaEnabled()) {
-      sendOtp(new OtpSendRequest(user.getEmail()));
       throw new BadRequestException("MFA_OTP_REQUIRED");
     }
 
