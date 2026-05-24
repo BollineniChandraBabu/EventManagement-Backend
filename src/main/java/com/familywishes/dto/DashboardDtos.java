@@ -10,7 +10,8 @@ public class DashboardDtos {
 
   public record DashboardGraphResponse(int days, List<DashboardGraphPoint> points) {}
 
-  public record LoginLocationChartPoint(String location, long totalLogins) {}
+  public record LoginLocationChartPoint(
+      String location, String ipAddress, Double latitude, Double longitude, long totalLogins) {}
 
   public record LoginLocationChartResponse(
       Long userId, String fromDate, String toDate, List<LoginLocationChartPoint> points) {}

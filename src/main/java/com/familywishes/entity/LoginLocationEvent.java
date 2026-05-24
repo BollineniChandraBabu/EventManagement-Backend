@@ -25,4 +25,14 @@ public class LoginLocationEvent extends AuditableEntity {
 
   @Column(name = "logged_in_at", nullable = false)
   private LocalDateTime loggedInAt;
+
+  @Column(name = "ip_address", length = 64)
+  private String ipAddress;
+
+  @Column(name = "latitude")
+  private Double latitude;
+
+  @Column(name = "longitude")
+  private Double longitude;
+
 }

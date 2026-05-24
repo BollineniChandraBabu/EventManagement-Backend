@@ -5,7 +5,10 @@ import com.familywishes.chat.ChatService;
 import com.familywishes.dto.DashboardDtos.DashboardGraphResponse;
 import com.familywishes.dto.DashboardDtos.LoginLocationChartResponse;
 import com.familywishes.dto.DashboardDtos.DashboardResponse;
+import com.familywishes.exception.BadRequestException;
 import com.familywishes.service.DashboardService;
+import java.time.LocalDate;
+import java.time.ZoneId;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
@@ -34,20 +37,41 @@ public class DashboardController {
 
   @GetMapping("/chart")
   public DashboardGraphResponse chart(
-      Authentication authentication, @RequestParam(defaultValue = "7") int days) {
-    return dashboardService.getInstaChart(days, authentication.getName(), isAdmin(authentication));
+      Authentication authentication,
+      @RequestParam String startDate,
+      @RequestParam String endDate) {
+    DateRange dateRange = validateDateRange(startDate, endDate);
+    return dashboardService.getInstaChart(
+        dateRange.startDate(),
+        dateRange.endDate(),
+        authentication.getName(),
+        isAdmin(authentication));
   }
 
   @GetMapping("/chart/mail")
   public DashboardGraphResponse mailChart(
-      Authentication authentication, @RequestParam(defaultValue = "7") int days) {
-    return dashboardService.getMailChart(days, authentication.getName(), isAdmin(authentication));
+      Authentication authentication,
+      @RequestParam String startDate,
+      @RequestParam String endDate) {
+    DateRange dateRange = validateDateRange(startDate, endDate);
+    return dashboardService.getMailChart(
+        dateRange.startDate(),
+        dateRange.endDate(),
+        authentication.getName(),
+        isAdmin(authentication));
   }
 
   @GetMapping("/chart/insta")
   public DashboardGraphResponse instaChart(
-      Authentication authentication, @RequestParam(defaultValue = "7") int days) {
-    return dashboardService.getInstaChart(days, authentication.getName(), isAdmin(authentication));
+      Authentication authentication,
+      @RequestParam String startDate,
+      @RequestParam String endDate) {
+    DateRange dateRange = validateDateRange(startDate, endDate);
+    return dashboardService.getInstaChart(
+        dateRange.startDate(),
+        dateRange.endDate(),
+        authentication.getName(),
+        isAdmin(authentication));
   }
 
   @GetMapping("/mail/otp")
@@ -64,15 +88,20 @@ public class DashboardController {
 
   @GetMapping("/chart/mail/otp")
   @PreAuthorize("hasRole('ADMIN')")
-  public DashboardGraphResponse otpMailChart(@RequestParam(defaultValue = "7") int days) {
-    return dashboardService.getOtpChart(days);
+  public DashboardGraphResponse otpMailChart(
+      @RequestParam String startDate,
+      @RequestParam String endDate) {
+    DateRange dateRange = validateDateRange(startDate, endDate);
+    return dashboardService.getOtpChart(dateRange.startDate(), dateRange.endDate());
   }
 
   @GetMapping("/chart/mail/forgot-password")
   @PreAuthorize("hasRole('ADMIN')")
   public DashboardGraphResponse forgotPasswordMailChart(
-      @RequestParam(defaultValue = "7") int days) {
-    return dashboardService.getForgotPasswordChart(days);
+      @RequestParam String startDate,
+      @RequestParam String endDate) {
+    DateRange dateRange = validateDateRange(startDate, endDate);
+    return dashboardService.getForgotPasswordChart(dateRange.startDate(), dateRange.endDate());
   }
 
   @GetMapping("/chart/login-locations")
@@ -96,6 +125,34 @@ public class DashboardController {
   public java.util.List<ChatDtos.ChatUserResponse> activeChatUsers() {
     return chatService.listActiveUsers();
   }
+
+
+  private DateRange validateDateRange(String startDateParam, String endDateParam) {
+    LocalDate startDate;
+    LocalDate endDate;
+
+    try {
+      startDate = LocalDate.parse(startDateParam);
+      endDate = LocalDate.parse(endDateParam);
+    } catch (Exception ex) {
+      throw new BadRequestException("Invalid date format. Use yyyy-MM-dd for startDate and endDate");
+    }
+
+    LocalDate today = LocalDate.now(ZoneId.systemDefault());
+    if (endDate.isAfter(today)) {
+      throw new BadRequestException("endDate must not be greater than today");
+    }
+    if (startDate.isEqual(endDate)) {
+      throw new BadRequestException("startDate and endDate must not be the same");
+    }
+    if (startDate.isAfter(endDate)) {
+      throw new BadRequestException("startDate must be before endDate");
+    }
+
+    return new DateRange(startDate, endDate);
+  }
+
+  private record DateRange(LocalDate startDate, LocalDate endDate) {}
 
   private boolean isAdmin(Authentication authentication) {
     return authentication.getAuthorities().stream()

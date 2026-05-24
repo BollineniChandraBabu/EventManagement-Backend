@@ -118,11 +118,9 @@ public class DashboardServiceImpl implements DashboardService {
   }
 
   @Override
-  public DashboardGraphResponse getMailChart(int days, String requesterEmail, boolean isAdmin) {
-    int normalizedDays = Math.max(1, days);
-    LocalDate startDate =
-        LocalDate.now(ZoneId.of(schedulerTimeZone)).minusDays(normalizedDays - 1L);
+  public DashboardGraphResponse getMailChart(LocalDate startDate, LocalDate endDate, String requesterEmail, boolean isAdmin) {
     LocalDateTime start = startDate.atStartOfDay();
+    int days = (int) java.time.temporal.ChronoUnit.DAYS.between(startDate, endDate) + 1;
 
     Map<LocalDate, Long> sentByDate;
     Map<LocalDate, Long> failedByDate;
@@ -147,21 +145,16 @@ public class DashboardServiceImpl implements DashboardService {
                   start, EmailStatus.FAILED, requesterEmail, SENSITIVE_TYPES));
     }
 
-    return buildGraphResponse(normalizedDays, startDate, sentByDate, failedByDate);
+    return buildGraphResponse(days, startDate, sentByDate, failedByDate);
   }
 
   @Override
-  public DashboardGraphResponse getInstaChart(int days, String requesterEmail, boolean isAdmin) {
+  public DashboardGraphResponse getInstaChart(LocalDate startDate, LocalDate endDate, String requesterEmail, boolean isAdmin) {
+    int days = (int) java.time.temporal.ChronoUnit.DAYS.between(startDate, endDate) + 1;
     if (!isAdmin) {
-      int normalizedDays = Math.max(1, days);
-      LocalDate startDate =
-          LocalDate.now(ZoneId.of(schedulerTimeZone)).minusDays(normalizedDays - 1L);
-      return buildGraphResponse(normalizedDays, startDate, Map.of(), Map.of());
+      return buildGraphResponse(days, startDate, Map.of(), Map.of());
     }
 
-    int normalizedDays = Math.max(1, days);
-    LocalDate startDate =
-        LocalDate.now(ZoneId.of(schedulerTimeZone)).minusDays(normalizedDays - 1L);
     LocalDateTime start = startDate.atStartOfDay();
 
     Map<LocalDate, Long> sentByDate =
@@ -169,7 +162,7 @@ public class DashboardServiceImpl implements DashboardService {
     Map<LocalDate, Long> failedByDate =
         toDateCountMap(igMessageLogRepository.getDailyCountsByStatus(start, MessageStatus.FAILED));
 
-    return buildGraphResponse(normalizedDays, startDate, sentByDate, failedByDate);
+    return buildGraphResponse(days, startDate, sentByDate, failedByDate);
   }
 
   @Override
@@ -183,13 +176,13 @@ public class DashboardServiceImpl implements DashboardService {
   }
 
   @Override
-  public DashboardGraphResponse getOtpChart(int days) {
-    return getSensitiveChart(days, EmailType.OTP);
+  public DashboardGraphResponse getOtpChart(LocalDate startDate, LocalDate endDate) {
+    return getSensitiveChart(startDate, endDate, EmailType.OTP);
   }
 
   @Override
-  public DashboardGraphResponse getForgotPasswordChart(int days) {
-    return getSensitiveChart(days, EmailType.FORGOT_PASSWORD);
+  public DashboardGraphResponse getForgotPasswordChart(LocalDate startDate, LocalDate endDate) {
+    return getSensitiveChart(startDate, endDate, EmailType.FORGOT_PASSWORD);
   }
 
   private DashboardResponse getSensitiveDashboard(EmailType emailType) {
@@ -206,10 +199,8 @@ public class DashboardServiceImpl implements DashboardService {
     return new DashboardResponse(0L, 0L, sentToday, failed);
   }
 
-  private DashboardGraphResponse getSensitiveChart(int days, EmailType emailType) {
-    int normalizedDays = Math.max(1, days);
-    LocalDate startDate =
-        LocalDate.now(ZoneId.of(schedulerTimeZone)).minusDays(normalizedDays - 1L);
+  private DashboardGraphResponse getSensitiveChart(LocalDate startDate, LocalDate endDate, EmailType emailType) {
+    int days = (int) java.time.temporal.ChronoUnit.DAYS.between(startDate, endDate) + 1;
     LocalDateTime start = startDate.atStartOfDay();
     List<EmailType> types = List.of(emailType);
 
@@ -222,7 +213,7 @@ public class DashboardServiceImpl implements DashboardService {
             emailLogRepository.getDailyCountsByStatusAndEmailTypeIn(
                 start, EmailStatus.FAILED, types));
 
-    return buildGraphResponse(normalizedDays, startDate, sentByDate, failedByDate);
+    return buildGraphResponse(days, startDate, sentByDate, failedByDate);
   }
 
   private DashboardGraphResponse buildGraphResponse(
@@ -259,7 +250,14 @@ public class DashboardServiceImpl implements DashboardService {
 
     List<LoginLocationChartPoint> points =
         loginLocationEventRepository.countByLocationWithFilters(userId, from, to).stream()
-            .map(row -> new LoginLocationChartPoint(String.valueOf(row[0]), ((Number) row[1]).longValue()))
+            .map(
+                row ->
+                    new LoginLocationChartPoint(
+                        String.valueOf(row[0]),
+                        row[1] == null ? null : String.valueOf(row[1]),
+                        row[2] == null ? null : ((Number) row[2]).doubleValue(),
+                        row[3] == null ? null : ((Number) row[3]).doubleValue(),
+                        ((Number) row[4]).longValue()))
             .collect(Collectors.toList());
 
     return new LoginLocationChartResponse(userId, fromDate, normalizedToDate, points);

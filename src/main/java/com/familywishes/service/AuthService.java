@@ -1,9 +1,10 @@
 package com.familywishes.service;
 
 import com.familywishes.dto.AuthDtos.*;
+import jakarta.servlet.http.HttpServletRequest;
 
 public interface AuthService {
-  AuthResponse login(LoginRequest request);
+  AuthResponse login(LoginRequest request, HttpServletRequest httpRequest);
 
   AuthResponse adminLoginAsUser(AdminLoginAsUserRequest request);
 
@@ -15,7 +16,7 @@ public interface AuthService {
 
   AuthResponse verifyOtp(OtpVerifyRequest request);
 
-  AuthResponse verifyLoginOtp(LoginOtpVerifyRequest request);
+  AuthResponse verifyLoginOtp(LoginOtpVerifyRequest request, HttpServletRequest httpRequest);
 
   void forgotPassword(ForgotPasswordRequest request);
 
