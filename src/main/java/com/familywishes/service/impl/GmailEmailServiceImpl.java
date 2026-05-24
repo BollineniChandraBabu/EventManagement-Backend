@@ -48,7 +48,6 @@ public class GmailEmailServiceImpl implements GmailEmailService {
   private final Gmail gmail;
   private final SupabaseStorageService supabaseStorageService;
   private final EmailTemplateBuilder emailTemplateBuilder;
-  private final @Lazy GmailEmailService asyncEmailService;
 
   @Value("${gmail.from-email}")
   private String senderEmail;
@@ -219,7 +218,7 @@ public class GmailEmailServiceImpl implements GmailEmailService {
         .findByStatusAndRetryCountLessThan(EmailStatus.FAILED, 3)
         .forEach(
             log ->
-                asyncEmailService.sendEmailWithAttachments(
+                sendEmailWithAttachments(
                     log.getRecipientEmail(), log.getSubject(), log.getBody(), log.getId(), null));
   }
 
@@ -332,7 +331,7 @@ public class GmailEmailServiceImpl implements GmailEmailService {
 
   @Override
   public void sendTestEmail(String to) {
-    asyncEmailService.sendEmailWithAttachments(
+    sendEmailWithAttachments(
         to, "Test Email", "<h3>Golden Greetings Gmail API test</h3>", null, null);
   }
 
@@ -357,7 +356,7 @@ public class GmailEmailServiceImpl implements GmailEmailService {
 
     EmailLog logEntry =
         createPendingEmailLog(request.userEmail(), request.subject(), EmailType.EVENT);
-    asyncEmailService.sendEmailWithAttachments(
+    sendEmailWithAttachments(
         request.userEmail(), request.subject(), htmlBody, logEntry.getId(), null);
   }
 
