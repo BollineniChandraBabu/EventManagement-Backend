@@ -22,5 +22,6 @@ public interface DashboardService {
 
   DashboardGraphResponse getForgotPasswordChart(LocalDate startDate, LocalDate endDate);
 
-  LoginLocationChartResponse getLoginLocationChart(Long userId, String fromDate, String toDate);
+  LoginLocationChartResponse getLoginLocationChart(
+      Long userId, String fromDate, String toDate, String requesterEmail, boolean isAdmin);
 }

@@ -238,7 +238,7 @@ public class DashboardServiceImpl implements DashboardService {
 
   @Override
   public LoginLocationChartResponse getLoginLocationChart(
-      Long userId, String fromDate, String toDate) {
+      Long userId, String fromDate, String toDate, String requesterEmail, boolean isAdmin) {
     LocalDateTime from =
         (fromDate == null || fromDate.isBlank()) ? null : LocalDate.parse(fromDate).atStartOfDay();
     String normalizedToDate =
@@ -248,8 +248,10 @@ public class DashboardServiceImpl implements DashboardService {
     LocalDateTime to =
         LocalDate.parse(normalizedToDate).plusDays(1).atStartOfDay().minusNanos(1);
 
+    Long effectiveUserId = resolveEffectiveUserId(userId, requesterEmail, isAdmin);
+
     List<LoginLocationChartPoint> points =
-        loginLocationEventRepository.countByLocationWithFilters(userId, from, to).stream()
+        loginLocationEventRepository.countByLocationWithFilters(effectiveUserId, from, to).stream()
             .map(
                 row ->
                     new LoginLocationChartPoint(
@@ -260,7 +262,16 @@ public class DashboardServiceImpl implements DashboardService {
                         ((Number) row[4]).longValue()))
             .collect(Collectors.toList());
 
-    return new LoginLocationChartResponse(userId, fromDate, normalizedToDate, points);
+    return new LoginLocationChartResponse(effectiveUserId, fromDate, normalizedToDate, points);
+  }
+
+
+  private Long resolveEffectiveUserId(Long requestedUserId, String requesterEmail, boolean isAdmin) {
+    if (isAdmin) {
+      return requestedUserId;
+    }
+
+    return userRepository.findByEmailAndDeletedFalse(requesterEmail).map(User::getId).orElse(-1L);
   }
 
   private Map<LocalDate, Long> toDateCountMap(List<Object[]> rows) {

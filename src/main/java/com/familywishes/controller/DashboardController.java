@@ -105,12 +105,17 @@ public class DashboardController {
   }
 
   @GetMapping("/chart/login-locations")
-  @PreAuthorize("hasRole('ADMIN')")
   public LoginLocationChartResponse loginLocationChart(
+      Authentication authentication,
       @RequestParam(required = false) Long userId,
       @RequestParam(required = false) String fromDate,
       @RequestParam(required = false) String toDate) {
-    return dashboardService.getLoginLocationChart(userId, fromDate, toDate);
+    return dashboardService.getLoginLocationChart(
+        userId,
+        fromDate,
+        toDate,
+        authentication.getName(),
+        isAdmin(authentication));
   }
 
   @GetMapping("/chat/messages")
