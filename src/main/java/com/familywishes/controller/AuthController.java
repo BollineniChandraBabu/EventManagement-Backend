@@ -2,6 +2,7 @@ package com.familywishes.controller;
 
 import com.familywishes.dto.AuthDtos.*;
 import com.familywishes.service.AuthService;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -14,8 +15,9 @@ public class AuthController {
   private final AuthService authService;
 
   @PostMapping("/login")
-  public AuthResponse login(@Valid @RequestBody LoginRequest request) {
-    return authService.login(request);
+  public AuthResponse login(
+      @Valid @RequestBody LoginRequest request, HttpServletRequest httpRequest) {
+    return authService.login(request, httpRequest);
   }
 
   @PostMapping("/refresh")
@@ -47,8 +49,9 @@ public class AuthController {
   }
 
   @PostMapping("/otp/verify-login")
-  public AuthResponse verifyLoginOtp(@Valid @RequestBody LoginOtpVerifyRequest request) {
-    return authService.verifyLoginOtp(request);
+  public AuthResponse verifyLoginOtp(
+      @Valid @RequestBody LoginOtpVerifyRequest request, HttpServletRequest httpRequest) {
+    return authService.verifyLoginOtp(request, httpRequest);
   }
 
   @PostMapping("/forgot-password")

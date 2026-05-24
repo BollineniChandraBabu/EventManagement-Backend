@@ -22,6 +22,7 @@ import java.security.SecureRandom;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.Collections;
+import jakarta.servlet.http.HttpServletRequest;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -73,7 +74,7 @@ public class AuthServiceImpl implements AuthService {
 
   @Override
   @Transactional
-  public AuthResponse login(LoginRequest request) {
+  public AuthResponse login(LoginRequest request, HttpServletRequest httpRequest) {
     User user =
         userRepository
             .findByEmailAndDeletedFalse(request.email())
@@ -121,7 +122,13 @@ public class AuthServiceImpl implements AuthService {
             .expiresAt(LocalDateTime.now(ZoneId.of(schedulerTimeZone)).plusDays(7))
             .revoked(false)
             .build());
-    recordLoginLocation(user, request.loginLocation());
+    recordLoginLocation(
+        user,
+        request.loginLocation(),
+        request.ipAddress(),
+        request.latitude(),
+        request.longitude(),
+        httpRequest);
     return buildAuthResponse(user, access, refresh);
   }
 
@@ -305,7 +312,7 @@ public class AuthServiceImpl implements AuthService {
 
 
   @Override
-  public AuthResponse verifyLoginOtp(LoginOtpVerifyRequest request) {
+  public AuthResponse verifyLoginOtp(LoginOtpVerifyRequest request, HttpServletRequest httpRequest) {
     User user =
         userRepository
             .findByEmailAndDeletedFalse(request.email())
@@ -331,20 +338,57 @@ public class AuthServiceImpl implements AuthService {
             .expiresAt(LocalDateTime.now(ZoneId.of(schedulerTimeZone)).plusDays(7))
             .revoked(false)
             .build());
-    recordLoginLocation(user, request.loginLocation());
+    recordLoginLocation(
+        user,
+        request.loginLocation(),
+        request.ipAddress(),
+        request.latitude(),
+        request.longitude(),
+        httpRequest);
     return buildAuthResponse(user, access, refresh);
   }
 
-  private void recordLoginLocation(User user, String loginLocation) {
-    if (loginLocation == null || loginLocation.isBlank()) {
-      return;
-    }
+  private void recordLoginLocation(
+      User user,
+      String loginLocation,
+      String requestIpAddress,
+      Double latitude,
+      Double longitude,
+      HttpServletRequest httpRequest) {
+    String normalizedLocation =
+        (loginLocation == null || loginLocation.isBlank()) ? "Unknown" : loginLocation.strip();
+    String ipAddress = resolveClientIp(httpRequest, requestIpAddress);
+
     loginLocationEventRepository.save(
         LoginLocationEvent.builder()
             .user(user)
-            .loginLocation(loginLocation.strip())
+            .loginLocation(normalizedLocation)
+            .ipAddress(ipAddress)
+            .latitude(latitude)
+            .longitude(longitude)
             .loggedInAt(LocalDateTime.now(ZoneId.of(schedulerTimeZone)))
             .build());
+  }
+
+  private String resolveClientIp(HttpServletRequest httpRequest, String requestIpAddress) {
+    if (requestIpAddress != null && !requestIpAddress.isBlank()) {
+      return requestIpAddress.strip();
+    }
+    if (httpRequest == null) {
+      return null;
+    }
+
+    String forwardedFor = httpRequest.getHeader("X-Forwarded-For");
+    if (forwardedFor != null && !forwardedFor.isBlank()) {
+      return forwardedFor.split(",")[0].trim();
+    }
+
+    String realIp = httpRequest.getHeader("X-Real-IP");
+    if (realIp != null && !realIp.isBlank()) {
+      return realIp.trim();
+    }
+
+    return httpRequest.getRemoteAddr();
   }
   @Override
   @Transactional
