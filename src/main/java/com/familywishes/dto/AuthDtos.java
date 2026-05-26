@@ -5,7 +5,12 @@ import jakarta.validation.constraints.NotBlank;
 
 public class AuthDtos {
   public record LoginRequest(
-      @Email String email, @NotBlank String password, String loginLocation) {}
+      @Email String email,
+      @NotBlank String password,
+      String loginLocation,
+      String ipAddress,
+      Double latitude,
+      Double longitude) {}
 
   public record AdminLoginAsUserRequest(@Email String email) {}
 
@@ -25,7 +30,13 @@ public class AuthDtos {
 
   public record OtpVerifyRequest(@Email String email, @NotBlank String otp) {}
 
-  public record LoginOtpVerifyRequest(@Email String email, @NotBlank String otp, String loginLocation) {}
+  public record LoginOtpVerifyRequest(
+      @Email String email,
+      @NotBlank String otp,
+      String loginLocation,
+      String ipAddress,
+      Double latitude,
+      Double longitude) {}
 
   public record ForgotPasswordRequest(@Email String email) {}
 

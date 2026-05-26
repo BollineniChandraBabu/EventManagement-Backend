@@ -1,5 +1,7 @@
 package com.familywishes.dto;
 
+import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 
 public class DashboardDtos {
@@ -10,7 +12,8 @@ public class DashboardDtos {
 
   public record DashboardGraphResponse(int days, List<DashboardGraphPoint> points) {}
 
-  public record LoginLocationChartPoint(String location, long totalLogins) {}
+  public record LoginLocationChartPoint(
+          String location, String ipAddress, Double latitude, Double longitude, LocalDateTime loggedInAt) {}
 
   public record LoginLocationChartResponse(
       Long userId, String fromDate, String toDate, List<LoginLocationChartPoint> points) {}
