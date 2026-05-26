@@ -10,16 +10,15 @@ import org.springframework.data.repository.query.Param;
 public interface LoginLocationEventRepository extends JpaRepository<LoginLocationEvent, Long> {
 
   @Query("""
-          SELECT e.loginLocation, e.ipAddress, e.latitude, e.longitude, COUNT(e)
+          SELECT e
           FROM LoginLocationEvent e
-          WHERE (:userId IS NULL OR e.user.id = :userId)
+          WHERE (:userIds IS NULL OR e.user.id IN (:userIds))
             AND e.loggedInAt >= COALESCE(:fromDate, e.loggedInAt)
             AND e.loggedInAt <= COALESCE(:toDate, e.loggedInAt)
-          GROUP BY e.loginLocation, e.ipAddress, e.latitude, e.longitude
-          ORDER BY COUNT(e) DESC
+          ORDER BY e.loggedInAt DESC
           """)
-  List<Object[]> countByLocationWithFilters(
-          @Param("userId") Long userId,
+  List<LoginLocationEvent> countByLocationWithFilters(
+          @Param("userIds") List<Long> userIds,
           @Param("fromDate") LocalDateTime fromDate,
           @Param("toDate") LocalDateTime toDate
   );

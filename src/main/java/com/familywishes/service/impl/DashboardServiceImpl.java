@@ -20,13 +20,12 @@ import java.sql.Date;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+import org.springframework.util.CollectionUtils;
 
 @Service
 @RequiredArgsConstructor
@@ -238,7 +237,7 @@ public class DashboardServiceImpl implements DashboardService {
 
   @Override
   public LoginLocationChartResponse getLoginLocationChart(
-      Long userId, String fromDate, String toDate, String requesterEmail, boolean isAdmin) {
+      Long userId, String fromDate, String toDate, String requesterEmail, boolean isAdmin, List<Long> userIds) {
     LocalDateTime from =
         (fromDate == null || fromDate.isBlank()) ? null : LocalDate.parse(fromDate).atStartOfDay();
     String normalizedToDate =
@@ -249,17 +248,20 @@ public class DashboardServiceImpl implements DashboardService {
         LocalDate.parse(normalizedToDate).plusDays(1).atStartOfDay().minusNanos(1);
 
     Long effectiveUserId = resolveEffectiveUserId(userId, requesterEmail, isAdmin);
-
+    if(Objects.nonNull(effectiveUserId)) {
+        userIds = CollectionUtils.isEmpty(userIds) ? new ArrayList<>() : userIds;
+        userIds.add(effectiveUserId);
+    }
     List<LoginLocationChartPoint> points =
-        loginLocationEventRepository.countByLocationWithFilters(effectiveUserId, from, to).stream()
+        loginLocationEventRepository.countByLocationWithFilters(userIds, from, to).stream()
             .map(
                 row ->
                     new LoginLocationChartPoint(
-                        String.valueOf(row[0]),
-                        row[1] == null ? null : String.valueOf(row[1]),
-                        row[2] == null ? null : ((Number) row[2]).doubleValue(),
-                        row[3] == null ? null : ((Number) row[3]).doubleValue(),
-                        ((Number) row[4]).longValue()))
+                       row.getLoginLocation(),
+                            row.getIpAddress(),
+                            row.getLatitude(),
+                            row.getLongitude(),
+                            row.getLoggedInAt()))
             .collect(Collectors.toList());
 
     return new LoginLocationChartResponse(effectiveUserId, fromDate, normalizedToDate, points);

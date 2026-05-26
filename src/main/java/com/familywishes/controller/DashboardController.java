@@ -9,6 +9,8 @@ import com.familywishes.exception.BadRequestException;
 import com.familywishes.service.DashboardService;
 import java.time.LocalDate;
 import java.time.ZoneId;
+import java.util.List;
+
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
@@ -106,16 +108,14 @@ public class DashboardController {
 
   @GetMapping("/chart/login-locations")
   public LoginLocationChartResponse loginLocationChart(
-      Authentication authentication,
-      @RequestParam(required = false) Long userId,
-      @RequestParam(required = false) String fromDate,
-      @RequestParam(required = false) String toDate) {
+          Authentication authentication,
+          @RequestParam(required = false) Long userId,
+          @RequestParam(required = false) String startDate,
+          @RequestParam(required = false) String endDate,
+          @RequestParam(required = false) List<Long> userIds) {
+    validateDateRange(startDate, endDate);
     return dashboardService.getLoginLocationChart(
-        userId,
-        fromDate,
-        toDate,
-        authentication.getName(),
-        isAdmin(authentication));
+        userId, startDate, endDate, authentication.getName(), isAdmin(authentication), userIds);
   }
 
   @GetMapping("/chat/messages")

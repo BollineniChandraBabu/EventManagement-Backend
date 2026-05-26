@@ -4,6 +4,7 @@ import com.familywishes.dto.DashboardDtos.DashboardGraphResponse;
 import com.familywishes.dto.DashboardDtos.LoginLocationChartResponse;
 import com.familywishes.dto.DashboardDtos.DashboardResponse;
 import java.time.LocalDate;
+import java.util.List;
 
 public interface DashboardService {
   DashboardResponse getDashboard(String requesterEmail, boolean isAdmin);
@@ -23,5 +24,5 @@ public interface DashboardService {
   DashboardGraphResponse getForgotPasswordChart(LocalDate startDate, LocalDate endDate);
 
   LoginLocationChartResponse getLoginLocationChart(
-      Long userId, String fromDate, String toDate, String requesterEmail, boolean isAdmin);
+      Long userId, String fromDate, String toDate, String requesterEmail, boolean isAdmin, List<Long> userIds);
 }
