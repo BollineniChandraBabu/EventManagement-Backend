@@ -18,10 +18,12 @@ import com.familywishes.entity.User;
 import com.familywishes.entity.enums.Role;
 import com.familywishes.exception.BadRequestException;
 import com.familywishes.exception.NotFoundException;
+import com.familywishes.repository.LoginLocationEventRepository;
 import com.familywishes.repository.OtpCodeRepository;
 import com.familywishes.repository.PasswordResetTokenRepository;
 import com.familywishes.repository.RefreshTokenRepository;
 import com.familywishes.repository.UserRepository;
+import com.familywishes.repository.ViolatedUserRepository;
 import com.familywishes.security.JwtService;
 import com.familywishes.service.GmailEmailService;
 import java.util.List;
@@ -51,6 +53,9 @@ class AuthServiceImplTest {
   @Mock private PasswordEncoder passwordEncoder;
   @Mock private GmailEmailService emailService;
   @Mock private ChatMessageRepository chatMessageRepository;
+  @Mock private LoginLocationEventRepository loginLocationEventRepository;
+  @Mock private ViolatedUserRepository violatedUserRepository;
+  @Mock private ViolatedUserAuditService violatedUserAuditService;
 
   @InjectMocks private AuthServiceImpl authService;
 
