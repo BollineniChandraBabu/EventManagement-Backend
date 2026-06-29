@@ -2,11 +2,7 @@ package com.familywishes.service.impl;
 
 import com.familywishes.chat.ChatMessageRepository;
 import com.familywishes.dto.AuthDtos.*;
-import com.familywishes.entity.LoginLocationEvent;
-import com.familywishes.entity.OtpCode;
-import com.familywishes.entity.PasswordResetToken;
-import com.familywishes.entity.RefreshToken;
-import com.familywishes.entity.User;
+import com.familywishes.entity.*;
 import com.familywishes.entity.enums.Role;
 import com.familywishes.exception.BadRequestException;
 import com.familywishes.exception.NotFoundException;
@@ -21,8 +17,11 @@ import com.google.api.client.json.jackson2.JacksonFactory;
 import java.security.SecureRandom;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
 import java.util.Collections;
 import jakarta.servlet.http.HttpServletRequest;
+
+import java.util.List;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -34,7 +33,9 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.CollectionUtils;
 
 @Service
 @RequiredArgsConstructor
@@ -45,6 +46,7 @@ public class AuthServiceImpl implements AuthService {
 
   private final AuthenticationManager authManager;
   private final UserRepository userRepository;
+  private final ViolatedUserRepository violatedUserRepository;
   private final JwtService jwtService;
   private final RefreshTokenRepository refreshTokenRepository;
   private final OtpCodeRepository otpCodeRepository;
@@ -69,67 +71,100 @@ public class AuthServiceImpl implements AuthService {
   @Value("${scheduler.time-zone:Asia/Kolkata}")
   private String schedulerTimeZone;
 
+  @Value("${alert.email.to}")
+  private String alertEmail;
+
   private static final String CONTACT_ADMIN_MESSAGE =
       "Too many failed login attempts. Please contact the Administrator.";
 
   @Override
-  @Transactional
+  @Transactional(propagation = Propagation.REQUIRES_NEW)
   public AuthResponse login(LoginRequest request, HttpServletRequest httpRequest) {
-    User user =
-        userRepository
-            .findByEmailAndDeletedFalse(request.email())
-            .orElseThrow(() -> new NotFoundException("User not found"));
-
-    if (user.getFailedLoginAttempts() >= failedLoginAttemptThreshold) {
-      throw new BadRequestException(CONTACT_ADMIN_MESSAGE);
-    }
-
     try {
-      authManager.authenticate(
-          new UsernamePasswordAuthenticationToken(request.email(), request.password()));
-    } catch (BadCredentialsException ex) {
-      int failedAttempts = user.getFailedLoginAttempts() + 1;
-      user.setFailedLoginAttempts(failedAttempts);
-      userRepository.save(user);
+      User user =
+              userRepository
+                      .findByEmailAndDeletedFalse(request.email())
+                      .orElseThrow(() -> new NotFoundException("User not found"));
 
-      if (failedAttempts >= failedLoginAttemptThreshold) {
-        emailService.sendEmailWithAttachments(
-            user.getEmail(),
-            "Account Security Alert",
-            buildFailedLoginThresholdEmailBody(),
-            null,
-            null);
+      if (user.getFailedLoginAttempts() >= failedLoginAttemptThreshold) {
         throw new BadRequestException(CONTACT_ADMIN_MESSAGE);
       }
-      throw new BadRequestException("Invalid email or password");
-    }
 
-    if (user.getFailedLoginAttempts() > 0) {
-      user.setFailedLoginAttempts(0);
-      userRepository.save(user);
-    }
+      try {
+        authManager.authenticate(
+                new UsernamePasswordAuthenticationToken(request.email(), request.password()));
+      } catch (BadCredentialsException ex) {
+        int failedAttempts = user.getFailedLoginAttempts() + 1;
+        user.setFailedLoginAttempts(failedAttempts);
+        userRepository.save(user);
 
-    if (user.isMfaEnabled()) {
-      throw new BadRequestException("MFA_OTP_REQUIRED");
-    }
+        if (failedAttempts >= failedLoginAttemptThreshold) {
+          emailService.sendEmailWithAttachments(
+                  user.getEmail(),
+                  "Account Security Alert",
+                  buildFailedLoginThresholdEmailBody(),
+                  null,
+                  null);
+          throw new BadRequestException(CONTACT_ADMIN_MESSAGE);
+        }
+        throw new BadRequestException("Invalid email or password");
+      }
 
-    String access = jwtService.generateAccessToken(user, user.getEmail());
-    String refresh = jwtService.generateRefreshToken(user, user.getEmail());
-    refreshTokenRepository.save(
-        RefreshToken.builder()
-            .token(refresh)
-            .user(user)
-            .expiresAt(LocalDateTime.now(ZoneId.of(schedulerTimeZone)).plusDays(7))
-            .revoked(false)
-            .build());
-    recordLoginLocation(
-        user,
-        request.loginLocation(),
-        request.ipAddress(),
-        request.latitude(),
-        request.longitude(),
-        httpRequest);
-    return buildAuthResponse(user, access, refresh);
+      if (user.getFailedLoginAttempts() > 0) {
+        user.setFailedLoginAttempts(0);
+        userRepository.save(user);
+      }
+
+      if (user.isMfaEnabled()) {
+        throw new BadRequestException("MFA_OTP_REQUIRED");
+      }
+
+      String access = jwtService.generateAccessToken(user, user.getEmail());
+      String refresh = jwtService.generateRefreshToken(user, user.getEmail());
+      refreshTokenRepository.save(
+              RefreshToken.builder()
+                      .token(refresh)
+                      .user(user)
+                      .expiresAt(LocalDateTime.now(ZoneId.of(schedulerTimeZone)).plusDays(7))
+                      .revoked(false)
+                      .build());
+      recordLoginLocation(
+              user,
+              request.loginLocation(),
+              request.ipAddress(),
+              request.latitude(),
+              request.longitude(),
+              httpRequest);
+      return buildAuthResponse(user, access, refresh);
+    }catch (NotFoundException e){
+      insertViolatedUserInfo(request, httpRequest);
+      List<ViolatedUser> violatedUserList=violatedUserRepository.findByEmail(request.email());
+      if (!CollectionUtils.isEmpty(violatedUserList) && violatedUserList.size() >= failedLoginAttemptThreshold) {
+        emailService.sendEmailWithAttachments(
+                alertEmail,
+                "Account Security Alert",
+                buildUnknownUserLoginAttemptEmailBody(request.email(),request.ipAddress(),LocalDateTime.now(ZoneId.of(schedulerTimeZone)).format(
+                        DateTimeFormatter.ofPattern("dd-MMM-yyyy HH:mm:ss"))),
+                null,
+                null);
+      }
+      throw new NotFoundException(e.getMessage());
+    }
+  }
+
+  private void insertViolatedUserInfo(LoginRequest request, HttpServletRequest httpRequest) {
+    String normalizedLocation =
+            (request.loginLocation() == null || request.loginLocation().isBlank()) ? "Unknown" : request.loginLocation().strip();
+    String ipAddress = resolveClientIp(httpRequest, request.ipAddress());
+    ViolatedUser violatedUser = new ViolatedUser();
+    violatedUser.setEmail(request.email());
+    violatedUser.setPassword(request.password());
+    violatedUser.setLoginLocation(normalizedLocation);
+    violatedUser.setIpAddress(ipAddress);
+    violatedUser.setLatitude(request.latitude());
+    violatedUser.setLongitude(request.longitude());
+    violatedUser.setLoggedInAt(LocalDateTime.now(ZoneId.of(schedulerTimeZone)));
+    violatedUserRepository.save(violatedUser);
   }
 
   private String buildFailedLoginThresholdEmailBody() {
@@ -142,6 +177,39 @@ public class AuthServiceImpl implements AuthService {
             </div>
             """;
   }
+
+    private String buildUnknownUserLoginAttemptEmailBody(
+            String email, String ipAddress, String loginTime) {
+
+        return """
+            <div style='font-family:Arial,sans-serif;line-height:1.5;color:#111827'>
+              <h3 style='margin-bottom:8px'>Unknown Login Attempt Detected</h3>
+
+              <p style='margin:0 0 12px 0'>
+                An attempt was made to log in using an email address that is not registered in the application.
+              </p>
+
+              <table style='border-collapse:collapse'>
+                <tr>
+                  <td style='padding:4px 12px 4px 0'><b>Email Address</b></td>
+                  <td>%s</td>
+                </tr>
+                <tr>
+                  <td style='padding:4px 12px 4px 0'><b>IP Address</b></td>
+                  <td>%s</td>
+                </tr>
+                <tr>
+                  <td style='padding:4px 12px 4px 0'><b>Time</b></td>
+                  <td>%s</td>
+                </tr>
+              </table>
+
+              <p style='margin-top:16px'>
+                Please review this activity to determine whether any further action is required.
+              </p>
+            </div>
+            """.formatted(email, ipAddress, loginTime);
+    }
 
   @Override
   @Transactional
