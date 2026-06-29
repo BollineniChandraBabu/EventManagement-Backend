@@ -14,7 +14,8 @@ public interface FestivalWishMappingService {
   PagedResponse<FestivalWishMappingResponse> list(
       int page, int size, String searchKey, String sortBy, String sortDir);
 
-  List<FestivalWishMappingResponse> listForCurrentUser();
+  PagedResponse<FestivalWishMappingResponse> listForCurrentUser(
+      int page, int size, String searchKey, String sortBy, String sortDir);
 
   void delete(Long id);
 }

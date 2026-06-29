@@ -16,8 +16,6 @@ public interface FestivalWishMappingRepository extends JpaRepository<FestivalWis
 
   Optional<FestivalWishMapping> findBySpecialEvent_IdAndUser_Id(Long specialEventId, Long userId);
 
-  List<FestivalWishMapping> findByUser_IdAndActiveTrue(Long userId);
-
   @Query(
       """
       SELECT f FROM FestivalWishMapping f
@@ -28,4 +26,16 @@ public interface FestivalWishMappingRepository extends JpaRepository<FestivalWis
       """)
   Page<FestivalWishMapping> findAllBySearchKey(
       @Param("searchKey") String searchKey, Pageable pageable);
+
+  @Query(
+      """
+      SELECT f FROM FestivalWishMapping f
+      WHERE f.user.id = :userId
+        AND f.active = true
+        AND (:searchKey = ''
+             OR LOWER(f.specialEvent.eventName) LIKE LOWER(CONCAT('%', :searchKey, '%'))
+             OR LOWER(COALESCE(f.customMessage, '')) LIKE LOWER(CONCAT('%', :searchKey, '%')))
+      """)
+  Page<FestivalWishMapping> findActiveByUserIdAndSearchKey(
+      @Param("userId") Long userId, @Param("searchKey") String searchKey, Pageable pageable);
 }

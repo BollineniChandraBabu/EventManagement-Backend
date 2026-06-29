@@ -4,7 +4,6 @@ import com.familywishes.dto.CommonDtos.PagedResponse;
 import com.familywishes.dto.SeedDtos.SpecialEventSeedRequest;
 import com.familywishes.dto.SeedDtos.SpecialEventSeedResponse;
 import java.time.LocalDate;
-import java.util.List;
 
 public interface SpecialEventSeedService {
   SpecialEventSeedResponse create(SpecialEventSeedRequest request);
@@ -14,7 +13,8 @@ public interface SpecialEventSeedService {
   PagedResponse<SpecialEventSeedResponse> list(
       int page, int size, String searchKey, String sortBy, String sortDir);
 
-  List<SpecialEventSeedResponse> listTodayActive(LocalDate eventDate);
+  PagedResponse<SpecialEventSeedResponse> listTodayActive(
+      LocalDate eventDate, int page, int size, String searchKey, String sortBy, String sortDir);
 
   SpecialEventSeedResponse update(Long id, SpecialEventSeedRequest request);
 

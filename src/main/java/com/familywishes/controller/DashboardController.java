@@ -2,6 +2,7 @@ package com.familywishes.controller;
 
 import com.familywishes.chat.ChatDtos;
 import com.familywishes.chat.ChatService;
+import com.familywishes.dto.CommonDtos.PagedResponse;
 import com.familywishes.dto.DashboardDtos.DashboardGraphResponse;
 import com.familywishes.dto.DashboardDtos.DashboardResponse;
 import com.familywishes.dto.DashboardDtos.LoginLocationChartResponse;
@@ -146,8 +147,13 @@ public class DashboardController {
   }
 
   @GetMapping("/chat/users/active")
-  public java.util.List<ChatDtos.ChatUserResponse> activeChatUsers() {
-    return chatService.listActiveUsers();
+  public PagedResponse<ChatDtos.ChatUserResponse> activeChatUsers(
+      @RequestParam(defaultValue = "0") int page,
+      @RequestParam(defaultValue = "20") int size,
+      @RequestParam(defaultValue = "") String searchKey,
+      @RequestParam(defaultValue = "name") String sortBy,
+      @RequestParam(defaultValue = "asc") String sortDir) {
+    return chatService.listActiveUsers(page, size, searchKey, sortBy, sortDir);
   }
 
   private DateRange validateInclusiveDateRange(String startDateParam, String endDateParam) {

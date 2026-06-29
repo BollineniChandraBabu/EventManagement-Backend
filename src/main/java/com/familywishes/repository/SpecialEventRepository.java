@@ -12,8 +12,6 @@ import org.springframework.data.repository.query.Param;
 
 public interface SpecialEventRepository extends JpaRepository<SpecialEvent, Long> {
 
-  List<SpecialEvent> findByEventDateAndActiveTrue(LocalDate eventDate);
-
   @Query(
       value =
           """
@@ -45,4 +43,18 @@ public interface SpecialEventRepository extends JpaRepository<SpecialEvent, Long
             OR LOWER(s.message) LIKE LOWER(CONCAT('%', :searchKey, '%'))
             """)
   Page<SpecialEvent> findAllBySearchKey(@Param("searchKey") String searchKey, Pageable pageable);
+
+  @Query(
+      """
+            SELECT s FROM SpecialEvent s
+            WHERE s.eventDate = :eventDate
+              AND s.active = true
+              AND (:searchKey = ''
+                   OR LOWER(s.eventName) LIKE LOWER(CONCAT('%', :searchKey, '%'))
+                   OR LOWER(COALESCE(s.message, '')) LIKE LOWER(CONCAT('%', :searchKey, '%')))
+            """)
+  Page<SpecialEvent> findActiveByEventDateAndSearchKey(
+      @Param("eventDate") LocalDate eventDate,
+      @Param("searchKey") String searchKey,
+      Pageable pageable);
 }

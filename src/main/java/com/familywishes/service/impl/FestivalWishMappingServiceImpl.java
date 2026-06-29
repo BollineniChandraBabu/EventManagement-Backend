@@ -87,7 +87,8 @@ public class FestivalWishMappingServiceImpl implements FestivalWishMappingServic
   }
 
   @Override
-  public List<FestivalWishMappingResponse> listForCurrentUser() {
+  public PagedResponse<FestivalWishMappingResponse> listForCurrentUser(
+      int page, int size, String searchKey, String sortBy, String sortDir) {
     var auth = SecurityContextHolder.getContext().getAuthentication();
     if (auth == null || !auth.isAuthenticated()) {
       throw new NotFoundException("Authenticated user not found");
@@ -96,9 +97,24 @@ public class FestivalWishMappingServiceImpl implements FestivalWishMappingServic
         userRepository
             .findByEmailAndDeletedFalse(auth.getName())
             .orElseThrow(() -> new NotFoundException("User not found"));
-    return mappingRepository.findByUser_IdAndActiveTrue(me.getId()).stream()
-        .map(this::toResponse)
-        .toList();
+
+    String normalizedSortBy = resolveSortBy(sortBy);
+    Sort sort =
+        "desc".equalsIgnoreCase(sortDir)
+            ? Sort.by(normalizedSortBy).descending()
+            : Sort.by(normalizedSortBy).ascending();
+    var pageResult =
+        mappingRepository.findActiveByUserIdAndSearchKey(
+            me.getId(), searchKey == null ? "" : searchKey.trim(), PageRequest.of(page, size, sort));
+
+    return new PagedResponse<>(
+        pageResult.getContent().stream().map(this::toResponse).toList(),
+        pageResult.getNumber(),
+        pageResult.getSize(),
+        pageResult.getTotalElements(),
+        pageResult.getTotalPages(),
+        pageResult.hasNext(),
+        pageResult.hasPrevious());
   }
 
   private FestivalWishMappingResponse toResponse(FestivalWishMapping mapping) {

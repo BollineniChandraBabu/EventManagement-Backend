@@ -1,5 +1,6 @@
 package com.familywishes.service.impl;
 
+import com.familywishes.dto.CommonDtos.PagedResponse;
 import com.familywishes.dto.NotificationDtos.NotificationRequest;
 import com.familywishes.dto.NotificationDtos.NotificationResponse;
 import com.familywishes.entity.Notification;
@@ -12,13 +13,14 @@ import com.familywishes.service.NotificationService;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.Date;
-import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ScheduledFuture;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.scheduling.TaskScheduler;
 import org.springframework.scheduling.concurrent.ConcurrentTaskScheduler;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -78,8 +80,25 @@ public class NotificationServiceImpl implements NotificationService {
   }
 
   @Override
-  public List<NotificationResponse> getAll() {
-    return notificationRepository.findAll().stream().map(this::toResponse).toList();
+  public PagedResponse<NotificationResponse> getAll(
+      int page, int size, String searchKey, String sortBy, String sortDir) {
+    String normalizedSortBy = resolveSortBy(sortBy);
+    Sort sort =
+        "asc".equalsIgnoreCase(sortDir)
+            ? Sort.by(normalizedSortBy).ascending()
+            : Sort.by(normalizedSortBy).descending();
+    var notificationPage =
+        notificationRepository.findAllBySearchKey(
+            searchKey == null ? "" : searchKey.trim(), PageRequest.of(page, size, sort));
+
+    return new PagedResponse<>(
+        notificationPage.getContent().stream().map(this::toResponse).toList(),
+        notificationPage.getNumber(),
+        notificationPage.getSize(),
+        notificationPage.getTotalElements(),
+        notificationPage.getTotalPages(),
+        notificationPage.hasNext(),
+        notificationPage.hasPrevious());
   }
 
   @Override
@@ -256,6 +275,27 @@ public class NotificationServiceImpl implements NotificationService {
     return value == null
         ? ""
         : value.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;");
+  }
+
+
+  private String resolveSortBy(String sortBy) {
+    if (sortBy == null || sortBy.isBlank()) {
+      return "createdAt";
+    }
+    return switch (sortBy.trim()) {
+      case "id",
+          "title",
+          "published",
+          "canSendEmail",
+          "scheduledFrom",
+          "scheduledTo",
+          "publishedAt",
+          "createdBy",
+          "updatedBy",
+          "createdAt",
+          "updatedAt" -> sortBy.trim();
+      default -> "createdAt";
+    };
   }
 
   private NotificationResponse toResponse(Notification n) {

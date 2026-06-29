@@ -8,7 +8,6 @@ import com.familywishes.exception.NotFoundException;
 import com.familywishes.repository.SpecialEventRepository;
 import com.familywishes.service.SpecialEventSeedService;
 import java.time.LocalDate;
-import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -63,10 +62,25 @@ public class SpecialEventSeedServiceImpl implements SpecialEventSeedService {
   }
 
   @Override
-  public List<SpecialEventSeedResponse> listTodayActive(LocalDate eventDate) {
-    return specialEventRepository.findByEventDateAndActiveTrue(eventDate).stream()
-        .map(this::toResponse)
-        .toList();
+  public PagedResponse<SpecialEventSeedResponse> listTodayActive(
+      LocalDate eventDate, int page, int size, String searchKey, String sortBy, String sortDir) {
+    Sort.Direction direction =
+        "asc".equalsIgnoreCase(sortDir) ? Sort.Direction.ASC : Sort.Direction.DESC;
+    String normalizedSortBy = (sortBy == null || sortBy.isBlank()) ? "eventName" : sortBy.trim();
+    Page<SpecialEvent> specialEventPage =
+        specialEventRepository.findActiveByEventDateAndSearchKey(
+            eventDate,
+            searchKey == null ? "" : searchKey.trim(),
+            PageRequest.of(page, size, Sort.by(direction, normalizedSortBy)));
+
+    return new PagedResponse<>(
+        specialEventPage.getContent().stream().map(this::toResponse).toList(),
+        specialEventPage.getNumber(),
+        specialEventPage.getSize(),
+        specialEventPage.getTotalElements(),
+        specialEventPage.getTotalPages(),
+        specialEventPage.hasNext(),
+        specialEventPage.hasPrevious());
   }
 
   @Override
