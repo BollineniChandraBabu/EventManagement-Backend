@@ -13,7 +13,9 @@ import com.familywishes.repository.EmailLogRepository;
 import com.familywishes.repository.EventRepository;
 import com.familywishes.repository.IGMessageLogRepository;
 import com.familywishes.repository.InstagramUserRepository;
+import com.familywishes.repository.LoginLocationEventRepository;
 import com.familywishes.repository.UserRepository;
+import com.familywishes.repository.ViolatedUserRepository;
 import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
@@ -30,6 +32,8 @@ class DashboardServiceImplTest {
   @Mock private EmailLogRepository emailLogRepository;
   @Mock private IGMessageLogRepository igMessageLogRepository;
   @Mock private InstagramUserRepository instagramUserRepository;
+  @Mock private LoginLocationEventRepository loginLocationEventRepository;
+  @Mock private ViolatedUserRepository violatedUserRepository;
 
   @InjectMocks private DashboardServiceImpl dashboardService;
 
