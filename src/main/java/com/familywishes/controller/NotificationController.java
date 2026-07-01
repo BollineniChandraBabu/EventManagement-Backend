@@ -1,10 +1,10 @@
 package com.familywishes.controller;
 
+import com.familywishes.dto.CommonDtos.PagedResponse;
 import com.familywishes.dto.NotificationDtos.NotificationRequest;
 import com.familywishes.dto.NotificationDtos.NotificationResponse;
 import com.familywishes.service.NotificationService;
 import jakarta.validation.Valid;
-import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
@@ -27,8 +27,13 @@ public class NotificationController {
   }
 
   @GetMapping
-  public List<NotificationResponse> getAll() {
-    return notificationService.getAll();
+  public PagedResponse<NotificationResponse> getAll(
+      @RequestParam(defaultValue = "0") int page,
+      @RequestParam(defaultValue = "10") int size,
+      @RequestParam(defaultValue = "") String searchKey,
+      @RequestParam(defaultValue = "createdAt") String sortBy,
+      @RequestParam(defaultValue = "desc") String sortDir) {
+    return notificationService.getAll(page, size, searchKey, sortBy, sortDir);
   }
 
   @PutMapping("/{id}")

@@ -5,7 +5,6 @@ import com.familywishes.dto.FestivalDtos.FestivalWishMappingRequest;
 import com.familywishes.dto.FestivalDtos.FestivalWishMappingResponse;
 import com.familywishes.service.FestivalWishMappingService;
 import jakarta.validation.Valid;
-import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
@@ -37,8 +36,13 @@ public class FestivalWishMappingController {
 
   @GetMapping("/me")
   @PreAuthorize("isAuthenticated()")
-  public List<FestivalWishMappingResponse> myMappings() {
-    return festivalWishMappingService.listForCurrentUser();
+  public PagedResponse<FestivalWishMappingResponse> myMappings(
+      @RequestParam(defaultValue = "0") int page,
+      @RequestParam(defaultValue = "10") int size,
+      @RequestParam(defaultValue = "") String searchKey,
+      @RequestParam(defaultValue = "id") String sortBy,
+      @RequestParam(defaultValue = "desc") String sortDir) {
+    return festivalWishMappingService.listForCurrentUser(page, size, searchKey, sortBy, sortDir);
   }
 
   @DeleteMapping("/{id}")

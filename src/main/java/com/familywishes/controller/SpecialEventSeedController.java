@@ -7,7 +7,6 @@ import com.familywishes.service.SpecialEventSeedService;
 import jakarta.validation.Valid;
 import java.time.LocalDate;
 import java.time.ZoneId;
-import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -44,9 +43,14 @@ public class SpecialEventSeedController {
   }
 
   @GetMapping("/today")
-  public List<SpecialEventSeedResponse> listTodayActive() {
+  public PagedResponse<SpecialEventSeedResponse> listTodayActive(
+      @RequestParam(defaultValue = "0") int page,
+      @RequestParam(defaultValue = "10") int size,
+      @RequestParam(defaultValue = "") String searchKey,
+      @RequestParam(defaultValue = "eventName") String sortBy,
+      @RequestParam(defaultValue = "asc") String sortDir) {
     LocalDate today = LocalDate.now(ZoneId.of(schedulerTimeZone));
-    return specialEventSeedService.listTodayActive(today);
+    return specialEventSeedService.listTodayActive(today, page, size, searchKey, sortBy, sortDir);
   }
 
   @PutMapping("/{id}")

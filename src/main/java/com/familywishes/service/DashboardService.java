@@ -3,6 +3,7 @@ package com.familywishes.service;
 import com.familywishes.dto.DashboardDtos.DashboardGraphResponse;
 import com.familywishes.dto.DashboardDtos.LoginLocationChartResponse;
 import com.familywishes.dto.DashboardDtos.DashboardResponse;
+import com.familywishes.dto.DashboardDtos.ViolatedUsersDashboardResponse;
 import java.time.LocalDate;
 import java.util.List;
 
@@ -11,9 +12,11 @@ public interface DashboardService {
 
   DashboardResponse getIGDashboard(String requesterEmail, boolean isAdmin);
 
-  DashboardGraphResponse getMailChart(LocalDate startDate, LocalDate endDate, String requesterEmail, boolean isAdmin);
+  DashboardGraphResponse getMailChart(
+      LocalDate startDate, LocalDate endDate, String requesterEmail, boolean isAdmin);
 
-  DashboardGraphResponse getInstaChart(LocalDate startDate, LocalDate endDate, String requesterEmail, boolean isAdmin);
+  DashboardGraphResponse getInstaChart(
+      LocalDate startDate, LocalDate endDate, String requesterEmail, boolean isAdmin);
 
   DashboardResponse getOtpDashboard();
 
@@ -24,5 +27,13 @@ public interface DashboardService {
   DashboardGraphResponse getForgotPasswordChart(LocalDate startDate, LocalDate endDate);
 
   LoginLocationChartResponse getLoginLocationChart(
-      Long userId, String fromDate, String toDate, String requesterEmail, boolean isAdmin, List<Long> userIds);
+      Long userId,
+      String fromDate,
+      String toDate,
+      String requesterEmail,
+      boolean isAdmin,
+      List<Long> userIds);
+
+  ViolatedUsersDashboardResponse getViolatedUsersDashboard(
+      LocalDate startDate, LocalDate endDate, int page, int size, boolean includeIpInfo);
 }

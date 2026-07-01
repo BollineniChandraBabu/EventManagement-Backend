@@ -1,8 +1,8 @@
 package com.familywishes.service;
 
+import com.familywishes.dto.CommonDtos.PagedResponse;
 import com.familywishes.dto.NotificationDtos.NotificationRequest;
 import com.familywishes.dto.NotificationDtos.NotificationResponse;
-import java.util.List;
 
 public interface NotificationService {
   NotificationResponse create(NotificationRequest request);
@@ -11,7 +11,8 @@ public interface NotificationService {
 
   NotificationResponse getById(Long id);
 
-  List<NotificationResponse> getAll();
+  PagedResponse<NotificationResponse> getAll(
+      int page, int size, String searchKey, String sortBy, String sortDir);
 
   void delete(Long id);
 

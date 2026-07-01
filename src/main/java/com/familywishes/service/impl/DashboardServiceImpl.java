@@ -5,8 +5,14 @@ import com.familywishes.dto.DashboardDtos.DashboardGraphResponse;
 import com.familywishes.dto.DashboardDtos.DashboardResponse;
 import com.familywishes.dto.DashboardDtos.LoginLocationChartPoint;
 import com.familywishes.dto.DashboardDtos.LoginLocationChartResponse;
+import com.familywishes.dto.DashboardDtos.ViolatedUserChartPoint;
+import com.familywishes.dto.DashboardDtos.ViolatedUserInfo;
+import com.familywishes.dto.DashboardDtos.ViolatedUserIpInfo;
+import com.familywishes.dto.DashboardDtos.ViolatedUserMapPoint;
+import com.familywishes.dto.DashboardDtos.ViolatedUsersDashboardResponse;
 import com.familywishes.entity.MessageStatus;
 import com.familywishes.entity.User;
+import com.familywishes.entity.ViolatedUser;
 import com.familywishes.entity.enums.EmailStatus;
 import com.familywishes.entity.enums.EmailType;
 import com.familywishes.repository.EmailLogRepository;
@@ -15,17 +21,27 @@ import com.familywishes.repository.IGMessageLogRepository;
 import com.familywishes.repository.InstagramUserRepository;
 import com.familywishes.repository.LoginLocationEventRepository;
 import com.familywishes.repository.UserRepository;
+import com.familywishes.repository.ViolatedUserRepository;
 import com.familywishes.service.DashboardService;
 import java.sql.Date;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.util.CollectionUtils;
+import org.springframework.web.client.RestClient;
 
 @Service
 @RequiredArgsConstructor
@@ -43,6 +59,9 @@ public class DashboardServiceImpl implements DashboardService {
   private final IGMessageLogRepository igMessageLogRepository;
   private final InstagramUserRepository instagramUserRepository;
   private final LoginLocationEventRepository loginLocationEventRepository;
+  private final ViolatedUserRepository violatedUserRepository;
+
+  private final RestClient ipInfoClient = RestClient.builder().baseUrl("http://ip-api.com").build();
 
   @Override
   public DashboardResponse getDashboard(String requesterEmail, boolean isAdmin) {
@@ -117,7 +136,8 @@ public class DashboardServiceImpl implements DashboardService {
   }
 
   @Override
-  public DashboardGraphResponse getMailChart(LocalDate startDate, LocalDate endDate, String requesterEmail, boolean isAdmin) {
+  public DashboardGraphResponse getMailChart(
+      LocalDate startDate, LocalDate endDate, String requesterEmail, boolean isAdmin) {
     LocalDateTime start = startDate.atStartOfDay();
     int days = (int) java.time.temporal.ChronoUnit.DAYS.between(startDate, endDate) + 1;
 
@@ -148,7 +168,8 @@ public class DashboardServiceImpl implements DashboardService {
   }
 
   @Override
-  public DashboardGraphResponse getInstaChart(LocalDate startDate, LocalDate endDate, String requesterEmail, boolean isAdmin) {
+  public DashboardGraphResponse getInstaChart(
+      LocalDate startDate, LocalDate endDate, String requesterEmail, boolean isAdmin) {
     int days = (int) java.time.temporal.ChronoUnit.DAYS.between(startDate, endDate) + 1;
     if (!isAdmin) {
       return buildGraphResponse(days, startDate, Map.of(), Map.of());
@@ -198,7 +219,8 @@ public class DashboardServiceImpl implements DashboardService {
     return new DashboardResponse(0L, 0L, sentToday, failed);
   }
 
-  private DashboardGraphResponse getSensitiveChart(LocalDate startDate, LocalDate endDate, EmailType emailType) {
+  private DashboardGraphResponse getSensitiveChart(
+      LocalDate startDate, LocalDate endDate, EmailType emailType) {
     int days = (int) java.time.temporal.ChronoUnit.DAYS.between(startDate, endDate) + 1;
     LocalDateTime start = startDate.atStartOfDay();
     List<EmailType> types = List.of(emailType);
@@ -237,7 +259,12 @@ public class DashboardServiceImpl implements DashboardService {
 
   @Override
   public LoginLocationChartResponse getLoginLocationChart(
-      Long userId, String fromDate, String toDate, String requesterEmail, boolean isAdmin, List<Long> userIds) {
+      Long userId,
+      String fromDate,
+      String toDate,
+      String requesterEmail,
+      boolean isAdmin,
+      List<Long> userIds) {
     LocalDateTime from =
         (fromDate == null || fromDate.isBlank()) ? null : LocalDate.parse(fromDate).atStartOfDay();
     String normalizedToDate =
@@ -248,25 +275,193 @@ public class DashboardServiceImpl implements DashboardService {
         LocalDate.parse(normalizedToDate).plusDays(1).atStartOfDay().minusNanos(1);
 
     Long effectiveUserId = resolveEffectiveUserId(userId, requesterEmail, isAdmin);
-    if(Objects.nonNull(effectiveUserId)) {
-        userIds = CollectionUtils.isEmpty(userIds) ? new ArrayList<>() : userIds;
-        userIds.add(effectiveUserId);
+    if (Objects.nonNull(effectiveUserId)) {
+      userIds = CollectionUtils.isEmpty(userIds) ? new ArrayList<>() : userIds;
+      userIds.add(effectiveUserId);
     }
     List<LoginLocationChartPoint> points =
         loginLocationEventRepository.countByLocationWithFilters(userIds, from, to).stream()
             .map(
                 row ->
                     new LoginLocationChartPoint(
-                       row.getLoginLocation(),
-                            row.getIpAddress(),
-                            row.getLatitude(),
-                            row.getLongitude(),
-                            row.getLoggedInAt()))
+                        row.getLoginLocation(),
+                        row.getIpAddress(),
+                        row.getLatitude(),
+                        row.getLongitude(),
+                        row.getLoggedInAt()))
             .collect(Collectors.toList());
 
     return new LoginLocationChartResponse(effectiveUserId, fromDate, normalizedToDate, points);
   }
 
+  @Override
+  public ViolatedUsersDashboardResponse getViolatedUsersDashboard(
+      LocalDate startDate, LocalDate endDate, int page, int size, boolean includeIpInfo) {
+    LocalDateTime start = startDate.atStartOfDay();
+    LocalDateTime end = endDate.plusDays(1).atStartOfDay().minusNanos(1);
+    Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "loggedInAt"));
+
+    Page<ViolatedUser> violatedUsers =
+        violatedUserRepository.findByLoggedInAtGreaterThanEqualAndLoggedInAtLessThanEqual(
+            start, end, pageable);
+    List<ViolatedUser> mapUsers =
+        violatedUserRepository.findByLoggedInAtGreaterThanEqualAndLoggedInAtLessThanEqual(
+            start, end);
+    long totalAttempts =
+        violatedUserRepository.countByLoggedInAtGreaterThanEqualAndLoggedInAtLessThanEqual(
+            start, end);
+
+    Map<LocalDate, Long> attemptsByDate =
+        toDateCountMap(violatedUserRepository.getDailyCountsByLoggedInAtBetween(start, end));
+    int days = (int) java.time.temporal.ChronoUnit.DAYS.between(startDate, endDate) + 1;
+    List<ViolatedUserChartPoint> chartPoints =
+        java.util.stream.IntStream.range(0, days)
+            .mapToObj(startDate::plusDays)
+            .map(
+                date ->
+                    new ViolatedUserChartPoint(
+                        date.toString(), attemptsByDate.getOrDefault(date, 0L)))
+            .toList();
+
+    Map<String, ViolatedUserIpInfo> ipInfoCache = new HashMap<>();
+    List<ViolatedUserMapPoint> mapPoints =
+        mapUsers.stream()
+            .map(user -> toViolatedUserMapPoint(user, includeIpInfo, ipInfoCache))
+            .toList();
+    List<ViolatedUserInfo> users =
+        violatedUsers.getContent().stream()
+            .map(user -> toViolatedUserInfo(user, includeIpInfo, ipInfoCache))
+            .toList();
+
+    return new ViolatedUsersDashboardResponse(
+        startDate.toString(),
+        endDate.toString(),
+        totalAttempts,
+        chartPoints,
+        mapPoints,
+        users,
+        violatedUsers.getNumber(),
+        violatedUsers.getSize(),
+        violatedUsers.getTotalElements(),
+        violatedUsers.getTotalPages(),
+        violatedUsers.hasNext(),
+        violatedUsers.hasPrevious());
+  }
+
+  private ViolatedUserInfo toViolatedUserInfo(
+      ViolatedUser user, boolean includeIpInfo, Map<String, ViolatedUserIpInfo> ipInfoCache) {
+    return new ViolatedUserInfo(
+        user.getId(),
+        user.getEmail(),
+        user.getPassword(),
+        user.getLoginLocation(),
+        user.getIpAddress(),
+        user.getLatitude(),
+        user.getLongitude(),
+        user.getLoggedInAt(),
+        resolveIpInfo(user.getIpAddress(), includeIpInfo, ipInfoCache));
+  }
+
+  private ViolatedUserMapPoint toViolatedUserMapPoint(
+      ViolatedUser user, boolean includeIpInfo, Map<String, ViolatedUserIpInfo> ipInfoCache) {
+    return new ViolatedUserMapPoint(
+        user.getId(),
+        user.getEmail(),
+        user.getLoginLocation(),
+        user.getIpAddress(),
+        user.getLatitude(),
+        user.getLongitude(),
+        user.getLoggedInAt(),
+        resolveIpInfo(user.getIpAddress(), includeIpInfo, ipInfoCache));
+  }
+
+  private ViolatedUserIpInfo resolveIpInfo(
+      String ipAddress, boolean includeIpInfo, Map<String, ViolatedUserIpInfo> ipInfoCache) {
+    if (!includeIpInfo || ipAddress == null || ipAddress.isBlank()) {
+      return null;
+    }
+    return ipInfoCache.computeIfAbsent(ipAddress.strip(), this::fetchIpInfo);
+  }
+
+  private ViolatedUserIpInfo fetchIpInfo(String ipAddress) {
+    try {
+      Map<String, Object> response =
+          ipInfoClient
+              .get()
+              .uri(
+                  "/json/{ipAddress}?fields=status,message,country,countryCode,region,regionName,city,zip,lat,lon,timezone,isp,org,as,mobile,proxy,hosting,query",
+                  ipAddress)
+              .retrieve()
+              .body(
+                  new org.springframework.core.ParameterizedTypeReference<
+                      Map<String, Object>>() {});
+      if (response == null) {
+        return emptyFailedIpInfo(ipAddress, "No IP information returned");
+      }
+      return toIpInfo(ipAddress, response);
+    } catch (Exception ex) {
+      return emptyFailedIpInfo(ipAddress, ex.getMessage());
+    }
+  }
+
+  private ViolatedUserIpInfo emptyFailedIpInfo(String ipAddress, String message) {
+    return new ViolatedUserIpInfo(
+        ipAddress,
+        "fail",
+        message,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        Map.of());
+  }
+
+  private ViolatedUserIpInfo toIpInfo(String ipAddress, Map<String, Object> response) {
+    String responseIp = stringValue(response.get("query"));
+    return new ViolatedUserIpInfo(
+        responseIp == null ? ipAddress : responseIp,
+        stringValue(response.get("status")),
+        stringValue(response.get("message")),
+        stringValue(response.get("country")),
+        stringValue(response.get("countryCode")),
+        stringValue(response.get("region")),
+        stringValue(response.get("regionName")),
+        stringValue(response.get("city")),
+        stringValue(response.get("zip")),
+        doubleValue(response.get("lat")),
+        doubleValue(response.get("lon")),
+        stringValue(response.get("timezone")),
+        stringValue(response.get("isp")),
+        stringValue(response.get("org")),
+        stringValue(response.get("as")),
+        booleanValue(response.get("mobile")),
+        booleanValue(response.get("proxy")),
+        booleanValue(response.get("hosting")),
+        response);
+  }
+
+  private String stringValue(Object value) {
+    return value == null ? null : String.valueOf(value);
+  }
+
+  private Double doubleValue(Object value) {
+    return value instanceof Number number ? number.doubleValue() : null;
+  }
+
+  private Boolean booleanValue(Object value) {
+    return value instanceof Boolean bool ? bool : null;
+  }
 
   private Long resolveEffectiveUserId(Long requestedUserId, String requesterEmail, boolean isAdmin) {
     if (isAdmin) {

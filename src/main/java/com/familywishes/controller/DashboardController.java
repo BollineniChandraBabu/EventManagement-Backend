@@ -2,15 +2,16 @@ package com.familywishes.controller;
 
 import com.familywishes.chat.ChatDtos;
 import com.familywishes.chat.ChatService;
+import com.familywishes.dto.CommonDtos.PagedResponse;
 import com.familywishes.dto.DashboardDtos.DashboardGraphResponse;
-import com.familywishes.dto.DashboardDtos.LoginLocationChartResponse;
 import com.familywishes.dto.DashboardDtos.DashboardResponse;
+import com.familywishes.dto.DashboardDtos.LoginLocationChartResponse;
+import com.familywishes.dto.DashboardDtos.ViolatedUsersDashboardResponse;
 import com.familywishes.exception.BadRequestException;
 import com.familywishes.service.DashboardService;
 import java.time.LocalDate;
 import java.time.ZoneId;
 import java.util.List;
-
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
@@ -118,6 +119,25 @@ public class DashboardController {
         userId, startDate, endDate, authentication.getName(), isAdmin(authentication), userIds);
   }
 
+  @GetMapping("/violated-users")
+  @PreAuthorize("hasRole('ADMIN')")
+  public ViolatedUsersDashboardResponse violatedUsersDashboard(
+      @RequestParam String startDate,
+      @RequestParam String endDate,
+      @RequestParam(defaultValue = "0") int page,
+      @RequestParam(defaultValue = "50") int size,
+      @RequestParam(defaultValue = "true") boolean includeIpInfo) {
+    if (page < 0) {
+      throw new BadRequestException("page must not be negative");
+    }
+    if (size < 1 || size > 500) {
+      throw new BadRequestException("size must be between 1 and 500");
+    }
+    DateRange dateRange = validateInclusiveDateRange(startDate, endDate);
+    return dashboardService.getViolatedUsersDashboard(
+        dateRange.startDate(), dateRange.endDate(), page, size, includeIpInfo);
+  }
+
   @GetMapping("/chat/messages")
   public ChatDtos.GlobalMessagePageResponse chatMessages(
       @RequestParam(defaultValue = "0") int page,
@@ -127,21 +147,31 @@ public class DashboardController {
   }
 
   @GetMapping("/chat/users/active")
-  public java.util.List<ChatDtos.ChatUserResponse> activeChatUsers() {
-    return chatService.listActiveUsers();
+  public PagedResponse<ChatDtos.ChatUserResponse> activeChatUsers(
+      @RequestParam(defaultValue = "0") int page,
+      @RequestParam(defaultValue = "20") int size,
+      @RequestParam(defaultValue = "") String searchKey,
+      @RequestParam(defaultValue = "name") String sortBy,
+      @RequestParam(defaultValue = "asc") String sortDir) {
+    return chatService.listActiveUsers(page, size, searchKey, sortBy, sortDir);
   }
 
+  private DateRange validateInclusiveDateRange(String startDateParam, String endDateParam) {
+    DateRange dateRange = parseDateRange(startDateParam, endDateParam);
+    LocalDate today = LocalDate.now(ZoneId.systemDefault());
+    if (dateRange.endDate().isAfter(today)) {
+      throw new BadRequestException("endDate must not be greater than today");
+    }
+    if (dateRange.startDate().isAfter(dateRange.endDate())) {
+      throw new BadRequestException("startDate must be before or equal to endDate");
+    }
+    return dateRange;
+  }
 
   private DateRange validateDateRange(String startDateParam, String endDateParam) {
-    LocalDate startDate;
-    LocalDate endDate;
-
-    try {
-      startDate = LocalDate.parse(startDateParam);
-      endDate = LocalDate.parse(endDateParam);
-    } catch (Exception ex) {
-      throw new BadRequestException("Invalid date format. Use yyyy-MM-dd for startDate and endDate");
-    }
+    DateRange dateRange = parseDateRange(startDateParam, endDateParam);
+    LocalDate startDate = dateRange.startDate();
+    LocalDate endDate = dateRange.endDate();
 
     LocalDate today = LocalDate.now(ZoneId.systemDefault());
     if (endDate.isAfter(today)) {
@@ -152,6 +182,20 @@ public class DashboardController {
     }
     if (startDate.isAfter(endDate)) {
       throw new BadRequestException("startDate must be before endDate");
+    }
+
+    return dateRange;
+  }
+
+  private DateRange parseDateRange(String startDateParam, String endDateParam) {
+    LocalDate startDate;
+    LocalDate endDate;
+
+    try {
+      startDate = LocalDate.parse(startDateParam);
+      endDate = LocalDate.parse(endDateParam);
+    } catch (Exception ex) {
+      throw new BadRequestException("Invalid date format. Use yyyy-MM-dd for startDate and endDate");
     }
 
     return new DateRange(startDate, endDate);

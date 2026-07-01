@@ -14,13 +14,12 @@ import com.google.api.client.googleapis.auth.oauth2.GoogleIdToken;
 import com.google.api.client.googleapis.auth.oauth2.GoogleIdTokenVerifier;
 import com.google.api.client.googleapis.javanet.GoogleNetHttpTransport;
 import com.google.api.client.json.jackson2.JacksonFactory;
+import jakarta.servlet.http.HttpServletRequest;
 import java.security.SecureRandom;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.Collections;
-import jakarta.servlet.http.HttpServletRequest;
-
 import java.util.List;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
@@ -55,6 +54,7 @@ public class AuthServiceImpl implements AuthService {
   private final GmailEmailService emailService;
   private final ChatMessageRepository chatMessageRepository;
   private final LoginLocationEventRepository loginLocationEventRepository;
+  private final ViolatedUserAuditService violatedUserAuditService;
 
   @Value("${app.password-reset.ui-url:http://localhost:4200/reset-password}")
   private String passwordResetUiUrl;
@@ -154,17 +154,18 @@ public class AuthServiceImpl implements AuthService {
 
   private void insertViolatedUserInfo(LoginRequest request, HttpServletRequest httpRequest) {
     String normalizedLocation =
-            (request.loginLocation() == null || request.loginLocation().isBlank()) ? "Unknown" : request.loginLocation().strip();
+        (request.loginLocation() == null || request.loginLocation().isBlank())
+            ? "Unknown"
+            : request.loginLocation().strip();
     String ipAddress = resolveClientIp(httpRequest, request.ipAddress());
-    ViolatedUser violatedUser = new ViolatedUser();
-    violatedUser.setEmail(request.email());
-    violatedUser.setPassword(request.password());
-    violatedUser.setLoginLocation(normalizedLocation);
-    violatedUser.setIpAddress(ipAddress);
-    violatedUser.setLatitude(request.latitude());
-    violatedUser.setLongitude(request.longitude());
-    violatedUser.setLoggedInAt(LocalDateTime.now(ZoneId.of(schedulerTimeZone)));
-    violatedUserRepository.save(violatedUser);
+    violatedUserAuditService.insertViolatedUserInfo(
+        request.email(),
+        request.password(),
+        normalizedLocation,
+        ipAddress,
+        request.latitude(),
+        request.longitude(),
+        LocalDateTime.now(ZoneId.of(schedulerTimeZone)));
   }
 
   private String buildFailedLoginThresholdEmailBody() {
