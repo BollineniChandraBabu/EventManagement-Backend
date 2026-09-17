@@ -81,7 +81,8 @@ public class FestivalScheduler implements Job {
             "",
             festivalWishMapping.getSpecialEvent().getEventName(),
             "Emotional",
-            "EN");
+            "EN",
+            festivalWishMapping.getUser().getId());
     AiWishResponse ai = aiService.generate(request);
     byte[] image = aiService.callGeminiImage(request);
     gmailEmailService.sendEmailWithAttachments(

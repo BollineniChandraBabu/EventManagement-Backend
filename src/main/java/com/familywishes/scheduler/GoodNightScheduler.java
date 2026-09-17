@@ -46,7 +46,8 @@ public class GoodNightScheduler implements Job {
               "Good Night",
               "",
               "Emotional",
-              "EN");
+              "EN",
+              event.getUser().getId());
 
       AiWishResponse ai = aiService.generate(request);
 

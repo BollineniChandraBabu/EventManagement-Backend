@@ -96,6 +96,38 @@ public class SupabaseStorageService {
     return objectKey;
   }
 
+  public String uploadWishImage(MultipartFile file) {
+    if (file == null || file.isEmpty()) {
+      return null;
+    }
+    try {
+      String original = file.getOriginalFilename() == null ? "wish.png" : file.getOriginalFilename();
+      String safeName = original.replaceAll("[^a-zA-Z0-9._-]", "_");
+      String objectKey =
+          "Wish Images/"
+              + LocalDate.now().format(DateTimeFormatter.ISO_DATE)
+              + "/"
+              + UUID.randomUUID()
+              + "-"
+              + safeName;
+      PutObjectRequest request =
+          PutObjectRequest.builder()
+              .bucket(bucket)
+              .key(objectKey)
+              .contentType(file.getContentType())
+              .build();
+      s3Client.putObject(request, RequestBody.fromBytes(file.getBytes()));
+      return objectKey;
+    } catch (Exception ex) {
+      log.error("Failed to upload wish image", ex);
+      return null;
+    }
+  }
+
+  public String getPublicUrl(String objectKey) {
+    return objectKey == null ? null : toPublicUrl(objectKey);
+  }
+
   public String uploadChatAttachment(MultipartFile file) {
     if (file == null || file.isEmpty()) {
       return null;

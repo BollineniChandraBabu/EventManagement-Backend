@@ -8,4 +8,10 @@ public record AiWishRequest(
     String event,
     String festival,
     @NotBlank String tone,
-    @NotBlank String language) {}
+    @NotBlank String language,
+    Long userId) {
+  public AiWishRequest(
+      String name, String relation, String event, String festival, String tone, String language) {
+    this(name, relation, event, festival, tone, language, null);
+  }
+}

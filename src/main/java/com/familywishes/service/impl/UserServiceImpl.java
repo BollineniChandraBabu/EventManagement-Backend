@@ -232,7 +232,8 @@ public class UserServiceImpl implements UserService {
                 "BIRTHDAY",
                 "",
                 "Emotional",
-                "EN");
+                "EN",
+                user.getId());
         wishType = "BIRTHDAY";
       } else {
         request =
@@ -242,7 +243,8 @@ public class UserServiceImpl implements UserService {
                 "",
                 selectedFestival.getSpecialEvent().getEventName(),
                 "Emotional",
-                "EN");
+                "EN",
+                user.getId());
         wishType = "FESTIVAL";
       }
 
