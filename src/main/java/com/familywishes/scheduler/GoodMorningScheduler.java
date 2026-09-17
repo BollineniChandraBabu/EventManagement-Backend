@@ -49,7 +49,8 @@ public class GoodMorningScheduler implements Job {
               DEFAULT_EVENT,
               "",
               DEFAULT_TONE,
-              DEFAULT_LANGUAGE);
+              DEFAULT_LANGUAGE,
+              event.getUser().getId());
 
       AiWishResponse ai = aiService.generate(request);
       byte[] image = aiService.callGeminiImage(request);

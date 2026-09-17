@@ -4,6 +4,7 @@ import com.familywishes.dto.AiWishRequest;
 import com.familywishes.dto.AiWishResponse;
 import com.familywishes.exception.BadRequestException;
 import com.familywishes.service.AiService;
+import com.familywishes.service.WishImageService;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.List;
@@ -23,6 +24,7 @@ import org.springframework.web.util.UriComponentsBuilder;
 @Slf4j
 public class AiServiceImpl implements AiService {
   private final RestTemplate restTemplate;
+  private final WishImageService wishImageService;
 
   @Value("${app.gemini.api.key}")
   private String apiKey;
@@ -66,6 +68,11 @@ public class AiServiceImpl implements AiService {
   }
 
   public byte[] callGeminiImage(AiWishRequest request) {
+    byte[] uploadedImage =
+        wishImageService.findRandomImage(resolveImageEvent(request), request.userId());
+    if (uploadedImage != null && uploadedImage.length > 0) {
+      return uploadedImage;
+    }
     HttpHeaders headers = new HttpHeaders();
     if (StringUtils.hasText(pollinationsApiKey)) {
       headers.setBearerAuth(pollinationsApiKey);
@@ -93,6 +100,10 @@ public class AiServiceImpl implements AiService {
           ex.getResponseBodyAsString());
       return null;
     }
+  }
+
+  private String resolveImageEvent(AiWishRequest request) {
+    return StringUtils.hasText(request.event()) ? request.event() : request.festival();
   }
 
   @Override
