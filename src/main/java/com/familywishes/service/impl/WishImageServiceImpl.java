@@ -12,6 +12,7 @@ import com.familywishes.service.WishImageService;
 import java.util.List;
 import java.util.concurrent.ThreadLocalRandom;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
@@ -20,6 +21,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class WishImageServiceImpl implements WishImageService {
   private final WishImageRepository wishImageRepository;
   private final UserRepository userRepository;
@@ -93,7 +95,7 @@ public class WishImageServiceImpl implements WishImageService {
             searchKey == null ? "" : searchKey.trim(),
             eventType == null ? "" : eventType.trim(),
             userId,
-            active,
+            WishImage.toActiveFilter(active),
             PageRequest.of(Math.max(page, 0), Math.min(Math.max(size, 1), 100), sort));
     return new PagedResponse<>(
         result.getContent().stream().map(this::toResponse).toList(),

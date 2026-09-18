@@ -21,4 +21,6 @@ public abstract class ActivatableEntity extends AuditableEntity {
   @Convert(converter = BooleanToZeroOneConverter.class)
   @Builder.Default
   private boolean active = true;
+
+  public static int toActiveFilter(Boolean value) { if (value == null) { return -1; } return value ? 1 : 0; }
 }

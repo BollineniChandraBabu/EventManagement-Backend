@@ -52,13 +52,14 @@ public class FestivalScheduler implements Job {
     }
 
     for (FestivalWishMapping mapping : mappings) {
-      if (today.equals(mapping.getLastWishSentOn())) {
+      if (today.equals(mapping.getLastWishSentOn()) && !mapping.isError()) {
         continue;
       }
 
       try {
         sendFestivalWish(mapping);
       } catch (Exception e) {
+        mapping.setError(true);
         log.error(e.getMessage(), e);
         sendErrorEmail(mapping.getUser(), e);
       }
@@ -92,7 +93,7 @@ public class FestivalScheduler implements Job {
         null,
         image,
         EmailType.FESTIVAL_WISH);
-    log.info("Birthday wish sent to {}", festivalWishMapping.getUser().getEmail());
+    log.info("Festival wish for " +festivalWishMapping.getSpecialEvent().getEventName()  +" sent to " +festivalWishMapping.getUser().getEmail());
   }
 
   private void sendErrorEmail(User user, Exception e) {

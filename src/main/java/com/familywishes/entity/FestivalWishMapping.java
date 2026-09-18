@@ -1,5 +1,6 @@
 package com.familywishes.entity;
 
+import com.familywishes.entity.converter.BooleanToZeroOneConverter;
 import jakarta.persistence.*;
 import java.time.LocalDate;
 import lombok.*;
@@ -35,4 +36,9 @@ public class FestivalWishMapping extends ActivatableEntity {
   private String customMessage;
 
   private LocalDate lastWishSentOn;
+
+  @Column(nullable = false, columnDefinition = "SMALLINT")
+  @Convert(converter = BooleanToZeroOneConverter.class)
+  @Builder.Default
+  private boolean isError = false;
 }

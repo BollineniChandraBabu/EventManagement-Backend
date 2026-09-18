@@ -15,17 +15,19 @@ public interface WishImageRepository extends JpaRepository<WishImage, Long> {
 
   @Query(
       """
-      SELECT w FROM WishImage w
-      WHERE (:searchKey = '' OR LOWER(w.eventType) LIKE LOWER(CONCAT('%', :searchKey, '%'))
-             OR LOWER(COALESCE(w.user.name, '')) LIKE LOWER(CONCAT('%', :searchKey, '%')))
-        AND (:eventType = '' OR LOWER(w.eventType) = LOWER(:eventType))
-        AND (:userId IS NULL OR w.user.id = :userId)
-        AND (:active IS NULL OR w.active = :active)
+      SELECT w FROM WishImage w LEFT JOIN w.user u
+      WHERE (:searchKey IS NULL OR :searchKey = ''  OR LOWER(w.eventType) LIKE LOWER(CONCAT('%', :searchKey, '%'))
+             OR LOWER(u.name) LIKE LOWER(CONCAT('%', :searchKey, '%')))
+        AND (:eventType IS NULL or :eventType = '' OR LOWER(w.eventType) = LOWER(:eventType))
+        AND (:userId IS NULL OR u.id = :userId)
+        AND (:activeFilter = -1
+        OR (:activeFilter = 1 AND w.active = true)
+        OR (:activeFilter = 0 AND w.active = false))
       """)
   Page<WishImage> findAllFiltered(
       @Param("searchKey") String searchKey,
       @Param("eventType") String eventType,
       @Param("userId") Long userId,
-      @Param("active") Boolean active,
+      @Param("activeFilter") Integer activeFilter,
       Pageable pageable);
 }
