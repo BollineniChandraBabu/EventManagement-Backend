@@ -178,7 +178,7 @@ public class WishImageServiceImpl implements WishImageService {
         user == null ? null : user.getId(),
         user == null ? null : user.getName(),
         image.getEventType(),
-        storageService.getPublicUrl(image.getObjectKey()),
+        storageService.getSignedUrl(image.getObjectKey()),
         image.isActive(),
         image.getCreatedAt(),
         image.getUpdatedAt());
