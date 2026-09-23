@@ -74,7 +74,7 @@ public interface UserRepository extends JpaRepository<User, Long> {
                   """
             SELECT * FROM users s
             WHERE (EXTRACT(MONTH FROM s.birthday) = :month)
-            ORDER BY s.event_date
+            ORDER BY s.birthday
         """,
           nativeQuery = true)
   List<User> findByMonth(@Param("month") Integer month);
@@ -85,7 +85,7 @@ public interface UserRepository extends JpaRepository<User, Long> {
             SELECT * FROM users s
             WHERE (EXTRACT(MONTH FROM s.birthday) = :month)
             AND (u.email = :userEmail)
-            ORDER BY s.event_date
+            ORDER BY s.birthday
         """,
           nativeQuery = true)
   List<User> findByMonthAndUserEmail(@Param("month") Integer month, @Param("userEmail") String userEmail);
