@@ -1,5 +1,6 @@
 package com.familywishes.repository;
 
+import com.familywishes.entity.Event;
 import com.familywishes.entity.User;
 import java.util.List;
 import java.util.Optional;
@@ -66,4 +67,26 @@ public interface UserRepository extends JpaRepository<User, Long> {
          AND u.lastSeenAt < :staleBefore
       """)
   int markStaleUsersOffline(@Param("staleBefore") java.time.LocalDateTime staleBefore);
+
+
+  @Query(
+          value =
+                  """
+            SELECT * FROM users s
+            WHERE (EXTRACT(MONTH FROM s.birthday) = :month)
+            ORDER BY s.event_date
+        """,
+          nativeQuery = true)
+  List<User> findByMonth(@Param("month") Integer month);
+
+  @Query(
+          value =
+                  """
+            SELECT * FROM users s
+            WHERE (EXTRACT(MONTH FROM s.birthday) = :month)
+            AND (u.email = :userEmail)
+            ORDER BY s.event_date
+        """,
+          nativeQuery = true)
+  List<User> findByMonthAndUserEmail(@Param("month") Integer month, @Param("userEmail") String userEmail);
 }

@@ -284,6 +284,8 @@ public class DashboardServiceImpl implements DashboardService {
             .map(
                 row ->
                     new LoginLocationChartPoint(
+                            row.getUser().getEmail(),
+                        row.getUser().getName(),
                         row.getLoginLocation(),
                         row.getIpAddress(),
                         row.getLatitude(),

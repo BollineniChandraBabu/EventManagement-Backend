@@ -3,6 +3,8 @@ package com.familywishes.repository;
 import com.familywishes.entity.Event;
 import java.time.LocalDate;
 import java.util.List;
+
+import com.familywishes.entity.EventTypeSeed;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -39,4 +41,26 @@ public interface EventRepository extends JpaRepository<Event, Long> {
       @Param("userEmail") String userEmail,
       @Param("searchKey") String searchKey,
       Pageable pageable);
+
+
+  @Query(
+          value =
+                  """
+            SELECT * FROM events s
+            WHERE (EXTRACT(MONTH FROM s.event_date) = :month)
+            ORDER BY s.event_date
+        """,
+          nativeQuery = true)
+  List<Event> findByMonth(@Param("month") Integer month);
+
+  @Query(
+          value =
+                  """
+            SELECT * FROM events s JOIN users u ON u.id = s.user_id
+            WHERE (EXTRACT(MONTH FROM s.event_date) = :month)
+            AND (u.email = :userEmail)
+            ORDER BY s.event_date
+        """,
+          nativeQuery = true)
+  List<Event> findByMonthAndUserEmail(@Param("month") Integer month, @Param("userEmail") String userEmail);
 }

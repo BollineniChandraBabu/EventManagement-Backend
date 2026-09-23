@@ -16,6 +16,8 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 
+import java.util.List;
+
 @Service
 @RequiredArgsConstructor
 public class EventServiceImpl implements EventService {
@@ -87,6 +89,20 @@ public class EventServiceImpl implements EventService {
         events.getTotalPages(),
         events.hasNext(),
         events.hasPrevious());
+  }
+
+  @Override
+  public List<EventResponse> listByMonth(Integer month){
+    return eventRepository.findByMonth(month).stream().map(event -> {
+      return new EventResponse(event.getId(), event.getEventType().getDisplayName(), event.getEventDate(),event.isRecurring(), event.getUser().getName(), event.isActive());
+    }).toList();
+  }
+
+  @Override
+  public List<EventResponse> listByMonthAndUserEmail(Integer month, String userEmail) {
+    return eventRepository.findByMonthAndUserEmail(month, userEmail).stream().map(event -> {
+      return new EventResponse(event.getId(), event.getEventType().getDisplayName(), event.getEventDate(),event.isRecurring(), event.getUser().getName(), event.isActive());
+    }).toList();
   }
 
   private EventTypeSeed resolveEventType(String eventType) {

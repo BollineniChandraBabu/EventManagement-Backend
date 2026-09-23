@@ -161,6 +161,18 @@ public class UserServiceImpl implements UserService {
   }
 
   @Override
+  public List<UserResponse> listByMonth(
+          Integer month) {
+    return userRepository.findByMonth(month).stream().map(this::toUserResponse).toList();
+  }
+
+  @Override
+  public List<UserResponse> listByMonthAndUserEmail(
+          Integer month, String userEmail) {
+    return userRepository.findByMonthAndUserEmail(month, userEmail).stream().map(this::toUserResponse).toList();
+  }
+
+  @Override
   public UserResponse getById(Long id) {
     User user =
         userRepository.findById(id).orElseThrow(() -> new NotFoundException("User not found"));

@@ -3,6 +3,8 @@ package com.familywishes.service;
 import com.familywishes.dto.CommonDtos.PagedResponse;
 import com.familywishes.dto.EventDtos.*;
 
+import java.util.List;
+
 public interface EventService {
   EventResponse create(EventRequest request);
 
@@ -18,4 +20,8 @@ public interface EventService {
       String sortDir,
       boolean isAdmin,
       String userEmail);
+
+  List<EventResponse> listByMonth(Integer month);
+
+  List<EventResponse> listByMonthAndUserEmail(Integer month, String userEmail);
 }

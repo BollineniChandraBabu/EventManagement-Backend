@@ -3,6 +3,8 @@ package com.familywishes.repository;
 import com.familywishes.entity.EventTypeSeed;
 import java.util.List;
 import java.util.Optional;
+
+import com.familywishes.entity.SpecialEvent;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;

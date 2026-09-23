@@ -4,6 +4,8 @@ import com.familywishes.dto.CommonDtos.PagedResponse;
 import com.familywishes.dto.UserDtos.*;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.util.List;
+
 public interface UserService {
   UserResponse create(UserRequest request);
 
@@ -30,4 +32,8 @@ public interface UserService {
   void deactivate(Long id);
 
   UserResponse updateStatus(Long id, boolean active);
+
+  List<UserResponse> listByMonth(Integer month);
+
+  List<UserResponse> listByMonthAndUserEmail(Integer month, String userEmail);
 }
