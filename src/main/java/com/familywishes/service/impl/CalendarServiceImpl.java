@@ -38,9 +38,9 @@ public class CalendarServiceImpl implements CalendarService {
       eventResponses = eventService.listByMonthAndUserEmail(month, userEmail);
       userResponses = userService.listByMonthAndUserEmail(month, userEmail);
     }
-    calendarResponses.addAll(festivalResponses.stream().map(festivalResponse -> new CalendarResponse(festivalResponse.id(),festivalResponse.eventName(),festivalResponse.eventDate(),festivalResponse.active())).toList());
-    calendarResponses.addAll(eventResponses.stream().map(eventResponse -> new CalendarResponse(eventResponse.id(),eventResponse.eventType(),eventResponse.eventDate(),eventResponse.active())).toList());
-    calendarResponses.addAll(userResponses.stream().map(userResponse -> new CalendarResponse(userResponse.id(), "Birthday", userResponse.dateOfBirth(),userResponse.active())).toList());
+    calendarResponses.addAll(festivalResponses.stream().map(festivalResponse -> new CalendarResponse(festivalResponse.id(),"Festival",festivalResponse.eventName(),festivalResponse.eventDate(),festivalResponse.active())).toList());
+    calendarResponses.addAll(eventResponses.stream().map(eventResponse -> new CalendarResponse(eventResponse.id(),"Anniversary", eventResponse.eventType(),eventResponse.eventDate(),eventResponse.active())).toList());
+    calendarResponses.addAll(userResponses.stream().map(userResponse -> new CalendarResponse(userResponse.id(), "Birthday", userResponse.name(), userResponse.dateOfBirth(),userResponse.active())).toList());
     return calendarResponses;
   }
 }
