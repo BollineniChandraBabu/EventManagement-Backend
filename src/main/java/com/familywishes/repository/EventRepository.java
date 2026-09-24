@@ -43,24 +43,21 @@ public interface EventRepository extends JpaRepository<Event, Long> {
       Pageable pageable);
 
 
-  @Query(
-          value =
-                  """
-            SELECT * FROM events s
-            WHERE (EXTRACT(MONTH FROM s.event_date) = :month)
-            ORDER BY s.event_date
-        """,
-          nativeQuery = true)
+  @Query("""
+    SELECT e
+    FROM Event e
+    WHERE MONTH(e.eventDate) = :month
+    ORDER BY e.eventDate
+    """)
   List<Event> findByMonth(@Param("month") Integer month);
 
-  @Query(
-          value =
-                  """
-            SELECT * FROM events s JOIN users u ON u.id = s.user_id
-            WHERE (EXTRACT(MONTH FROM s.event_date) = :month)
-            AND (u.email = :userEmail)
-            ORDER BY s.event_date
-        """,
-          nativeQuery = true)
+  @Query("""
+    SELECT e
+    FROM Event e
+    JOIN e.user u
+    WHERE MONTH(e.eventDate) = :month
+      AND u.email = :userEmail
+    ORDER BY e.eventDate
+    """)
   List<Event> findByMonthAndUserEmail(@Param("month") Integer month, @Param("userEmail") String userEmail);
 }

@@ -12,14 +12,12 @@ import org.springframework.data.repository.query.Param;
 
 public interface SpecialEventRepository extends JpaRepository<SpecialEvent, Long> {
 
-  @Query(
-      value =
-          """
-    SELECT * FROM seed_special_events s
-    WHERE (:month IS NULL OR EXTRACT(MONTH FROM s.event_date) = :month)
-    ORDER BY s.event_date, s.event_name
-""",
-      nativeQuery = true)
+  @Query("""
+    SELECT s
+    FROM SpecialEvent s
+    WHERE (:month IS NULL OR MONTH(s.eventDate) = :month)
+    ORDER BY s.eventDate, s.eventName
+    """)
   List<SpecialEvent> findByMonth(@Param("month") Integer month);
 
   @Query(

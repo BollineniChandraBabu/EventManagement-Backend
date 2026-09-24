@@ -69,24 +69,20 @@ public interface UserRepository extends JpaRepository<User, Long> {
   int markStaleUsersOffline(@Param("staleBefore") java.time.LocalDateTime staleBefore);
 
 
-  @Query(
-          value =
-                  """
-            SELECT * FROM users s
-            WHERE (EXTRACT(MONTH FROM s.birthday) = :month)
-            ORDER BY s.birthday
-        """,
-          nativeQuery = true)
+  @Query("""
+    SELECT u
+    FROM User u
+    WHERE MONTH(u.birthday) = :month
+    ORDER BY u.birthday
+    """)
   List<User> findByMonth(@Param("month") Integer month);
 
-  @Query(
-          value =
-                  """
-            SELECT * FROM users s
-            WHERE (EXTRACT(MONTH FROM s.birthday) = :month)
-            AND (u.email = :userEmail)
-            ORDER BY s.birthday
-        """,
-          nativeQuery = true)
+  @Query("""
+    SELECT u
+    FROM User u
+    WHERE MONTH(u.birthday) = :month
+      AND u.email = :userEmail
+    ORDER BY u.birthday
+    """)
   List<User> findByMonthAndUserEmail(@Param("month") Integer month, @Param("userEmail") String userEmail);
 }
