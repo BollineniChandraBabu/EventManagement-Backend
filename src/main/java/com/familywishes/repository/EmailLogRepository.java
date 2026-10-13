@@ -18,6 +18,15 @@ public interface EmailLogRepository extends JpaRepository<EmailLog, Long> {
 
   long countByStatus(EmailStatus status);
 
+  List<EmailLog> findTop5ByRecipientUserIdAndStatusOrderBySentAtDesc(
+      Long userId, EmailStatus status);
+
+  @EntityGraph(attributePaths = "recipientUser")
+  List<EmailLog> findTop20ByStatusOrderByIdDesc(EmailStatus status);
+
+  @EntityGraph(attributePaths = "recipientUser")
+  java.util.Optional<EmailLog> findWithRecipientById(Long id);
+
   long countByStatusAndSentAtGreaterThanEqualAndSentAtLessThan(
       EmailStatus status, LocalDateTime startTime, LocalDateTime endTime);
 

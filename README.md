@@ -164,3 +164,12 @@ Example request:
 curl "https://gen.pollinations.ai/image/a beautiful sunset over mountains?model=imagen-4" \
   --header "Authorization: Bearer <your_pollinations_api_key>"
 ```
+
+## Agentic AI (`com.familywishes.agent`)
+All agents are **off by default** and share one tool-calling loop (`AgentRunner`) on top of the existing Gemini endpoint.
+
+| Agent | What it does | Flag |
+|---|---|---|
+| `WishComposerAgent` | Reads recipient profile + recent wishes, drafts, and must pass a validator tool (`submit_wish`) before the wish is accepted. Wired in via a `@Primary` `AgenticAiService`, so all schedulers/endpoints benefit; falls back to the old single prompt on any failure. | `AGENT_WISH_ENABLED` |
+| `DeliveryOpsAgent` | Every 30 min (only when failed emails exist): classifies errors, retries transient ones, sends at most one admin alert. Dry-run by default. | `AGENT_DELIVERY_OPS_ENABLED`, `AGENT_DELIVERY_OPS_DRY_RUN` |
+| `AdminCopilotAgent` | `POST /api/agent/admin/ask` - read-only natural-language questions about email stats, failed logins, birthdays. Admin only. | `AGENT_COPILOT_ENABLED` |

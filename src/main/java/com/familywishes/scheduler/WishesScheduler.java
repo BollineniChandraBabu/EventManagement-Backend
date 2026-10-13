@@ -46,6 +46,7 @@ public class WishesScheduler implements Job {
           try {
             AiWishRequest request =
                 buildRequest(
+                    event.getUser().getId(),
                     event.getUser().getName(),
                     event.getUser().getRelationShip().getCode(),
                     event.getEventType().getCode());
@@ -62,7 +63,7 @@ public class WishesScheduler implements Job {
     log.info("Daily wish job completed");
   }
 
-  private AiWishRequest buildRequest(String name, String relation, String eventType) {
-    return new AiWishRequest(name, relation, eventType, "", DEFAULT_TONE, DEFAULT_LANGUAGE);
+  private AiWishRequest buildRequest(Long userId, String name, String relation, String eventType) {
+    return new AiWishRequest(name, relation, eventType, "", DEFAULT_TONE, DEFAULT_LANGUAGE, userId);
   }
 }
