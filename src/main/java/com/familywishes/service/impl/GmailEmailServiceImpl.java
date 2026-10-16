@@ -332,7 +332,7 @@ public class GmailEmailServiceImpl implements GmailEmailService {
     if(emailLogOptional.isPresent()) {
       logRepository.deleteById(id);
       if(Objects.nonNull(emailLogOptional.get().getImageUrl())) {
-        supabaseStorageService.deleteObject(emailLogOptional.get().getImageUrl());
+        supabaseStorageService.deleteByPublicUrl(emailLogOptional.get().getImageUrl());
       }
     }else {
       throw new NotFoundException("Email Info not found for ID: " +id);
