@@ -55,4 +55,6 @@ public interface GmailEmailService {
       Long logId,
       byte[] image,
       com.familywishes.entity.enums.EmailType emailType);
+
+  void deleteEmailStatus(Long id);
 }

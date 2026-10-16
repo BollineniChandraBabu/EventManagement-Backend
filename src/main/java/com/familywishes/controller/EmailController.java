@@ -9,13 +9,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping({"/api/email", "/api/emails"})
@@ -93,6 +87,12 @@ public class EmailController {
             .anyMatch("ROLE_ADMIN"::equals);
     return emailService.getFestivalWishStatus(
         page, size, searchKey, authentication.getName(), isAdmin, sortBy, sortDir);
+  }
+
+  @DeleteMapping("/status/{id}")
+  @PreAuthorize("hasRole('ADMIN')")
+  public void deleteWishStatus(@PathVariable Long id) {
+    emailService.deleteEmailStatus(id);
   }
 
   @GetMapping("/status/unread-chat-messages")

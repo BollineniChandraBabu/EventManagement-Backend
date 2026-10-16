@@ -329,6 +329,10 @@ public class GmailEmailServiceImpl implements GmailEmailService {
     return toEmailStatusResponse(log);
   }
 
+  public void deleteEmailStatus(Long id){
+    logRepository.deleteById(id);
+  }
+
   @Override
   public void sendTestEmail(String to) {
     sendEmailWithAttachments(
