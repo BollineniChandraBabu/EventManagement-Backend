@@ -23,10 +23,8 @@ import jakarta.mail.util.ByteArrayDataSource;
 import java.io.ByteArrayOutputStream;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
-import java.util.Base64;
-import java.util.List;
-import java.util.Locale;
-import java.util.Properties;
+import java.util.*;
+
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.annotation.Lazy;
@@ -330,7 +328,15 @@ public class GmailEmailServiceImpl implements GmailEmailService {
   }
 
   public void deleteEmailStatus(Long id){
-    logRepository.deleteById(id);
+    Optional<EmailLog> emailLogOptional = logRepository.findById(id);
+    if(emailLogOptional.isPresent()) {
+      logRepository.deleteById(id);
+      if(Objects.nonNull(emailLogOptional.get().getImageUrl())) {
+        supabaseStorageService.deleteObject(emailLogOptional.get().getImageUrl());
+      }
+    }else {
+      throw new NotFoundException("Email Info not found for ID: " +id);
+    }
   }
 
   @Override
