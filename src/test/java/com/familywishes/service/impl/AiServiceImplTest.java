@@ -10,7 +10,9 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.familywishes.ai.GeminiClient;
 import com.familywishes.dto.AiWishRequest;
+import com.familywishes.service.WishImageService;
 import com.familywishes.exception.BadRequestException;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import java.util.Map;
@@ -32,12 +34,14 @@ import org.springframework.web.client.RestTemplate;
 class AiServiceImplTest {
 
   @Mock private RestTemplate restTemplate;
+  @Mock private WishImageService wishImageService;
+  @Mock private GeminiClient geminiClient;
 
   private AiServiceImpl aiService;
 
   @BeforeEach
   void setUp() {
-    aiService = new AiServiceImpl(restTemplate);
+    aiService = new AiServiceImpl(restTemplate, wishImageService, geminiClient);
     ReflectionTestUtils.setField(
         aiService, "pollinationsImageUrl", "https://gen.pollinations.ai/image/");
     ReflectionTestUtils.setField(aiService, "pollinationsApiKey", "secret-key");
@@ -117,5 +121,27 @@ class AiServiceImplTest {
         .thenThrow(unauthorized);
 
     assertThrows(BadRequestException.class, () -> aiService.getPollinationsBalance());
+  }
+
+  @Test
+  void generateShouldParseWishFromGeminiClientResponse() throws JsonProcessingException {
+    AiWishRequest request = new AiWishRequest("John", "Family", "Birthday", "", "Warm", "EN");
+    Map<String, Object> response =
+        Map.of(
+            "candidates",
+            java.util.List.of(
+                Map.of(
+                    "content",
+                    Map.of(
+                        "parts",
+                        java.util.List.of(
+                            Map.of(
+                                "text",
+                                "{\"subject\":\"Happy Birthday John\",\"htmlMessage\":\"<p>Hi John</p>\"}"))))));
+    when(geminiClient.generateContent(any())).thenReturn(response);
+
+    var wish = aiService.generate(request);
+
+    assertEquals("Happy Birthday John", wish.subject());
   }
 }

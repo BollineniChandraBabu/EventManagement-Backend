@@ -173,3 +173,13 @@ All agents are **off by default** and share one tool-calling loop (`AgentRunner`
 | `WishComposerAgent` | Reads recipient profile + recent wishes, drafts, and must pass a validator tool (`submit_wish`) before the wish is accepted. Wired in via a `@Primary` `AgenticAiService`, so all schedulers/endpoints benefit; falls back to the old single prompt on any failure. | `AGENT_WISH_ENABLED` |
 | `DeliveryOpsAgent` | Every 30 min (only when failed emails exist): classifies errors, retries transient ones, sends at most one admin alert. Dry-run by default. | `AGENT_DELIVERY_OPS_ENABLED`, `AGENT_DELIVERY_OPS_DRY_RUN` |
 | `AdminCopilotAgent` | `POST /api/agent/admin/ask` - read-only natural-language questions about email stats, failed logins, birthdays. Admin only. | `AGENT_COPILOT_ENABLED` |
+
+## Gemini model fallback (`com.familywishes.ai`)
+All Gemini text calls (wishes and agents) go through `GeminiClient`:
+
+1. It calls the model in `GEMINI_API_URL`.
+2. On a rate limit (429), a missing model (404), a server error (5xx) or a timeout, it tries the next model from `GeminiModelCatalog`, at most `GEMINI_FALLBACK_MAX_RETRIES` (default 5) extra times.
+3. A model that just failed is skipped for `GEMINI_FALLBACK_COOLDOWN_SECONDS` (default 60).
+4. If nothing answers, the API returns `503`. Other errors (bad key, bad request) are not retried.
+
+`GeminiModelCatalog` asks Google which models can generate text and caches the list for `GEMINI_FALLBACK_MODEL_CACHE_MINUTES` (default 60), so new models are picked up and retired ones disappear automatically. No model names are configured anywhere. `GEMINI_FALLBACK_EXCLUDED_MODEL_PATTERN` is a regex for kinds of models to skip (embedding, image, audio, preview, ...). Set `GEMINI_FALLBACK_MAX_RETRIES=0` to turn the fallback off.

@@ -32,6 +32,13 @@ public class GlobalExceptionHandler {
         HttpStatus.BAD_REQUEST, ex.getBindingResult().getAllErrors().get(0).getDefaultMessage());
   }
 
+  @ExceptionHandler(AiUnavailableException.class)
+  public ResponseEntity<?> handleAiUnavailable(AiUnavailableException ex) {
+    return build(
+        HttpStatus.SERVICE_UNAVAILABLE,
+        "The AI service is busy right now. Please try again in a minute.");
+  }
+
   @ExceptionHandler(Exception.class)
   public ResponseEntity<?> fallback(Exception ex) {
     return build(HttpStatus.INTERNAL_SERVER_ERROR, ex.getMessage());

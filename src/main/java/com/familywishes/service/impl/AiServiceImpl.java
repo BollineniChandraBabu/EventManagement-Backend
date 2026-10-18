@@ -1,5 +1,6 @@
 package com.familywishes.service.impl;
 
+import com.familywishes.ai.GeminiClient;
 import com.familywishes.dto.AiWishRequest;
 import com.familywishes.dto.AiWishResponse;
 import com.familywishes.exception.BadRequestException;
@@ -25,12 +26,7 @@ import org.springframework.web.util.UriComponentsBuilder;
 public class AiServiceImpl implements AiService {
   private final RestTemplate restTemplate;
   private final WishImageService wishImageService;
-
-  @Value("${app.gemini.api.key}")
-  private String apiKey;
-
-  @Value("${app.gemini.api.url}")
-  private String apiURL;
+  private final GeminiClient geminiClient;
 
   @Value("${app.pollinations.image.url}")
   private String pollinationsImageUrl;
@@ -50,12 +46,9 @@ public class AiServiceImpl implements AiService {
 
     Map<String, Object> body =
         Map.of("contents", List.of(Map.of("parts", List.of(Map.of("text", prompt)))));
-    HttpHeaders headers = new HttpHeaders();
-    headers.setContentType(MediaType.APPLICATION_JSON);
-    ResponseEntity<Map> response =
-        restTemplate.exchange(
-            apiURL + apiKey, HttpMethod.POST, new HttpEntity<>(body, headers), Map.class);
-    var candidates = (List<Map<String, Object>>) response.getBody().get("candidates");
+    // Model fallback / retry on 429 and outages is handled inside GeminiClient.
+    Map<String, Object> response = geminiClient.generateContent(body);
+    var candidates = (List<Map<String, Object>>) response.get("candidates");
     if (candidates == null || candidates.isEmpty())
       throw new BadRequestException("AI response missing");
     Map<String, Object> content = (Map<String, Object>) candidates.get(0).get("content");
