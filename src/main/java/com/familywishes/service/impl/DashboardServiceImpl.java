@@ -1,5 +1,6 @@
 package com.familywishes.service.impl;
 
+import com.familywishes.config.CacheNames;
 import com.familywishes.dto.DashboardDtos.DashboardGraphPoint;
 import com.familywishes.dto.DashboardDtos.DashboardGraphResponse;
 import com.familywishes.dto.DashboardDtos.DashboardResponse;
@@ -10,6 +11,7 @@ import com.familywishes.dto.DashboardDtos.ViolatedUserInfo;
 import com.familywishes.dto.DashboardDtos.ViolatedUserIpInfo;
 import com.familywishes.dto.DashboardDtos.ViolatedUserMapPoint;
 import com.familywishes.dto.DashboardDtos.ViolatedUsersDashboardResponse;
+import com.familywishes.entity.LoginLocationEvent;
 import com.familywishes.entity.MessageStatus;
 import com.familywishes.entity.User;
 import com.familywishes.entity.ViolatedUser;
@@ -35,13 +37,13 @@ import java.util.Objects;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.util.CollectionUtils;
-import org.springframework.web.client.RestClient;
 
 @Service
 @RequiredArgsConstructor
@@ -49,6 +51,9 @@ public class DashboardServiceImpl implements DashboardService {
 
   @Value("${scheduler.time-zone:Asia/Kolkata}")
   private String schedulerTimeZone;
+
+  /** Most login events returned at once; the dashboard asks for a narrower range to see more. */
+  private static final int MAX_LOGIN_LOCATION_POINTS = 1000;
 
   private static final List<EmailType> SENSITIVE_TYPES =
       List.of(EmailType.OTP, EmailType.FORGOT_PASSWORD);
@@ -60,10 +65,12 @@ public class DashboardServiceImpl implements DashboardService {
   private final InstagramUserRepository instagramUserRepository;
   private final LoginLocationEventRepository loginLocationEventRepository;
   private final ViolatedUserRepository violatedUserRepository;
-
-  private final RestClient ipInfoClient = RestClient.builder().baseUrl("http://ip-api.com").build();
+  private final IpInfoService ipInfoService;
 
   @Override
+  @Cacheable(
+      cacheNames = CacheNames.DASHBOARD_SUMMARY,
+      key = "#isAdmin ? 'admin' : #requesterEmail")
   public DashboardResponse getDashboard(String requesterEmail, boolean isAdmin) {
     LocalDate today = LocalDate.now(ZoneId.of(schedulerTimeZone));
     LocalDateTime startOfDay = today.atStartOfDay();
@@ -279,21 +286,28 @@ public class DashboardServiceImpl implements DashboardService {
       userIds = CollectionUtils.isEmpty(userIds) ? new ArrayList<>() : userIds;
       userIds.add(effectiveUserId);
     }
-    List<LoginLocationChartPoint> points =
-        loginLocationEventRepository.countByLocationWithFilters(userIds, from, to).stream()
-            .map(
-                row ->
-                    new LoginLocationChartPoint(
-                            row.getUser().getEmail(),
-                        row.getUser().getName(),
-                        row.getLoginLocation(),
-                        row.getIpAddress(),
-                        row.getLatitude(),
-                        row.getLongitude(),
-                        row.getLoggedInAt()))
-            .collect(Collectors.toList());
+    // One extra row tells us whether older logins were left out.
+    List<LoginLocationEvent> events =
+        loginLocationEventRepository.findNewestWithUser(
+            userIds, from, to, PageRequest.of(0, MAX_LOGIN_LOCATION_POINTS + 1));
+    boolean truncated = events.size() > MAX_LOGIN_LOCATION_POINTS;
 
-    return new LoginLocationChartResponse(effectiveUserId, fromDate, normalizedToDate, points);
+    List<LoginLocationChartPoint> points =
+        events.stream().limit(MAX_LOGIN_LOCATION_POINTS).map(this::toLoginLocationPoint).toList();
+
+    return new LoginLocationChartResponse(
+        effectiveUserId, fromDate, normalizedToDate, points, truncated);
+  }
+
+  private LoginLocationChartPoint toLoginLocationPoint(LoginLocationEvent event) {
+    return new LoginLocationChartPoint(
+        event.getUser().getEmail(),
+        event.getUser().getName(),
+        event.getLoginLocation(),
+        event.getIpAddress(),
+        event.getLatitude(),
+        event.getLongitude(),
+        event.getLoggedInAt());
   }
 
   @Override
@@ -325,14 +339,13 @@ public class DashboardServiceImpl implements DashboardService {
                         date.toString(), attemptsByDate.getOrDefault(date, 0L)))
             .toList();
 
-    Map<String, ViolatedUserIpInfo> ipInfoCache = new HashMap<>();
     List<ViolatedUserMapPoint> mapPoints =
         mapUsers.stream()
-            .map(user -> toViolatedUserMapPoint(user, includeIpInfo, ipInfoCache))
+            .map(user -> toViolatedUserMapPoint(user, includeIpInfo))
             .toList();
     List<ViolatedUserInfo> users =
         violatedUsers.getContent().stream()
-            .map(user -> toViolatedUserInfo(user, includeIpInfo, ipInfoCache))
+            .map(user -> toViolatedUserInfo(user, includeIpInfo))
             .toList();
 
     return new ViolatedUsersDashboardResponse(
@@ -351,7 +364,7 @@ public class DashboardServiceImpl implements DashboardService {
   }
 
   private ViolatedUserInfo toViolatedUserInfo(
-      ViolatedUser user, boolean includeIpInfo, Map<String, ViolatedUserIpInfo> ipInfoCache) {
+      ViolatedUser user, boolean includeIpInfo) {
     return new ViolatedUserInfo(
         user.getId(),
         user.getEmail(),
@@ -361,11 +374,11 @@ public class DashboardServiceImpl implements DashboardService {
         user.getLatitude(),
         user.getLongitude(),
         user.getLoggedInAt(),
-        resolveIpInfo(user.getIpAddress(), includeIpInfo, ipInfoCache));
+        resolveIpInfo(user.getIpAddress(), includeIpInfo));
   }
 
   private ViolatedUserMapPoint toViolatedUserMapPoint(
-      ViolatedUser user, boolean includeIpInfo, Map<String, ViolatedUserIpInfo> ipInfoCache) {
+      ViolatedUser user, boolean includeIpInfo) {
     return new ViolatedUserMapPoint(
         user.getId(),
         user.getEmail(),
@@ -374,95 +387,14 @@ public class DashboardServiceImpl implements DashboardService {
         user.getLatitude(),
         user.getLongitude(),
         user.getLoggedInAt(),
-        resolveIpInfo(user.getIpAddress(), includeIpInfo, ipInfoCache));
+        resolveIpInfo(user.getIpAddress(), includeIpInfo));
   }
 
-  private ViolatedUserIpInfo resolveIpInfo(
-      String ipAddress, boolean includeIpInfo, Map<String, ViolatedUserIpInfo> ipInfoCache) {
+  private ViolatedUserIpInfo resolveIpInfo(String ipAddress, boolean includeIpInfo) {
     if (!includeIpInfo || ipAddress == null || ipAddress.isBlank()) {
       return null;
     }
-    return ipInfoCache.computeIfAbsent(ipAddress.strip(), this::fetchIpInfo);
-  }
-
-  private ViolatedUserIpInfo fetchIpInfo(String ipAddress) {
-    try {
-      Map<String, Object> response =
-          ipInfoClient
-              .get()
-              .uri(
-                  "/json/{ipAddress}?fields=status,message,country,countryCode,region,regionName,city,zip,lat,lon,timezone,isp,org,as,mobile,proxy,hosting,query",
-                  ipAddress)
-              .retrieve()
-              .body(
-                  new org.springframework.core.ParameterizedTypeReference<
-                      Map<String, Object>>() {});
-      if (response == null) {
-        return emptyFailedIpInfo(ipAddress, "No IP information returned");
-      }
-      return toIpInfo(ipAddress, response);
-    } catch (Exception ex) {
-      return emptyFailedIpInfo(ipAddress, ex.getMessage());
-    }
-  }
-
-  private ViolatedUserIpInfo emptyFailedIpInfo(String ipAddress, String message) {
-    return new ViolatedUserIpInfo(
-        ipAddress,
-        "fail",
-        message,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        Map.of());
-  }
-
-  private ViolatedUserIpInfo toIpInfo(String ipAddress, Map<String, Object> response) {
-    String responseIp = stringValue(response.get("query"));
-    return new ViolatedUserIpInfo(
-        responseIp == null ? ipAddress : responseIp,
-        stringValue(response.get("status")),
-        stringValue(response.get("message")),
-        stringValue(response.get("country")),
-        stringValue(response.get("countryCode")),
-        stringValue(response.get("region")),
-        stringValue(response.get("regionName")),
-        stringValue(response.get("city")),
-        stringValue(response.get("zip")),
-        doubleValue(response.get("lat")),
-        doubleValue(response.get("lon")),
-        stringValue(response.get("timezone")),
-        stringValue(response.get("isp")),
-        stringValue(response.get("org")),
-        stringValue(response.get("as")),
-        booleanValue(response.get("mobile")),
-        booleanValue(response.get("proxy")),
-        booleanValue(response.get("hosting")),
-        response);
-  }
-
-  private String stringValue(Object value) {
-    return value == null ? null : String.valueOf(value);
-  }
-
-  private Double doubleValue(Object value) {
-    return value instanceof Number number ? number.doubleValue() : null;
-  }
-
-  private Boolean booleanValue(Object value) {
-    return value instanceof Boolean bool ? bool : null;
+    return ipInfoService.lookup(ipAddress.strip());
   }
 
   private Long resolveEffectiveUserId(Long requestedUserId, String requesterEmail, boolean isAdmin) {

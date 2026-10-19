@@ -2,6 +2,7 @@ package com.familywishes.service;
 
 import com.familywishes.dto.CommonDtos.PagedResponse;
 import com.familywishes.dto.EmailDtos;
+import com.familywishes.dto.EmailImage;
 
 public interface GmailEmailService {
   void sendEmailWithAttachments(String to, String subject, String html, Long logId, byte[] image);
@@ -43,6 +44,12 @@ public interface GmailEmailService {
       String sortDir);
 
   EmailDtos.EmailStatusResponse getStatusById(Long id, String requesterEmail);
+
+  /**
+   * The image of one email, loaded on demand (the status lists only say whether there is one).
+   * Admins may open any email; everyone else only their own non-sensitive ones.
+   */
+  EmailImage getImage(Long id, String requesterEmail, boolean isAdmin);
 
   void sendTestEmail(String to);
 

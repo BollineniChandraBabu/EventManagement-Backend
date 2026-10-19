@@ -183,3 +183,20 @@ All Gemini text calls (wishes and agents) go through `GeminiClient`:
 4. If nothing answers, the API returns `503`. Other errors (bad key, bad request) are not retried.
 
 `GeminiModelCatalog` asks Google which models can generate text and caches the list for `GEMINI_FALLBACK_MODEL_CACHE_MINUTES` (default 60), so new models are picked up and retired ones disappear automatically. No model names are configured anywhere. `GEMINI_FALLBACK_EXCLUDED_MODEL_PATTERN` is a regex for kinds of models to skip (embedding, image, audio, preview, ...). Set `GEMINI_FALLBACK_MAX_RETRIES=0` to turn the fallback off.
+
+## Caching (Ehcache)
+Configured in `src/main/resources/ehcache.xml`. Every cache has a size limit and an expiry, so memory use stays bounded (`CacheConfigurationTest` enforces this and checks that each name in `CacheNames` is declared).
+
+| Cache | What | Lifetime | Cleared when |
+|---|---|---|---|
+| `seedData` + query cache (Hibernate) | event types, relationships, template types and the lookups by code done on every user/event save and email send | 1 h | Hibernate clears it itself when a row changes |
+| `emailImages` | an email's image, loaded on demand through `GET /api/emails/status/{id}/image` | 15 min | the email is deleted |
+| `ipInfo` | IP geolocation from ip-api.com (45 requests/min limit); failures are not cached | 24 h | expiry |
+| `festivalsByMonth` | festivals of a month for the calendar | 6 h | festival sync, or any special-event create/update/delete |
+| `dashboardSummary` | the four dashboard counters | 60 s | expiry |
+
+Cached values must implement `Serializable` (so the caches also work if they are ever configured to store by value).
+
+## Email status API and images
+`GET /api/emails/status` (and the other status lists) no longer include image data; each row only has `hasImage`. Fetch the picture when it is needed with `GET /api/emails/status/{id}/image` (same access rules as the status endpoints: admins see everything, other users only their own non-sensitive emails). The response is the image itself with its content type and `Cache-Control: private, max-age=600`.
+

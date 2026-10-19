@@ -1,5 +1,7 @@
 package com.familywishes.repository;
 
+import jakarta.persistence.QueryHint;
+import org.springframework.data.jpa.repository.QueryHints;
 import com.familywishes.entity.TemplateTypeSeed;
 import java.util.List;
 import java.util.Optional;
@@ -12,6 +14,7 @@ import org.springframework.data.repository.query.Param;
 public interface TemplateTypeSeedRepository extends JpaRepository<TemplateTypeSeed, Long> {
   Optional<TemplateTypeSeed> findByCode(String code);
 
+  @QueryHints(@QueryHint(name = "org.hibernate.cacheable", value = "true"))
   Optional<TemplateTypeSeed> findByCodeAndActiveTrue(String code);
 
   List<TemplateTypeSeed> findByActiveTrueOrderByDisplayNameAsc();

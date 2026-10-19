@@ -27,20 +27,49 @@ public class CalendarServiceImpl implements CalendarService {
 
   @Override
   public List<CalendarResponse> listByMonth(Integer month, boolean isAdmin, String userEmail) {
-    List<CalendarResponse> calendarResponses = new ArrayList<>();
-    List<FestivalResponse> festivalResponses = festivalService.listByMonth(month);
-    List<EventDtos.EventResponse> eventResponses;
-    List<UserDtos.UserResponse> userResponses;
-    if(isAdmin) {
-      eventResponses = eventService.listByMonth(month);
-      userResponses = userService.listByMonth(month);
-    }else {
-      eventResponses = eventService.listByMonthAndUserEmail(month, userEmail);
-      userResponses = userService.listByMonthAndUserEmail(month, userEmail);
-    }
-    calendarResponses.addAll(festivalResponses.stream().map(festivalResponse -> new CalendarResponse(festivalResponse.id(),"Festival",festivalResponse.eventName(),festivalResponse.eventDate(),festivalResponse.active())).toList());
-    calendarResponses.addAll(eventResponses.stream().map(eventResponse -> new CalendarResponse(eventResponse.id(),"Anniversary", eventResponse.eventType(),eventResponse.eventDate(),eventResponse.active())).toList());
-    calendarResponses.addAll(userResponses.stream().map(userResponse -> new CalendarResponse(userResponse.id(), "Birthday", userResponse.name(), userResponse.dateOfBirth(),userResponse.active())).toList());
-    return calendarResponses;
+    List<FestivalResponse> festivals = festivalService.listByMonth(month);
+    List<EventDtos.EventResponse> events =
+        isAdmin
+            ? eventService.listByMonth(month)
+            : eventService.listByMonthAndUserEmail(month, userEmail);
+    List<UserDtos.UserResponse> users =
+        isAdmin
+            ? userService.listByMonth(month)
+            : userService.listByMonthAndUserEmail(month, userEmail);
+
+    List<CalendarResponse> calendar = new ArrayList<>();
+    festivals.forEach(festival -> calendar.add(toCalendar(festival)));
+    events.forEach(event -> calendar.add(toCalendar(event)));
+    users.forEach(user -> calendar.add(toCalendar(user)));
+    return calendar;
+  }
+
+  /** Festival dates move every year, so they only count on their exact date. */
+  private CalendarResponse toCalendar(FestivalResponse festival) {
+    return new CalendarResponse(
+        festival.id(),
+        "Festival",
+        festival.eventName(),
+        festival.eventDate(),
+        festival.active(),
+        false,
+        null);
+  }
+
+  private CalendarResponse toCalendar(EventDtos.EventResponse event) {
+    return new CalendarResponse(
+        event.id(),
+        "Anniversary",
+        event.eventType(),
+        event.eventDate(),
+        event.active(),
+        event.recurring(),
+        event.userName());
+  }
+
+  /** Birthdays repeat every year. */
+  private CalendarResponse toCalendar(UserDtos.UserResponse user) {
+    return new CalendarResponse(
+        user.id(), "Birthday", user.name(), user.dateOfBirth(), user.active(), true, user.name());
   }
 }

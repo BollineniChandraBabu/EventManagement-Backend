@@ -1,5 +1,7 @@
 package com.familywishes.repository;
 
+import jakarta.persistence.QueryHint;
+import org.springframework.data.jpa.repository.QueryHints;
 import com.familywishes.entity.EventTypeSeed;
 import java.util.List;
 import java.util.Optional;
@@ -14,6 +16,7 @@ import org.springframework.data.repository.query.Param;
 public interface EventTypeSeedRepository extends JpaRepository<EventTypeSeed, Long> {
   Optional<EventTypeSeed> findByCode(String code);
 
+  @QueryHints(@QueryHint(name = "org.hibernate.cacheable", value = "true"))
   Optional<EventTypeSeed> findByCodeAndActiveTrue(String code);
 
   List<EventTypeSeed> findByActiveTrueOrderByDisplayNameAsc();

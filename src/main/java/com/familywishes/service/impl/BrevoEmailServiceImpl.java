@@ -151,7 +151,7 @@ public class BrevoEmailServiceImpl implements BrevoEmailService {
                   emailLog.getRecipientEmail(),
                   emailLog.getSubject(),
                   emailLog.getBody(),
-                  supabaseStorageService.downloadImage(emailLog.getImageUrl()),
+                  emailLog.getImageUrl() != null && !emailLog.getImageUrl().isBlank(),
                   emailLog.getStatus().name(),
                   emailLog.getEmailType() == null
                       ? EmailType.EVENT.name()

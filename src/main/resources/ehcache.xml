@@ -7,24 +7,108 @@
             http://www.ehcache.org/v3/jsr107 http://www.ehcache.org/schema/ehcache-107-ext.xsd">
 
     <service>
-        <jsr107:defaults enable-management="true"
+        <!-- Any cache that is not declared below (e.g. created by Hibernate) is still bounded. -->
+        <jsr107:defaults default-template="bounded"
+                         enable-management="true"
                          enable-statistics="true"/>
     </service>
 
-    <cache alias="defaultCache">
-
+    <cache-template name="bounded">
         <key-type>java.lang.Object</key-type>
-
         <value-type>java.lang.Object</value-type>
-
         <expiry>
             <ttl unit="minutes">30</ttl>
         </expiry>
-
         <resources>
             <heap unit="entries">1000</heap>
         </resources>
+    </cache-template>
 
+    <cache alias="defaultCache" uses-template="bounded"/>
+
+    <!-- ===== Hibernate second-level cache ===== -->
+
+    <!-- Rarely changing reference data: event types, relationships, template types.
+         Hibernate removes entries itself when one of these rows is updated. -->
+    <cache alias="seedData">
+        <key-type>java.lang.Object</key-type>
+        <value-type>java.lang.Object</value-type>
+        <expiry>
+            <ttl unit="hours">1</ttl>
+        </expiry>
+        <resources>
+            <heap unit="entries">500</heap>
+        </resources>
+    </cache>
+
+    <!-- Results of queries marked cacheable (e.g. seed lookups by code). -->
+    <cache alias="default-query-results-region">
+        <key-type>java.lang.Object</key-type>
+        <value-type>java.lang.Object</value-type>
+        <expiry>
+            <ttl unit="minutes">10</ttl>
+        </expiry>
+        <resources>
+            <heap unit="entries">1000</heap>
+        </resources>
+    </cache>
+
+    <!-- Hibernate uses this to know when a table last changed. It must never expire, otherwise
+         stale query results could be served. It only holds one entry per table. -->
+    <cache alias="default-update-timestamps-region">
+        <key-type>java.lang.Object</key-type>
+        <value-type>java.lang.Object</value-type>
+        <resources>
+            <heap unit="entries">5000</heap>
+        </resources>
+    </cache>
+
+    <!-- ===== Spring cache (@Cacheable) ===== -->
+
+    <!-- Email images, loaded on demand. Few entries because images can be large. -->
+    <cache alias="emailImages">
+        <key-type>java.lang.Object</key-type>
+        <value-type>java.lang.Object</value-type>
+        <expiry>
+            <ttl unit="minutes">15</ttl>
+        </expiry>
+        <resources>
+            <heap unit="entries">30</heap>
+        </resources>
+    </cache>
+
+    <!-- ip-api.com allows only 45 requests per minute, and an IP's location rarely changes. -->
+    <cache alias="ipInfo">
+        <key-type>java.lang.Object</key-type>
+        <value-type>java.lang.Object</value-type>
+        <expiry>
+            <ttl unit="hours">24</ttl>
+        </expiry>
+        <resources>
+            <heap unit="entries">2000</heap>
+        </resources>
+    </cache>
+
+    <cache alias="festivalsByMonth">
+        <key-type>java.lang.Object</key-type>
+        <value-type>java.lang.Object</value-type>
+        <expiry>
+            <ttl unit="hours">6</ttl>
+        </expiry>
+        <resources>
+            <heap unit="entries">24</heap>
+        </resources>
+    </cache>
+
+    <cache alias="dashboardSummary">
+        <key-type>java.lang.Object</key-type>
+        <value-type>java.lang.Object</value-type>
+        <expiry>
+            <ttl unit="seconds">60</ttl>
+        </expiry>
+        <resources>
+            <heap unit="entries">200</heap>
+        </resources>
     </cache>
 
 </config>

@@ -1,5 +1,6 @@
 package com.familywishes.service.impl;
 
+import com.familywishes.config.CacheNames;
 import com.familywishes.dto.CommonDtos.PagedResponse;
 import com.familywishes.dto.SeedDtos.SpecialEventSeedRequest;
 import com.familywishes.dto.SeedDtos.SpecialEventSeedResponse;
@@ -9,6 +10,7 @@ import com.familywishes.repository.SpecialEventRepository;
 import com.familywishes.service.SpecialEventSeedService;
 import java.time.LocalDate;
 import lombok.RequiredArgsConstructor;
+import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
@@ -20,6 +22,7 @@ public class SpecialEventSeedServiceImpl implements SpecialEventSeedService {
   private final SpecialEventRepository specialEventRepository;
 
   @Override
+  @CacheEvict(cacheNames = CacheNames.FESTIVALS_BY_MONTH, allEntries = true)
   public SpecialEventSeedResponse create(SpecialEventSeedRequest request) {
     SpecialEvent event =
         SpecialEvent.builder()
@@ -84,6 +87,7 @@ public class SpecialEventSeedServiceImpl implements SpecialEventSeedService {
   }
 
   @Override
+  @CacheEvict(cacheNames = CacheNames.FESTIVALS_BY_MONTH, allEntries = true)
   public SpecialEventSeedResponse update(Long id, SpecialEventSeedRequest request) {
     SpecialEvent event =
         specialEventRepository
@@ -99,6 +103,7 @@ public class SpecialEventSeedServiceImpl implements SpecialEventSeedService {
   }
 
   @Override
+  @CacheEvict(cacheNames = CacheNames.FESTIVALS_BY_MONTH, allEntries = true)
   public void delete(Long id) {
     if (!specialEventRepository.existsById(id)) {
       throw new NotFoundException("Special event seed not found");

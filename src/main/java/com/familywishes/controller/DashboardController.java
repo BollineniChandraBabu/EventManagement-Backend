@@ -114,7 +114,7 @@ public class DashboardController {
           @RequestParam(required = false) String startDate,
           @RequestParam(required = false) String endDate,
           @RequestParam(required = false) List<Long> userIds) {
-    validateDateRange(startDate, endDate);
+    validateInclusiveDateRange(startDate, endDate); // a single day (start = end) is valid here
     return dashboardService.getLoginLocationChart(
         userId, startDate, endDate, authentication.getName(), isAdmin(authentication), userIds);
   }

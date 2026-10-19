@@ -1,12 +1,15 @@
 package com.familywishes.dto;
 
+import java.io.Serializable;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 
 public class DashboardDtos {
+  /** Serializable because it is kept in the dashboardSummary cache. */
   public record DashboardResponse(
-      long totalUsers, long upcomingEvents, long emailsSentToday, long failedEmails) {}
+      long totalUsers, long upcomingEvents, long emailsSentToday, long failedEmails)
+      implements Serializable {}
 
   public record DashboardGraphPoint(String date, long sent, long failed, long total) {}
 
@@ -15,8 +18,13 @@ public class DashboardDtos {
   public record LoginLocationChartPoint(
          String email, String userName, String location, String ipAddress, Double latitude, Double longitude, LocalDateTime loggedInAt) {}
 
+  /** truncated = older logins in the range were left out (only the newest ones are returned). */
   public record LoginLocationChartResponse(
-      Long userId, String fromDate, String toDate, List<LoginLocationChartPoint> points) {}
+      Long userId,
+      String fromDate,
+      String toDate,
+      List<LoginLocationChartPoint> points,
+      boolean truncated) {}
 
   public record ViolatedUserChartPoint(String date, long total) {}
 
@@ -39,7 +47,8 @@ public class DashboardDtos {
       Boolean mobile,
       Boolean proxy,
       Boolean hosting,
-      Map<String, Object> raw) {}
+      Map<String, Object> raw)
+      implements Serializable {} // kept in the ipInfo cache
 
   public record ViolatedUserInfo(
       Long id,

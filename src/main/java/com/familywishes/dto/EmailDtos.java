@@ -16,7 +16,7 @@ public class EmailDtos {
       String toEmail,
       String subject,
       String body,
-      byte[] imgData,
+      boolean hasImage,
       String status,
       String emailType,
       LocalDateTime sentAt) {}

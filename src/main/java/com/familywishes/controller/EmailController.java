@@ -2,10 +2,15 @@ package com.familywishes.controller;
 
 import com.familywishes.dto.CommonDtos.PagedResponse;
 import com.familywishes.dto.EmailDtos.EmailStatusResponse;
+import com.familywishes.dto.EmailImage;
 import com.familywishes.dto.EmailDtos.SendEmailNowRequest;
 import com.familywishes.service.GmailEmailService;
 import jakarta.validation.Valid;
+import java.time.Duration;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.CacheControl;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
@@ -31,6 +36,20 @@ public class EmailController {
   @GetMapping("/status/{id}")
   public EmailStatusResponse statusById(@PathVariable Long id, Authentication authentication) {
     return emailService.getStatusById(id, authentication.getName());
+  }
+
+  /** Loaded separately from the list so a page of emails never waits for image downloads. */
+  @GetMapping("/status/{id}/image")
+  public ResponseEntity<byte[]> statusImage(@PathVariable Long id, Authentication authentication) {
+    boolean isAdmin =
+        authentication.getAuthorities().stream()
+            .map(GrantedAuthority::getAuthority)
+            .anyMatch("ROLE_ADMIN"::equals);
+    EmailImage image = emailService.getImage(id, authentication.getName(), isAdmin);
+    return ResponseEntity.ok()
+        .contentType(MediaType.parseMediaType(image.contentType()))
+        .cacheControl(CacheControl.maxAge(Duration.ofMinutes(10)).cachePrivate())
+        .body(image.data());
   }
 
   @GetMapping("/status")

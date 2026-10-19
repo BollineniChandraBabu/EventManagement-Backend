@@ -2,6 +2,7 @@ package com.familywishes.service.impl;
 
 import com.familywishes.dto.CommonDtos.PagedResponse;
 import com.familywishes.dto.EmailDtos;
+import com.familywishes.dto.EmailImage;
 import com.familywishes.entity.EmailLog;
 import com.familywishes.entity.EventTypeSeed;
 import com.familywishes.entity.enums.EmailStatus;
@@ -45,6 +46,7 @@ public class GmailEmailServiceImpl implements GmailEmailService {
 
   private final Gmail gmail;
   private final SupabaseStorageService supabaseStorageService;
+  private final EmailImageService emailImageService;
   private final EmailTemplateBuilder emailTemplateBuilder;
 
   @Value("${gmail.from-email}")
@@ -327,10 +329,36 @@ public class GmailEmailServiceImpl implements GmailEmailService {
     return toEmailStatusResponse(log);
   }
 
+  @Override
+  public EmailImage getImage(Long id, String requesterEmail, boolean isAdmin) {
+    EmailLog log =
+        logRepository.findById(id).orElseThrow(() -> new NotFoundException("Email log not found"));
+
+    if (!isAdmin && !canNonAdminView(log, requesterEmail)) {
+      throw new NotFoundException("Email log not found");
+    }
+    if (!hasImage(log)) {
+      throw new NotFoundException("This email has no image");
+    }
+    EmailImage image = emailImageService.load(id, log.getImageUrl());
+    if (image == null) {
+      throw new NotFoundException("The image is not available");
+    }
+    return image;
+  }
+
+  /** Same rule as getStatusById: your own emails, except OTP and password-reset ones. */
+  private static boolean canNonAdminView(EmailLog log, String requesterEmail) {
+    return log.getRecipientEmail() != null
+        && log.getRecipientEmail().equalsIgnoreCase(requesterEmail)
+        && !SENSITIVE_TYPES.contains(log.getEmailType());
+  }
+
   public void deleteEmailStatus(Long id){
     Optional<EmailLog> emailLogOptional = logRepository.findById(id);
     if(emailLogOptional.isPresent()) {
       logRepository.deleteById(id);
+      emailImageService.evict(id);
       if(Objects.nonNull(emailLogOptional.get().getImageUrl())) {
         supabaseStorageService.deleteByPublicUrl(emailLogOptional.get().getImageUrl());
       }
@@ -370,13 +398,18 @@ public class GmailEmailServiceImpl implements GmailEmailService {
         request.userEmail(), request.subject(), htmlBody, logEntry.getId(), null);
   }
 
+  /** The list endpoints only say whether an image exists; it is fetched via {@link #getImage}. */
+  private static boolean hasImage(EmailLog log) {
+    return log.getImageUrl() != null && !log.getImageUrl().isBlank();
+  }
+
   private EmailDtos.EmailStatusResponse toEmailStatusResponse(EmailLog log) {
     return new EmailDtos.EmailStatusResponse(
         log.getId(),
         log.getRecipientEmail(),
         log.getSubject(),
         log.getBody(),
-        supabaseStorageService.downloadImage(log.getImageUrl()),
+        hasImage(log),
         log.getStatus().name(),
         log.getEmailType() == null ? EmailType.EVENT.name() : log.getEmailType().name(),
         log.getSentAt());

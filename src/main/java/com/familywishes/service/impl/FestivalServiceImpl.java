@@ -1,5 +1,6 @@
 package com.familywishes.service.impl;
 
+import com.familywishes.config.CacheNames;
 import com.familywishes.dto.CommonDtos.PagedResponse;
 import com.familywishes.dto.FestivalDtos.FestivalResponse;
 import com.familywishes.entity.SpecialEvent;
@@ -15,6 +16,8 @@ import java.util.Set;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
@@ -42,7 +45,9 @@ public class FestivalServiceImpl implements FestivalService {
   @Value("${calendarific.country:IN}")
   private String calendarificCountry;
 
+  /** Shared by every calendar user, so it is cached; evicted whenever festivals change. */
   @Override
+  @Cacheable(cacheNames = CacheNames.FESTIVALS_BY_MONTH, key = "#month ?: 'all'")
   public List<FestivalResponse> listByMonth(Integer month) {
     return specialEventRepository.findByMonth(month).stream()
         .map(this::toFestivalResponse)
@@ -72,6 +77,7 @@ public class FestivalServiceImpl implements FestivalService {
   }
 
   @Override
+  @CacheEvict(cacheNames = CacheNames.FESTIVALS_BY_MONTH, allEntries = true)
   public void syncCalendarificFestivals() {
     if (!StringUtils.hasText(calendarificApiKey)) {
       log.warn("Skipping Calendarific sync because calendarific.api.key is missing");
