@@ -62,6 +62,10 @@ public class User extends ActivatableEntity {
 
   @Column private LocalDate lastBirthdayWishSent;
 
+  /** Optional link to a custom birthday wishes page; added to the birthday email when present. */
+  @Column(name = "birthday_wishes_url", length = 500)
+  private String birthdayWishesUrl;
+
   @Column(columnDefinition = "SMALLINT")
   @Convert(converter = BooleanToZeroOneConverter.class)
   @Builder.Default

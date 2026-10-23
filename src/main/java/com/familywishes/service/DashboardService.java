@@ -35,5 +35,5 @@ public interface DashboardService {
       List<Long> userIds);
 
   ViolatedUsersDashboardResponse getViolatedUsersDashboard(
-      LocalDate startDate, LocalDate endDate, int page, int size, boolean includeIpInfo);
+      LocalDate startDate, LocalDate endDate, int page, int size, boolean includeIpInfo, String searchKey);
 }

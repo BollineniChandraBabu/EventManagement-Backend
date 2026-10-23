@@ -3,11 +3,10 @@ package com.familywishes.scheduler;
 import com.familywishes.dto.AiWishRequest;
 import com.familywishes.dto.AiWishResponse;
 import com.familywishes.entity.User;
-import com.familywishes.entity.UserWishSettings;
 import com.familywishes.repository.UserRepository;
-import com.familywishes.repository.UserWishSettingsRepository;
 import com.familywishes.service.AiService;
 import com.familywishes.service.GmailEmailService;
+import com.familywishes.util.WishEmailExtras;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import java.time.LocalDate;
 import java.time.ZoneId;
@@ -25,7 +24,6 @@ import org.springframework.stereotype.Component;
 @Slf4j
 public class BirthdayMailScheduler implements Job {
 
-  private final UserWishSettingsRepository userWishSettingsRepository;
   private final UserRepository userRepository;
   private final AiService aiService;
   private final GmailEmailService emailService;
@@ -38,33 +36,34 @@ public class BirthdayMailScheduler implements Job {
 
   @Override
   public void execute(JobExecutionContext context) {
-    System.out.println("BIRTHDAY JOB TRIGGERED: " + new Date());
-    log.info("BIRTHDAY JOB TRIGGERED: " + new Date());
-    userWishSettingsRepository.findByBirthdayEnabledTrue().forEach(this::triggerMessages);
-    System.out.println("BIRTHDAY JOB COMPLETED: " + new Date());
-    log.info("BIRTHDAY JOB COMPLETED: " + new Date());
-  }
-
-  private void triggerMessages(UserWishSettings event) {
+    log.info("BIRTHDAY JOB TRIGGERED: {}", new Date());
     LocalDate today = LocalDate.now(ZoneId.of(schedulerTimeZone));
     List<User> users =
         userRepository.findTodaysBirthdays(today.getMonthValue(), today.getDayOfMonth());
     log.info("Birthday users found: {}", users.size());
-    for (User user : users) {
-      if (today.equals(user.getLastBirthdayWishSent())) {
-        log.info("Already sent birthday wish to {}", user.getEmail());
-        return;
-      }
-      try {
-        sendBirthdayWish(user);
-      } catch (Exception e) {
-        log.error(e.getMessage(), e);
-        sendErrorEmail(user, e);
-      }
+    users.stream().filter(this::isBirthdayWishEnabled).forEach(user -> sendOnce(user, today));
+    log.info("BIRTHDAY JOB COMPLETED: {}", new Date());
+  }
+
+  /** Each user's own "Birthday Wishes" switch decides whether they receive a wish. */
+  private boolean isBirthdayWishEnabled(User user) {
+    return user.getWishSettings() != null && user.getWishSettings().isBirthdayEnabled();
+  }
+
+  private void sendOnce(User user, LocalDate today) {
+    if (today.equals(user.getLastBirthdayWishSent())) {
+      log.info("Already sent birthday wish to {}", user.getEmail());
+      return;
+    }
+    try {
+      sendBirthdayWish(user, today);
+    } catch (Exception e) {
+      log.error(e.getMessage(), e);
+      sendErrorEmail(user, e);
     }
   }
 
-  private void sendBirthdayWish(User user) throws JsonProcessingException {
+  private void sendBirthdayWish(User user, LocalDate today) throws JsonProcessingException {
     AiWishRequest request =
         new AiWishRequest(
             user.getName(),
@@ -75,11 +74,15 @@ public class BirthdayMailScheduler implements Job {
             "EN",
             user.getId());
     AiWishResponse ai = aiService.generate(request);
+    // An uploaded image is used when there is one, otherwise an image is generated.
     byte[] image = aiService.callGeminiImage(request);
-    emailService.sendEmailWithAttachments(
-        user.getEmail(), ai.subject(), ai.htmlMessage(), null, image);
+    // The custom wishes page is only added for users who have one.
+    String body =
+        WishEmailExtras.appendWishesLink(
+            ai.htmlMessage(), user.getBirthdayWishesUrl(), "Open your birthday wishes");
+    emailService.sendEmailWithAttachments(user.getEmail(), ai.subject(), body, null, image);
     log.info("Birthday wish sent to {}", user.getEmail());
-    user.setLastBirthdayWishSent(LocalDate.now(ZoneId.of(schedulerTimeZone)));
+    user.setLastBirthdayWishSent(today);
     userRepository.save(user);
   }
 

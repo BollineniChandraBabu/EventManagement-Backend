@@ -1,5 +1,7 @@
 package com.familywishes.service.impl;
 
+import com.familywishes.util.WishEmailExtras;
+import com.familywishes.util.WishesUrls;
 import com.familywishes.dto.AiWishRequest;
 import com.familywishes.dto.AiWishResponse;
 import com.familywishes.dto.CommonDtos.PagedResponse;
@@ -58,6 +60,7 @@ public class UserServiceImpl implements UserService {
             .gender(request.gender())
             .birthday(request.dateOfBirth())
             .relationShip(resolveRelationship(request.relationShip()))
+            .birthdayWishesUrl(normalizeWishesUrl(request.birthdayWishesUrl()))
             .active(true)
             .deleted(false)
             .build();
@@ -72,6 +75,15 @@ public class UserServiceImpl implements UserService {
 
     user = userRepository.save(user);
     return toUserResponse(user);
+  }
+
+  /** Blank means "no link"; a bad link is reported to the user as a 400. */
+  private static String normalizeWishesUrl(String raw) {
+    try {
+      return WishesUrls.normalizeOrNull(raw);
+    } catch (IllegalArgumentException e) {
+      throw new BadRequestException(e.getMessage());
+    }
   }
 
   private UserResponse toUserResponse(User user) {
@@ -90,7 +102,8 @@ public class UserServiceImpl implements UserService {
           user.getWishSettings().isBirthdayEnabled(),
           user.isOnline(),
           user.getLastSeenAt(),
-          resolveProfilePictureUrl(user));
+          resolveProfilePictureUrl(user),
+          user.getBirthdayWishesUrl());
     } else {
       return new UserResponse(
           user.getId(),
@@ -106,7 +119,8 @@ public class UserServiceImpl implements UserService {
           false,
           user.isOnline(),
           user.getLastSeenAt(),
-          resolveProfilePictureUrl(user));
+          resolveProfilePictureUrl(user),
+          user.getBirthdayWishesUrl());
     }
   }
 
@@ -124,6 +138,7 @@ public class UserServiceImpl implements UserService {
     user.setGender(request.gender());
     user.setBirthday(request.dateOfBirth());
     user.setRelationShip(resolveRelationship(request.relationShip()));
+    user.setBirthdayWishesUrl(normalizeWishesUrl(request.birthdayWishesUrl())); // blank removes it
 
     UserWishSettings userWishSettings =
         user.getWishSettings() == null
@@ -262,8 +277,14 @@ public class UserServiceImpl implements UserService {
 
       AiWishResponse aiWishResponse = aiService.generate(request);
       byte[] image = aiService.callGeminiImage(request);
-      return new WishPreviewResponse(
-          true, wishType, aiWishResponse.subject(), aiWishResponse.htmlMessage(), image);
+      // The preview shows the same extras as the real email.
+      String html =
+          birthdayEnabled
+              ? WishEmailExtras.appendWishesLink(
+                  aiWishResponse.htmlMessage(), user.getBirthdayWishesUrl(), "Open your birthday wishes")
+              : WishEmailExtras.appendPersonalNote(
+                  aiWishResponse.htmlMessage(), selectedFestival.getCustomMessage());
+      return new WishPreviewResponse(true, wishType, aiWishResponse.subject(), html, image);
     } catch (Exception ex) {
       log.error(ex.getMessage(), ex);
       throw new BadRequestException("Unable to generate wish preview");

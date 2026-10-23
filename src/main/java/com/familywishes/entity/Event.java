@@ -24,6 +24,10 @@ public class Event extends ActivatableEntity {
 
   @Column private LocalDate eventDate;
 
+  /** Optional link to a custom wishes page; added to the event's email when present. */
+  @Column(name = "wishes_url", length = 500)
+  private String wishesUrl;
+
   @Column(nullable = false, columnDefinition = "SMALLINT")
   @Convert(converter = BooleanToZeroOneConverter.class)
   private boolean recurring;

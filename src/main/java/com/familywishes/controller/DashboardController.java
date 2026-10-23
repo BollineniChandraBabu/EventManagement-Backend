@@ -25,6 +25,8 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/api/dashboard")
 @RequiredArgsConstructor
 public class DashboardController {
+  private static final int MAX_SEARCH_LENGTH = 100;
+
   private final DashboardService dashboardService;
   private final ChatService chatService;
 
@@ -126,7 +128,11 @@ public class DashboardController {
       @RequestParam String endDate,
       @RequestParam(defaultValue = "0") int page,
       @RequestParam(defaultValue = "50") int size,
-      @RequestParam(defaultValue = "true") boolean includeIpInfo) {
+      @RequestParam(defaultValue = "true") boolean includeIpInfo,
+      @RequestParam(defaultValue = "") String searchKey) {
+    if (searchKey.length() > MAX_SEARCH_LENGTH) {
+      throw new BadRequestException("searchKey must be at most " + MAX_SEARCH_LENGTH + " characters");
+    }
     if (page < 0) {
       throw new BadRequestException("page must not be negative");
     }
@@ -135,7 +141,7 @@ public class DashboardController {
     }
     DateRange dateRange = validateInclusiveDateRange(startDate, endDate);
     return dashboardService.getViolatedUsersDashboard(
-        dateRange.startDate(), dateRange.endDate(), page, size, includeIpInfo);
+        dateRange.startDate(), dateRange.endDate(), page, size, includeIpInfo, searchKey);
   }
 
   @GetMapping("/chat/messages")

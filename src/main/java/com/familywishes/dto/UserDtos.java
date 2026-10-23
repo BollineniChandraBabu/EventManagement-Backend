@@ -5,6 +5,7 @@ import com.familywishes.entity.enums.Role;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Size;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 
@@ -18,7 +19,33 @@ public class UserDtos {
       @NotBlank String relationShip,
       boolean isGoodMorningEnabled,
       boolean isGoodNightEnabled,
-      boolean isBirthdayEnabled) {}
+      boolean isBirthdayEnabled,
+      @Size(max = 500) String birthdayWishesUrl) {
+
+    /** Without a wishes link (the link feature is then skipped for this user). */
+    public UserRequest(
+        String name,
+        String email,
+        Role role,
+        Gender gender,
+        LocalDate dateOfBirth,
+        String relationShip,
+        boolean isGoodMorningEnabled,
+        boolean isGoodNightEnabled,
+        boolean isBirthdayEnabled) {
+      this(
+          name,
+          email,
+          role,
+          gender,
+          dateOfBirth,
+          relationShip,
+          isGoodMorningEnabled,
+          isGoodNightEnabled,
+          isBirthdayEnabled,
+          null);
+    }
+  }
 
   public record WishSettingsUpdateRequest(
       Boolean isGoodMorningEnabled, Boolean isGoodNightEnabled, Boolean isBirthdayEnabled) {}
@@ -47,5 +74,6 @@ public class UserDtos {
       boolean isBirthdayEnabled,
       boolean online,
       LocalDateTime lastSeenAt,
-      String profilePictureUrl) {}
+      String profilePictureUrl,
+      String birthdayWishesUrl) {}
 }

@@ -9,6 +9,7 @@ import com.familywishes.repository.FestivalWishMappingRepository;
 import com.familywishes.service.AiService;
 import com.familywishes.service.GmailEmailService;
 import com.familywishes.service.SchedulerTrackingService;
+import com.familywishes.util.WishEmailExtras;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import java.time.LocalDate;
 import java.time.ZoneId;
@@ -56,20 +57,27 @@ public class FestivalScheduler implements Job {
         continue;
       }
 
-      try {
-        sendFestivalWish(mapping);
-      } catch (Exception e) {
-        mapping.setError(true);
-        log.error(e.getMessage(), e);
-        sendErrorEmail(mapping.getUser(), e);
-      }
-
+      boolean sent = sendOrReport(mapping);
+      // The flag is cleared on success; otherwise a mapping that failed once would be sent again
+      // on every run of the day. A failed one keeps the flag so a later run retries it.
+      mapping.setError(!sent);
       mapping.setLastWishSentOn(today);
       mappingRepository.save(mapping);
-      log.info(
-          "Festival wish sent for event {} to user {}",
+    }
+  }
+
+  private boolean sendOrReport(FestivalWishMapping mapping) {
+    try {
+      sendFestivalWish(mapping);
+      return true;
+    } catch (Exception e) {
+      log.error(
+          "Festival wish for {} failed for user {}",
           mapping.getSpecialEvent().getEventName(),
-          mapping.getUser().getEmail());
+          mapping.getUser().getEmail(),
+          e);
+      sendErrorEmail(mapping.getUser(), e);
+      return false;
     }
   }
 
@@ -85,15 +93,21 @@ public class FestivalScheduler implements Job {
             "EN",
             festivalWishMapping.getUser().getId());
     AiWishResponse ai = aiService.generate(request);
+    // An image uploaded for this festival (or for "Festival") is used, otherwise one is generated.
     byte[] image = aiService.callGeminiImage(request);
+    // The personal note is only added to mappings that have one.
+    String body = WishEmailExtras.appendPersonalNote(ai.htmlMessage(), festivalWishMapping.getCustomMessage());
     gmailEmailService.sendEmailWithAttachments(
         festivalWishMapping.getUser().getEmail(),
         ai.subject(),
-        ai.htmlMessage(),
+        body,
         null,
         image,
         EmailType.FESTIVAL_WISH);
-    log.info("Festival wish for " +festivalWishMapping.getSpecialEvent().getEventName()  +" sent to " +festivalWishMapping.getUser().getEmail());
+    log.info(
+        "Festival wish for {} sent to {}",
+        festivalWishMapping.getSpecialEvent().getEventName(),
+        festivalWishMapping.getUser().getEmail());
   }
 
   private void sendErrorEmail(User user, Exception e) {

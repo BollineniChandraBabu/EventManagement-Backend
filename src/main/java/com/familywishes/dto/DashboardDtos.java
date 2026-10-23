@@ -71,6 +71,14 @@ public class DashboardDtos {
       LocalDateTime loggedInAt,
       ViolatedUserIpInfo ipInfo) {}
 
+  /** One IP address and how often it failed to log in (many different emails = guessing). */
+  public record ViolatedUserIpSummary(
+      String ipAddress, long attempts, long distinctEmails, LocalDateTime lastAttemptAt) {}
+
+  /** One email address and how often someone failed to log in as it. */
+  public record ViolatedUserEmailSummary(
+      String email, long attempts, long distinctIps, LocalDateTime lastAttemptAt) {}
+
   public record ViolatedUsersDashboardResponse(
       String startDate,
       String endDate,
@@ -83,5 +91,9 @@ public class DashboardDtos {
       long totalElements,
       int totalPages,
       boolean hasNext,
-      boolean hasPrevious) {}
+      boolean hasPrevious,
+      long uniqueIps,
+      long uniqueEmails,
+      List<ViolatedUserIpSummary> topIps,
+      List<ViolatedUserEmailSummary> topEmails) {}
 }

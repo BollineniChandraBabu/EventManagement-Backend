@@ -1,8 +1,11 @@
 package com.familywishes.service.impl;
 
 import com.familywishes.dto.CommonDtos.PagedResponse;
+import com.familywishes.dto.FestivalDtos.FestivalWishMappingBulkRequest;
+import com.familywishes.dto.FestivalDtos.FestivalWishMappingBulkResponse;
 import com.familywishes.dto.FestivalDtos.FestivalWishMappingRequest;
 import com.familywishes.dto.FestivalDtos.FestivalWishMappingResponse;
+import com.familywishes.dto.FestivalDtos.FestivalWishMappingSummary;
 import com.familywishes.entity.FestivalWishMapping;
 import com.familywishes.entity.SpecialEvent;
 import com.familywishes.entity.User;
@@ -11,12 +14,21 @@ import com.familywishes.repository.FestivalWishMappingRepository;
 import com.familywishes.repository.SpecialEventRepository;
 import com.familywishes.repository.UserRepository;
 import com.familywishes.service.FestivalWishMappingService;
+import java.time.LocalDate;
+import java.time.ZoneId;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+import java.util.Set;
+import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @RequiredArgsConstructor
@@ -24,7 +36,13 @@ public class FestivalWishMappingServiceImpl implements FestivalWishMappingServic
 
   private final FestivalWishMappingRepository mappingRepository;
   private final SpecialEventRepository specialEventRepository;
+  private static final long UPCOMING_DAYS = 30;
+  private static final Set<String> STATUSES = Set.of("ALL", "ACTIVE", "INACTIVE", "FAILED");
+
   private final UserRepository userRepository;
+
+  @Value("${scheduler.time-zone:Asia/Kolkata}")
+  private String schedulerTimeZone;
 
   @Override
   public FestivalWishMappingResponse upsert(FestivalWishMappingRequest request) {
@@ -45,10 +63,60 @@ public class FestivalWishMappingServiceImpl implements FestivalWishMappingServic
 
     mapping.setSpecialEvent(specialEvent);
     mapping.setUser(user);
-    mapping.setCustomMessage(null);
+    mapping.setCustomMessage(normalizeNote(request.customMessage()));
     mapping.setActive(request.active());
 
     return toResponse(mappingRepository.save(mapping));
+  }
+
+  @Override
+  @Transactional
+  public FestivalWishMappingBulkResponse upsertBulk(FestivalWishMappingBulkRequest request) {
+    SpecialEvent specialEvent =
+        specialEventRepository
+            .findById(request.specialEventId())
+            .orElseThrow(() -> new NotFoundException("Festival not found"));
+
+    List<Long> userIds = request.userIds().stream().distinct().toList();
+    Map<Long, User> usersById =
+        userRepository.findAllById(userIds).stream().collect(Collectors.toMap(User::getId, user -> user));
+    if (usersById.size() != userIds.size()) {
+      throw new NotFoundException("One or more users were not found");
+    }
+
+    Map<Long, FestivalWishMapping> existingByUserId =
+        mappingRepository.findBySpecialEvent_Id(specialEvent.getId()).stream()
+            .collect(Collectors.toMap(mapping -> mapping.getUser().getId(), mapping -> mapping));
+
+    String note = normalizeNote(request.customMessage());
+    int created = 0;
+    List<FestivalWishMapping> toSave = new ArrayList<>();
+    for (Long userId : userIds) {
+      FestivalWishMapping mapping = existingByUserId.get(userId);
+      if (mapping == null) {
+        mapping = new FestivalWishMapping();
+        mapping.setSpecialEvent(specialEvent);
+        mapping.setUser(usersById.get(userId));
+        created++;
+      }
+      mapping.setActive(request.active());
+      mapping.setCustomMessage(note);
+      toSave.add(mapping);
+    }
+    mappingRepository.saveAll(toSave);
+    return new FestivalWishMappingBulkResponse(created, userIds.size() - created);
+  }
+
+  @Override
+  public FestivalWishMappingSummary summary() {
+    LocalDate today = LocalDate.now(ZoneId.of(schedulerTimeZone));
+    long total = mappingRepository.count();
+    long active = mappingRepository.countByActiveTrue();
+    long upcoming =
+        mappingRepository.countByActiveTrueAndSpecialEvent_EventDateBetween(
+            today, today.plusDays(UPCOMING_DAYS));
+    return new FestivalWishMappingSummary(
+        total, active, total - active, upcoming, mappingRepository.countByIsError(true));
   }
 
   @Override
@@ -59,6 +127,12 @@ public class FestivalWishMappingServiceImpl implements FestivalWishMappingServic
   @Override
   public PagedResponse<FestivalWishMappingResponse> list(
       int page, int size, String searchKey, String sortBy, String sortDir) {
+    return list(page, size, searchKey, "ALL", sortBy, sortDir);
+  }
+
+  @Override
+  public PagedResponse<FestivalWishMappingResponse> list(
+      int page, int size, String searchKey, String status, String sortBy, String sortDir) {
     String normalizedSortBy = resolveSortBy(sortBy);
     Sort sort =
         "desc".equalsIgnoreCase(sortDir)
@@ -67,7 +141,10 @@ public class FestivalWishMappingServiceImpl implements FestivalWishMappingServic
 
     var pageResult =
         mappingRepository.findAllBySearchKey(
-            searchKey == null ? "" : searchKey.trim(), PageRequest.of(page, size, sort));
+            searchKey == null ? "" : searchKey.trim(),
+            normalizeStatus(status),
+            true, // value of the "failed" flag the FAILED filter looks for
+            PageRequest.of(page, size, sort));
     return new PagedResponse<>(
         pageResult.getContent().stream().map(this::toResponse).toList(),
         pageResult.getNumber(),
@@ -125,7 +202,20 @@ public class FestivalWishMappingServiceImpl implements FestivalWishMappingServic
         mapping.getSpecialEvent().getEventDate(),
         mapping.getUser().getId(),
         mapping.getUser().getName(),
-        mapping.isActive());
+        mapping.isActive(),
+        mapping.getCustomMessage(),
+        mapping.getLastWishSentOn(),
+        mapping.isError());
+  }
+
+  /** Blank means "no note"; the limit also protects the 1000 character column. */
+  private static String normalizeNote(String note) {
+    return note == null || note.isBlank() ? null : note.trim();
+  }
+
+  private static String normalizeStatus(String status) {
+    String upper = status == null ? "ALL" : status.trim().toUpperCase(Locale.ROOT);
+    return STATUSES.contains(upper) ? upper : "ALL";
   }
 
   private String resolveSortBy(String sortBy) {

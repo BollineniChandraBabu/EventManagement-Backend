@@ -2,6 +2,7 @@ package com.familywishes.service.impl;
 
 import com.familywishes.ai.GeminiClient;
 import com.familywishes.dto.AiWishRequest;
+import com.familywishes.util.WishImageKeys;
 import com.familywishes.dto.AiWishResponse;
 import com.familywishes.exception.BadRequestException;
 import com.familywishes.service.AiService;
@@ -17,6 +18,7 @@ import org.springframework.http.*;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 import org.springframework.web.client.HttpStatusCodeException;
+import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
 
@@ -61,8 +63,10 @@ public class AiServiceImpl implements AiService {
   }
 
   public byte[] callGeminiImage(AiWishRequest request) {
+    // 1) an uploaded image (made for this user, else for everyone), 2) otherwise generate one
     byte[] uploadedImage =
-        wishImageService.findRandomImage(resolveImageEvent(request), request.userId());
+        wishImageService.findRandomImage(
+            request.userId(), WishImageKeys.forWish(request.event(), request.festival()));
     if (uploadedImage != null && uploadedImage.length > 0) {
       return uploadedImage;
     }
@@ -92,11 +96,11 @@ public class AiServiceImpl implements AiService {
           ex.getStatusCode().value(),
           ex.getResponseBodyAsString());
       return null;
+    } catch (RestClientException ex) {
+      // timeouts and connection problems: the email is still sent, just without an image
+      log.warn("Pollinations image generation failed: {}", ex.getMessage());
+      return null;
     }
-  }
-
-  private String resolveImageEvent(AiWishRequest request) {
-    return StringUtils.hasText(request.event()) ? request.event() : request.festival();
   }
 
   @Override

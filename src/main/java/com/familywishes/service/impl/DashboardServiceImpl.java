@@ -7,7 +7,9 @@ import com.familywishes.dto.DashboardDtos.DashboardResponse;
 import com.familywishes.dto.DashboardDtos.LoginLocationChartPoint;
 import com.familywishes.dto.DashboardDtos.LoginLocationChartResponse;
 import com.familywishes.dto.DashboardDtos.ViolatedUserChartPoint;
+import com.familywishes.dto.DashboardDtos.ViolatedUserEmailSummary;
 import com.familywishes.dto.DashboardDtos.ViolatedUserInfo;
+import com.familywishes.dto.DashboardDtos.ViolatedUserIpSummary;
 import com.familywishes.dto.DashboardDtos.ViolatedUserIpInfo;
 import com.familywishes.dto.DashboardDtos.ViolatedUserMapPoint;
 import com.familywishes.dto.DashboardDtos.ViolatedUsersDashboardResponse;
@@ -51,6 +53,11 @@ public class DashboardServiceImpl implements DashboardService {
 
   @Value("${scheduler.time-zone:Asia/Kolkata}")
   private String schedulerTimeZone;
+
+  /** Most failed-login points drawn on the map at once. */
+  private static final int MAX_VIOLATED_MAP_POINTS = 300;
+
+  private static final int TOP_VIOLATION_LIMIT = 5;
 
   /** Most login events returned at once; the dashboard asks for a narrower range to see more. */
   private static final int MAX_LOGIN_LOCATION_POINTS = 1000;
@@ -312,17 +319,27 @@ public class DashboardServiceImpl implements DashboardService {
 
   @Override
   public ViolatedUsersDashboardResponse getViolatedUsersDashboard(
-      LocalDate startDate, LocalDate endDate, int page, int size, boolean includeIpInfo) {
+      LocalDate startDate,
+      LocalDate endDate,
+      int page,
+      int size,
+      boolean includeIpInfo,
+      String searchKey) {
     LocalDateTime start = startDate.atStartOfDay();
     LocalDateTime end = endDate.plusDays(1).atStartOfDay().minusNanos(1);
     Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "loggedInAt"));
 
     Page<ViolatedUser> violatedUsers =
-        violatedUserRepository.findByLoggedInAtGreaterThanEqualAndLoggedInAtLessThanEqual(
-            start, end, pageable);
+        violatedUserRepository.search(
+            start, end, searchKey == null ? "" : searchKey.trim(), pageable);
+    // Only a bounded set of recent attempts is drawn on the map, and without IP lookups: looking
+    // up every point would make one ip-api.com call each (the service allows 45 per minute).
     List<ViolatedUser> mapUsers =
-        violatedUserRepository.findByLoggedInAtGreaterThanEqualAndLoggedInAtLessThanEqual(
-            start, end);
+        violatedUserRepository
+            .findByLoggedInAtGreaterThanEqualAndLoggedInAtLessThanEqualAndLatitudeIsNotNullAndLongitudeIsNotNull(
+                start,
+                end,
+                PageRequest.of(0, MAX_VIOLATED_MAP_POINTS, Sort.by(Sort.Direction.DESC, "loggedInAt")));
     long totalAttempts =
         violatedUserRepository.countByLoggedInAtGreaterThanEqualAndLoggedInAtLessThanEqual(
             start, end);
@@ -341,7 +358,7 @@ public class DashboardServiceImpl implements DashboardService {
 
     List<ViolatedUserMapPoint> mapPoints =
         mapUsers.stream()
-            .map(user -> toViolatedUserMapPoint(user, includeIpInfo))
+            .map(user -> toViolatedUserMapPoint(user, false))
             .toList();
     List<ViolatedUserInfo> users =
         violatedUsers.getContent().stream()
@@ -360,7 +377,37 @@ public class DashboardServiceImpl implements DashboardService {
         violatedUsers.getTotalElements(),
         violatedUsers.getTotalPages(),
         violatedUsers.hasNext(),
-        violatedUsers.hasPrevious());
+        violatedUsers.hasPrevious(),
+        violatedUserRepository.countDistinctIps(start, end),
+        violatedUserRepository.countDistinctEmails(start, end),
+        topIps(start, end),
+        topEmails(start, end));
+  }
+
+  private List<ViolatedUserIpSummary> topIps(LocalDateTime start, LocalDateTime end) {
+    return violatedUserRepository.findTopIps(start, end, PageRequest.of(0, TOP_VIOLATION_LIMIT)).stream()
+        .map(
+            row ->
+                new ViolatedUserIpSummary(
+                    (String) row[0],
+                    ((Number) row[1]).longValue(),
+                    ((Number) row[2]).longValue(),
+                    (LocalDateTime) row[3]))
+        .toList();
+  }
+
+  private List<ViolatedUserEmailSummary> topEmails(LocalDateTime start, LocalDateTime end) {
+    return violatedUserRepository
+        .findTopEmails(start, end, PageRequest.of(0, TOP_VIOLATION_LIMIT))
+        .stream()
+        .map(
+            row ->
+                new ViolatedUserEmailSummary(
+                    (String) row[0],
+                    ((Number) row[1]).longValue(),
+                    ((Number) row[2]).longValue(),
+                    (LocalDateTime) row[3]))
+        .toList();
   }
 
   private ViolatedUserInfo toViolatedUserInfo(

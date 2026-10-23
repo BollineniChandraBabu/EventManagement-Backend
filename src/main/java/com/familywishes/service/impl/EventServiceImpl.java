@@ -1,5 +1,6 @@
 package com.familywishes.service.impl;
 
+import com.familywishes.util.WishesUrls;
 import com.familywishes.dto.CommonDtos.PagedResponse;
 import com.familywishes.dto.EventDtos.*;
 import com.familywishes.entity.Event;
@@ -36,6 +37,7 @@ public class EventServiceImpl implements EventService {
             .eventType(resolveEventType(request.eventType()))
             .eventDate(request.eventDate())
             .recurring(request.recurring())
+            .wishesUrl(normalizeWishesUrl(request.wishesUrl()))
             .user(user)
             .active(true)
             .build();
@@ -44,9 +46,33 @@ public class EventServiceImpl implements EventService {
   }
 
   @Override
+  public EventResponse update(Long id, EventRequest request) {
+    Event event = findEvent(id);
+    var user =
+        userRepository
+            .findById(request.userId())
+            .orElseThrow(() -> new NotFoundException("User not found"));
+    event.setEventType(resolveEventType(request.eventType()));
+    event.setEventDate(request.eventDate());
+    event.setRecurring(request.recurring());
+    event.setWishesUrl(normalizeWishesUrl(request.wishesUrl())); // blank removes the link
+    event.setUser(user);
+    return toResponse(eventRepository.save(event));
+  }
+
+  @Override
   public EventResponse getById(Long id) {
-    Event event =
-        eventRepository.findById(id).orElseThrow(() -> new NotFoundException("Event not found"));
+    return toResponse(findEvent(id));
+  }
+
+  @Override
+  public EventResponse getById(Long id, boolean isAdmin, String requesterEmail) {
+    Event event = findEvent(id);
+    boolean isOwner =
+        event.getUser().getEmail() != null && event.getUser().getEmail().equalsIgnoreCase(requesterEmail);
+    if (!isAdmin && !isOwner) {
+      throw new NotFoundException("Event not found"); // do not reveal that it exists
+    }
     return toResponse(event);
   }
 
@@ -94,14 +120,30 @@ public class EventServiceImpl implements EventService {
   @Override
   public List<EventResponse> listByMonth(Integer month){
     return eventRepository.findByMonth(month).stream().map(event -> {
-      return new EventResponse(event.getId(), event.getEventType().getDisplayName(), event.getEventDate(),event.isRecurring(), event.getUser().getName(), event.isActive());
+      return new EventResponse(
+          event.getId(),
+          event.getEventType().getDisplayName(),
+          event.getEventDate(),
+          event.isRecurring(),
+          event.getUser().getName(),
+          event.isActive(),
+          event.getUser().getId(),
+          event.getWishesUrl());
     }).toList();
   }
 
   @Override
   public List<EventResponse> listByMonthAndUserEmail(Integer month, String userEmail) {
     return eventRepository.findByMonthAndUserEmail(month, userEmail).stream().map(event -> {
-      return new EventResponse(event.getId(), event.getEventType().getDisplayName(), event.getEventDate(),event.isRecurring(), event.getUser().getName(), event.isActive());
+      return new EventResponse(
+          event.getId(),
+          event.getEventType().getDisplayName(),
+          event.getEventDate(),
+          event.isRecurring(),
+          event.getUser().getName(),
+          event.isActive(),
+          event.getUser().getId(),
+          event.getWishesUrl());
     }).toList();
   }
 
@@ -111,6 +153,19 @@ public class EventServiceImpl implements EventService {
         .orElseThrow(() -> new BadRequestException("Invalid event type"));
   }
 
+  private Event findEvent(Long id) {
+    return eventRepository.findById(id).orElseThrow(() -> new NotFoundException("Event not found"));
+  }
+
+  /** Blank means "no link"; a bad link is reported to the user as a 400. */
+  private static String normalizeWishesUrl(String raw) {
+    try {
+      return WishesUrls.normalizeOrNull(raw);
+    } catch (IllegalArgumentException e) {
+      throw new BadRequestException(e.getMessage());
+    }
+  }
+
   private EventResponse toResponse(Event event) {
     return new EventResponse(
         event.getId(),
@@ -118,6 +173,8 @@ public class EventServiceImpl implements EventService {
         event.getEventDate(),
         event.isRecurring(),
         event.getUser().getName(),
-        event.isActive());
+        event.isActive(),
+        event.getUser().getId(),
+        event.getWishesUrl());
   }
 }

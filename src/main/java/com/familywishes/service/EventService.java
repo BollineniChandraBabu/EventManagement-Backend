@@ -10,6 +10,11 @@ public interface EventService {
 
   EventResponse getById(Long id);
 
+  /** Admins may read any event; everyone else only their own. */
+  EventResponse getById(Long id, boolean isAdmin, String requesterEmail);
+
+  EventResponse update(Long id, EventRequest request);
+
   void deleteById(Long id);
 
   PagedResponse<EventResponse> list(

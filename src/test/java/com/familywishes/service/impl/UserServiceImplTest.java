@@ -1,5 +1,7 @@
 package com.familywishes.service.impl;
 
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.never;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
@@ -159,5 +161,64 @@ class UserServiceImplTest {
     when(userRepository.findByEmail("aman@example.com")).thenReturn(Optional.of(existingUser));
 
     assertThrows(BadRequestException.class, () -> userService.update(request));
+  }
+
+  private UserRequest requestWithWishesUrl(String wishesUrl) {
+    return new UserRequest(
+        "Aman",
+        "aman@example.com",
+        Role.ROLE_USER,
+        Gender.MALE,
+        LocalDate.of(1995, 5, 4),
+        "BROTHER",
+        true,
+        false,
+        true,
+        wishesUrl);
+  }
+
+  private void givenCreatableUser() {
+    when(relationshipSeedRepository.findByCodeAndActiveTrue("BROTHER"))
+        .thenReturn(
+            Optional.of(RelationshipSeed.builder().code("BROTHER").active(true).build()));
+    when(passwordEncoder.encode("Test")).thenReturn("encoded-password");
+    when(supabaseStorageService.getDefaultProfilePictureUrl(any())).thenReturn("default.png");
+    when(userRepository.save(any(User.class)))
+        .thenAnswer(
+            invocation -> {
+              User u = invocation.getArgument(0);
+              u.setId(1L);
+              return u;
+            });
+  }
+
+  @Test
+  void createShouldStoreTheCustomBirthdayWishesLink() {
+    givenCreatableUser();
+
+    UserResponse response =
+        userService.create(requestWithWishesUrl("  https://example.com/birthday/aman.html "));
+
+    assertEquals("https://example.com/birthday/aman.html", response.birthdayWishesUrl());
+  }
+
+  @Test
+  void createWithoutALinkShouldLeaveItEmptySoTheBirthdayEmailSkipsIt() {
+    givenCreatableUser();
+
+    assertNull(userService.create(requestWithWishesUrl(null)).birthdayWishesUrl());
+  }
+
+  @Test
+  void createShouldRejectALinkThatIsNotAWebAddress() {
+    when(relationshipSeedRepository.findByCodeAndActiveTrue("BROTHER"))
+        .thenReturn(
+            Optional.of(RelationshipSeed.builder().code("BROTHER").active(true).build()));
+    when(passwordEncoder.encode("Test")).thenReturn("encoded-password");
+
+    assertThrows(
+        BadRequestException.class,
+        () -> userService.create(requestWithWishesUrl("javascript:alert(1)")));
+    verify(userRepository, never()).save(any());
   }
 }

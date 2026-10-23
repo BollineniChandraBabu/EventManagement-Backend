@@ -9,7 +9,13 @@ import com.familywishes.exception.NotFoundException;
 import com.familywishes.repository.UserRepository;
 import com.familywishes.repository.WishImageRepository;
 import com.familywishes.service.WishImageService;
+import com.familywishes.util.ImageContentTypes;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
+import java.util.Locale;
+import java.util.Set;
 import java.util.concurrent.ThreadLocalRandom;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -25,6 +31,11 @@ import org.springframework.web.multipart.MultipartFile;
 public class WishImageServiceImpl implements WishImageService {
   private final WishImageRepository wishImageRepository;
   private final UserRepository userRepository;
+  private static final int MAX_EVENT_TYPE_LENGTH = 150; // size of the event_type column
+  private static final long MAX_IMAGE_BYTES = 5L * 1024 * 1024;
+  private static final Set<String> ALLOWED_IMAGE_TYPES =
+      Set.of("image/png", "image/jpeg", "image/gif", "image/webp");
+
   private final SupabaseStorageService storageService;
 
   @Override
@@ -116,23 +127,45 @@ public class WishImageServiceImpl implements WishImageService {
 
   @Override
   public byte[] findRandomImage(String eventType, Long userId) {
-    if (!StringUtils.hasText(eventType)) {
-      return null;
+    return findRandomImage(userId, List.of(eventType == null ? "" : eventType));
+  }
+
+  @Override
+  public byte[] findRandomImage(Long userId, List<String> eventTypes) {
+    for (String eventType : eventTypes) {
+      if (!StringUtils.hasText(eventType)) {
+        continue;
+      }
+      String normalizedEvent = normalizeEvent(eventType);
+      byte[] image = downloadAny(userCandidates(normalizedEvent, userId));
+      if (image == null) {
+        image = downloadAny(wishImageRepository.findByEventTypeIgnoreCaseAndActiveTrueAndUserIsNull(normalizedEvent));
+      }
+      if (image != null) {
+        return image;
+      }
     }
-    String normalizedEvent = normalizeEvent(eventType);
-    List<WishImage> candidates =
-        userId == null
-            ? List.of()
-            : wishImageRepository.findByEventTypeIgnoreCaseAndActiveTrueAndUser_Id(
-                normalizedEvent, userId);
-    if (candidates.isEmpty()) {
-      candidates = wishImageRepository.findByEventTypeIgnoreCaseAndActiveTrueAndUserIsNull(normalizedEvent);
+    return null;
+  }
+
+  private List<WishImage> userCandidates(String eventType, Long userId) {
+    return userId == null
+        ? List.of()
+        : wishImageRepository.findByEventTypeIgnoreCaseAndActiveTrueAndUser_Id(eventType, userId);
+  }
+
+  /** Picks images in random order until one can be downloaded (a file may be missing in storage). */
+  private byte[] downloadAny(List<WishImage> candidates) {
+    List<WishImage> shuffled = new ArrayList<>(candidates);
+    Collections.shuffle(shuffled, ThreadLocalRandom.current());
+    for (WishImage candidate : shuffled) {
+      byte[] data = storageService.downloadImage(candidate.getObjectKey());
+      if (data != null && data.length > 0) {
+        return data;
+      }
+      log.warn("Wish image {} could not be downloaded, trying another one", candidate.getId());
     }
-    if (candidates.isEmpty()) {
-      return null;
-    }
-    WishImage selected = candidates.get(ThreadLocalRandom.current().nextInt(candidates.size()));
-    return storageService.downloadImage(selected.getObjectKey());
+    return null;
   }
 
   private WishImage get(Long id) {
@@ -151,15 +184,33 @@ public class WishImageServiceImpl implements WishImageService {
     if (!StringUtils.hasText(value)) {
       throw new BadRequestException("Event type is required");
     }
-    return value.trim();
+    String eventType = value.trim();
+    if (eventType.length() > MAX_EVENT_TYPE_LENGTH) {
+      throw new BadRequestException("Event type must be at most " + MAX_EVENT_TYPE_LENGTH + " characters");
+    }
+    return eventType;
   }
 
+  /** Only real PNG, JPEG, GIF and WebP images up to 5 MB (no SVG, which can carry scripts). */
   private void validateImage(MultipartFile file) {
-    if (file == null
-        || file.isEmpty()
-        || file.getContentType() == null
-        || !file.getContentType().startsWith("image/")) {
+    if (file == null || file.isEmpty()) {
       throw new BadRequestException("A non-empty image file is required");
+    }
+    if (file.getSize() > MAX_IMAGE_BYTES) {
+      throw new BadRequestException("The image must be 5 MB or smaller");
+    }
+    String declaredType = file.getContentType() == null ? "" : file.getContentType().toLowerCase(Locale.ROOT);
+    if (!ALLOWED_IMAGE_TYPES.contains(declaredType) || !ALLOWED_IMAGE_TYPES.contains(detectType(file))) {
+      throw new BadRequestException("Only PNG, JPEG, GIF or WebP images are allowed");
+    }
+  }
+
+  /** Looks at the file's first bytes, so a renamed file cannot pass as an image. */
+  private String detectType(MultipartFile file) {
+    try {
+      return ImageContentTypes.detect(file.getBytes());
+    } catch (IOException e) {
+      throw new BadRequestException("The image could not be read");
     }
   }
 

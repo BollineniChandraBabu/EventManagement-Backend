@@ -1,8 +1,11 @@
 package com.familywishes.controller;
 
 import com.familywishes.dto.CommonDtos.PagedResponse;
+import com.familywishes.dto.FestivalDtos.FestivalWishMappingBulkRequest;
+import com.familywishes.dto.FestivalDtos.FestivalWishMappingBulkResponse;
 import com.familywishes.dto.FestivalDtos.FestivalWishMappingRequest;
 import com.familywishes.dto.FestivalDtos.FestivalWishMappingResponse;
+import com.familywishes.dto.FestivalDtos.FestivalWishMappingSummary;
 import com.familywishes.service.FestivalWishMappingService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -29,9 +32,23 @@ public class FestivalWishMappingController {
       @RequestParam(defaultValue = "0") int page,
       @RequestParam(defaultValue = "10") int size,
       @RequestParam(defaultValue = "") String searchKey,
+      @RequestParam(defaultValue = "ALL") String status,
       @RequestParam(defaultValue = "id") String sortBy,
       @RequestParam(defaultValue = "desc") String sortDir) {
-    return festivalWishMappingService.list(page, size, searchKey, sortBy, sortDir);
+    return festivalWishMappingService.list(page, size, searchKey, status, sortBy, sortDir);
+  }
+
+  @PostMapping("/bulk")
+  @PreAuthorize("hasRole('ADMIN')")
+  public FestivalWishMappingBulkResponse upsertBulk(
+      @Valid @RequestBody FestivalWishMappingBulkRequest request) {
+    return festivalWishMappingService.upsertBulk(request);
+  }
+
+  @GetMapping("/summary")
+  @PreAuthorize("hasRole('ADMIN')")
+  public FestivalWishMappingSummary summary() {
+    return festivalWishMappingService.summary();
   }
 
   @GetMapping("/me")

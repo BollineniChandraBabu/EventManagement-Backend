@@ -200,3 +200,31 @@ Cached values must implement `Serializable` (so the caches also work if they are
 ## Email status API and images
 `GET /api/emails/status` (and the other status lists) no longer include image data; each row only has `hasImage`. Fetch the picture when it is needed with `GET /api/emails/status/{id}/image` (same access rules as the status endpoints: admins see everything, other users only their own non-sensitive emails). The response is the image itself with its content type and `Cache-Control: private, max-age=600`.
 
+## Custom wishes link (birthday and events)
+A user can have a **birthday wishes page** (`users.birthday_wishes_url`) and an event such as an anniversary can have a **wishes page** (`events.wishes_url`), for example one of your static HTML pages. When the email is sent:
+
+- with a link: the email ends with a button "Open your birthday / anniversary wishes" and a plain-text copy of the link,
+- without a link: nothing is added (the feature is skipped for that user or event).
+
+Links must be `http://` or `https://` addresses of at most 500 characters, without spaces or a username/password (`WishesUrls`). Anything else is rejected with a `400`. Saving an empty value removes the link. Festival mappings can have a personal note instead, which is added at the end of the festival email. All text that comes from a user is HTML-escaped (`WishEmailExtras`).
+
+## Images for wishes
+Uploaded images (`/wish-images`) are chosen first, otherwise an image is generated, and the email is always sent (even if generation fails). The first match wins:
+
+1. an image uploaded for that person and event type,
+2. an image uploaded for everyone for that event type,
+3. for festivals, the same two steps for the general `Festival` type,
+4. otherwise a generated image.
+
+Event types are not case-sensitive, and codes such as `WEDDING_ANNIVERSARY` also match images named `Wedding Anniversary`. Uploads must be real PNG, JPEG, GIF or WebP files up to 5 MB (SVG is rejected, and the file's bytes are checked, not only its content type). Anniversary and other event emails now get an image too (they used to be sent without one).
+
+## Festival wishes API
+- `POST /api/festival-wish-mappings/bulk` maps one festival to many users (existing mappings are updated).
+- `GET /api/festival-wish-mappings/summary` returns the dashboard counts.
+- `GET /api/festival-wish-mappings?status=ALL|ACTIVE|INACTIVE|FAILED` filters the list. Responses include `lastWishSentOn`, `error` and `customMessage`.
+- A mapping whose last attempt failed keeps `error = true` until a later run succeeds; the flag is now cleared after a success (before, a mapping that failed once was sent again on every run that day).
+
+## Events and violated users
+- `PUT /api/events/{id}` updates an event (it did not exist before, so editing an event could not be saved). `GET /api/events/{id}` is limited to admins and the event's owner.
+- `GET /api/dashboard/violated-users` accepts `searchKey` (email or IP) and returns `uniqueIps`, `uniqueEmails`, `topIps` and `topEmails`. Map points are limited to the newest 300 and are no longer looked up one by one in ip-api.com.
+

@@ -22,9 +22,19 @@ public class EventController {
     return eventService.create(request);
   }
 
+  @PutMapping("/{id}")
+  @PreAuthorize("hasRole('ADMIN')")
+  public EventResponse update(@PathVariable Long id, @Valid @RequestBody EventRequest request) {
+    return eventService.update(id, request);
+  }
+
   @GetMapping("/{id}")
-  public EventResponse getById(@PathVariable Long id) {
-    return eventService.getById(id);
+  public EventResponse getById(@PathVariable Long id, Authentication authentication) {
+    boolean isAdmin =
+        authentication.getAuthorities().stream()
+            .map(GrantedAuthority::getAuthority)
+            .anyMatch("ROLE_ADMIN"::equals);
+    return eventService.getById(id, isAdmin, authentication.getName());
   }
 
   @GetMapping
