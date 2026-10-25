@@ -256,11 +256,6 @@ public class FestivalWishMappingServiceImpl implements FestivalWishMappingServic
     return note == null || note.isBlank() ? null : note.trim();
   }
 
-  private static String normalizeStatus(String status) {
-    String upper = status == null ? "ALL" : status.trim().toUpperCase(Locale.ROOT);
-    return STATUSES.contains(upper) ? upper : "ALL";
-  }
-
   private String resolveSortBy(String sortBy) {
     return switch (sortBy) {
       case "id", "active", "createdAt", "updatedAt", "lastWishSentOn" -> sortBy;

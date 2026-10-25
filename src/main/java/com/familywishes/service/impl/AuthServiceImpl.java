@@ -40,6 +40,7 @@ import org.springframework.util.CollectionUtils;
 @RequiredArgsConstructor
 @Slf4j
 public class AuthServiceImpl implements AuthService {
+  private static final String USER_NOT_FOUND = "User not found";
   private static final SecureRandom SECURE_RANDOM = new SecureRandom();
   private static final int OTP_TTL_MINUTES = 5;
 
@@ -84,31 +85,13 @@ public class AuthServiceImpl implements AuthService {
       User user =
               userRepository
                       .findByEmailAndDeletedFalse(request.email())
-                      .orElseThrow(() -> new NotFoundException("User not found"));
+                      .orElseThrow(() -> new NotFoundException(USER_NOT_FOUND));
 
       if (user.getFailedLoginAttempts() >= failedLoginAttemptThreshold) {
         throw new BadRequestException(CONTACT_ADMIN_MESSAGE);
       }
 
-      try {
-        authManager.authenticate(
-                new UsernamePasswordAuthenticationToken(request.email(), request.password()));
-      } catch (BadCredentialsException ex) {
-        int failedAttempts = user.getFailedLoginAttempts() + 1;
-        user.setFailedLoginAttempts(failedAttempts);
-        userRepository.save(user);
-
-        if (failedAttempts >= failedLoginAttemptThreshold) {
-          emailService.sendEmailWithAttachments(
-                  user.getEmail(),
-                  "Account Security Alert",
-                  buildFailedLoginThresholdEmailBody(),
-                  null,
-                  null);
-          throw new BadRequestException(CONTACT_ADMIN_MESSAGE);
-        }
-        throw new BadRequestException("Invalid email or password");
-      }
+      authenticateUser(user, request.email(), request.password());
 
       if (user.getFailedLoginAttempts() > 0) {
         user.setFailedLoginAttempts(0);
@@ -149,6 +132,28 @@ public class AuthServiceImpl implements AuthService {
                 null);
       }
       throw new NotFoundException(e.getMessage());
+    }
+  }
+
+  private void authenticateUser(User user, String email, String password) {
+    try {
+      authManager.authenticate(
+              new UsernamePasswordAuthenticationToken(email, password));
+    } catch (BadCredentialsException ex) {
+      int failedAttempts = user.getFailedLoginAttempts() + 1;
+      user.setFailedLoginAttempts(failedAttempts);
+      userRepository.save(user);
+
+      if (failedAttempts >= failedLoginAttemptThreshold) {
+        emailService.sendEmailWithAttachments(
+                user.getEmail(),
+                "Account Security Alert",
+                buildFailedLoginThresholdEmailBody(),
+                null,
+                null);
+        throw new BadRequestException(CONTACT_ADMIN_MESSAGE);
+      }
+      throw new BadRequestException("Invalid email or password");
     }
   }
 
@@ -223,7 +228,7 @@ public class AuthServiceImpl implements AuthService {
     User adminUser =
         userRepository
             .findByEmailAndDeletedFalse(authentication.getName())
-            .orElseThrow(() -> new NotFoundException("User not found"));
+            .orElseThrow(() -> new NotFoundException(USER_NOT_FOUND));
 
     if (adminUser.getRole() != Role.ROLE_ADMIN) {
       throw new BadRequestException("Only admin can login as user");
@@ -232,7 +237,7 @@ public class AuthServiceImpl implements AuthService {
     User user =
         userRepository
             .findByEmailAndDeletedFalse(request.email())
-            .orElseThrow(() -> new NotFoundException("User not found"));
+            .orElseThrow(() -> new NotFoundException(USER_NOT_FOUND));
 
     if (user.getRole() == Role.ROLE_ADMIN) {
       throw new BadRequestException("Admin cannot login as another admin");
@@ -319,7 +324,7 @@ public class AuthServiceImpl implements AuthService {
         userRepository
             .findByEmailAndDeletedFalse(request.email())
             .filter(User::isActive)
-            .orElseThrow(() -> new NotFoundException("User not found"));
+            .orElseThrow(() -> new NotFoundException(USER_NOT_FOUND));
 
     String otp = String.format("%06d", SECURE_RANDOM.nextInt(1_000_000));
     otpCodeRepository.save(
@@ -354,7 +359,7 @@ public class AuthServiceImpl implements AuthService {
     User user =
         userRepository
             .findByEmailAndDeletedFalse(request.email())
-            .orElseThrow(() -> new NotFoundException("User not found"));
+            .orElseThrow(() -> new NotFoundException(USER_NOT_FOUND));
 
     var otp =
         otpCodeRepository
@@ -526,7 +531,7 @@ public class AuthServiceImpl implements AuthService {
     User user =
         userRepository
             .findByEmailAndDeletedFalse(authentication.getName())
-            .orElseThrow(() -> new NotFoundException("User not found"));
+            .orElseThrow(() -> new NotFoundException(USER_NOT_FOUND));
 
     if (!passwordEncoder.matches(request.currentPassword(), user.getPassword())) {
       throw new BadRequestException("Current password is incorrect");
@@ -571,7 +576,7 @@ public class AuthServiceImpl implements AuthService {
     User user =
         userRepository
             .findByEmailAndDeletedFalse(email)
-            .orElseThrow(() -> new NotFoundException("User not found"));
+            .orElseThrow(() -> new NotFoundException(USER_NOT_FOUND));
     if (!user.isActive()) {
       throw new BadRequestException("User account is inactive");
     }

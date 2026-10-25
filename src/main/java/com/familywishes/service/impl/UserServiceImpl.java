@@ -380,16 +380,6 @@ public class UserServiceImpl implements UserService {
         .orElseThrow(() -> new BadRequestException("Invalid relationship"));
   }
 
-  private long daysUntil(LocalDate targetDate, LocalDate today) {
-    if (targetDate == null) {
-      return Long.MAX_VALUE;
-    }
-    if (!targetDate.isBefore(today)) {
-      return java.time.temporal.ChronoUnit.DAYS.between(today, targetDate);
-    }
-    return java.time.temporal.ChronoUnit.DAYS.between(today, targetDate.plusYears(1));
-  }
-
   private User findAuthenticatedUser() {
     Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
     if (authentication == null || !authentication.isAuthenticated()) {

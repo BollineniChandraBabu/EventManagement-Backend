@@ -77,10 +77,10 @@ public class GmailEmailServiceImpl implements GmailEmailService {
   public void sendEmailWithAttachments(
       String to, String subject, String html, Long logId, byte[] image, EmailType emailType) {
 
+    EmailType resolvedType = emailType != null ? emailType : classifyEmailType(subject, html);
     EmailLog logEntry =
         logId == null
-            ? createPendingEmailLog(
-                to, subject, emailType == null ? classifyEmailType(subject, html) : emailType)
+            ? createPendingEmailLog(to, subject, resolvedType)
             : logRepository.findById(logId).orElseThrow();
 
     if (emailType != null) {
@@ -164,7 +164,7 @@ public class GmailEmailServiceImpl implements GmailEmailService {
 
     message.setFrom(new InternetAddress(senderEmail));
 
-    message.addRecipient(MimeMessage.RecipientType.TO, new InternetAddress(to));
+    message.addRecipient(jakarta.mail.Message.RecipientType.TO, new InternetAddress(to));
 
     message.setSubject(subject);
 
@@ -227,7 +227,7 @@ public class GmailEmailServiceImpl implements GmailEmailService {
   // ==========================
 
   @Override
-  public PagedResponse<EmailStatusResponse> getStatusWithFilters(
+  public PagedResponse<EmailDtos.EmailStatusResponse> getStatusWithFilters(
       int page,
       int size,
       String searchKey,
@@ -249,6 +249,28 @@ public class GmailEmailServiceImpl implements GmailEmailService {
             normalizedSearchKey, targetEmail, cleanStatuses, cleanTypes, pageRequest);
 
     return toPagedResponse(logPage);
+  }
+
+  private PageRequest createPageRequest(int page, int size, String sortBy, String sortDir) {
+    Sort.Direction direction =
+        "asc".equalsIgnoreCase(sortDir) ? Sort.Direction.ASC : Sort.Direction.DESC;
+    String normalizedSortBy = (sortBy == null || sortBy.isBlank()) ? "id" : sortBy.trim();
+    return PageRequest.of(page, size, Sort.by(direction, normalizedSortBy));
+  }
+
+  private String normalizeSearchKey(String searchKey) {
+    return searchKey == null ? "" : searchKey.trim();
+  }
+
+  private PagedResponse<EmailDtos.EmailStatusResponse> toPagedResponse(Page<EmailLog> logPage) {
+    return new PagedResponse<>(
+        logPage.getContent().stream().map(this::toEmailStatusResponse).toList(),
+        logPage.getNumber(),
+        logPage.getSize(),
+        logPage.getTotalElements(),
+        logPage.getTotalPages(),
+        logPage.hasNext(),
+        logPage.hasPrevious());
   }
 
   @Override

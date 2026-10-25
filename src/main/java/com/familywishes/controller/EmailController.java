@@ -20,6 +20,7 @@ import org.springframework.web.bind.annotation.*;
 @RequestMapping({"/api/email", "/api/emails"})
 @RequiredArgsConstructor
 public class EmailController {
+  private static final String ROLE_ADMIN = "ROLE_ADMIN";
   private final GmailEmailService emailService;
 
   @PostMapping("/test")
@@ -44,7 +45,7 @@ public class EmailController {
     boolean isAdmin =
         authentication.getAuthorities().stream()
             .map(GrantedAuthority::getAuthority)
-            .anyMatch("ROLE_ADMIN"::equals);
+            .anyMatch(ROLE_ADMIN::equals);
     EmailImage image = emailService.getImage(id, authentication.getName(), isAdmin);
     return ResponseEntity.ok()
         .contentType(MediaType.parseMediaType(image.contentType()))
