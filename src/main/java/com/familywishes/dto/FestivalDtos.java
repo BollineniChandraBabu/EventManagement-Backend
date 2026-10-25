@@ -47,6 +47,7 @@ public class FestivalDtos {
       String userName,
       boolean active,
       String customMessage,
+      String imageUrl,
       LocalDate lastWishSentOn,
       boolean error) {}
 }

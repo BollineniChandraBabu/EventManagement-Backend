@@ -32,14 +32,23 @@ public class SpecialEventSeedController {
     return specialEventSeedService.getById(id);
   }
 
+  @GetMapping("/filter-values")
+  public java.util.Map<String, Object> getFilterValues() {
+    java.util.List<Integer> months = java.util.stream.IntStream.rangeClosed(1, 12).boxed().toList();
+    java.util.List<Boolean> activeStatuses = java.util.List.of(true, false);
+    return java.util.Map.of("months", months, "active", activeStatuses);
+  }
+
   @GetMapping
   public PagedResponse<SpecialEventSeedResponse> list(
       @RequestParam(defaultValue = "0") int page,
       @RequestParam(defaultValue = "10") int size,
       @RequestParam(defaultValue = "") String searchKey,
+      @RequestParam(required = false) java.util.List<Integer> months,
+      @RequestParam(required = false) Boolean active,
       @RequestParam(defaultValue = "id") String sortBy,
       @RequestParam(defaultValue = "desc") String sortDir) {
-    return specialEventSeedService.list(page, size, searchKey, sortBy, sortDir);
+    return specialEventSeedService.list(page, size, searchKey, months, active, sortBy, sortDir);
   }
 
   @GetMapping("/today")

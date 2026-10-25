@@ -27,14 +27,23 @@ public class RelationshipSeedController {
     return relationshipSeedService.update(code, request);
   }
 
+  @GetMapping("/filter-values")
+  public java.util.Map<String, Object> getFilterValues() {
+    java.util.List<String> codes = relationshipSeedService.listActive().stream().map(EnumSeedResponse::code).toList();
+    java.util.List<Boolean> activeStatuses = java.util.List.of(true, false);
+    return java.util.Map.of("codes", codes, "active", activeStatuses);
+  }
+
   @GetMapping
   public PagedResponse<EnumSeedResponse> list(
       @RequestParam(defaultValue = "0") int page,
       @RequestParam(defaultValue = "10") int size,
       @RequestParam(defaultValue = "") String searchKey,
+      @RequestParam(required = false) java.util.List<String> codes,
+      @RequestParam(required = false) Boolean active,
       @RequestParam(defaultValue = "displayName") String sortBy,
       @RequestParam(defaultValue = "asc") String sortDir) {
-    return relationshipSeedService.list(page, size, searchKey, sortBy, sortDir);
+    return relationshipSeedService.list(page, size, searchKey, codes, active, sortBy, sortDir);
   }
 
   @GetMapping("/{id}")

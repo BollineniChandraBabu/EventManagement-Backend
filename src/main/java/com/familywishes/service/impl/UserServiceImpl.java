@@ -155,14 +155,30 @@ public class UserServiceImpl implements UserService {
 
   @Override
   public PagedResponse<UserResponse> list(
-      int page, int size, String searchKey, String sortBy, String sortDir) {
+      int page,
+      int size,
+      String searchKey,
+      List<com.familywishes.entity.enums.Role> roles,
+      List<com.familywishes.entity.enums.Gender> genders,
+      List<String> relationships,
+      Boolean active,
+      String sortBy,
+      String sortDir) {
     Sort.Direction direction =
         "asc".equalsIgnoreCase(sortDir) ? Sort.Direction.ASC : Sort.Direction.DESC;
     String normalizedSortBy = (sortBy == null || sortBy.isBlank()) ? "createdAt" : sortBy.trim();
 
+    List<com.familywishes.entity.enums.Role> cleanRoles = (roles == null || roles.isEmpty()) ? null : roles;
+    List<com.familywishes.entity.enums.Gender> cleanGenders = (genders == null || genders.isEmpty()) ? null : genders;
+    List<String> cleanRelations = (relationships == null || relationships.isEmpty()) ? null : relationships;
+
     Page<User> userPage =
-        userRepository.findAllActiveUsers(
+        userRepository.findAllByFilters(
             searchKey == null ? "" : searchKey.trim(),
+            cleanRoles,
+            cleanGenders,
+            cleanRelations,
+            active,
             PageRequest.of(page, size, Sort.by(direction, normalizedSortBy)));
 
     return new PagedResponse<>(

@@ -52,6 +52,13 @@ public class EmailController {
         .body(image.data());
   }
 
+  @GetMapping("/filter-values")
+  public java.util.Map<String, Object> getFilterValues() {
+    return java.util.Map.of(
+        "statuses", java.util.Arrays.stream(com.familywishes.entity.enums.EmailStatus.values()).map(Enum::name).toList(),
+        "emailTypes", java.util.Arrays.stream(com.familywishes.entity.enums.EmailType.values()).map(Enum::name).toList());
+  }
+
   @GetMapping("/status")
   public PagedResponse<EmailStatusResponse> status(
       Authentication authentication,
@@ -59,12 +66,19 @@ public class EmailController {
       @RequestParam(defaultValue = "10") int size,
       @RequestParam(defaultValue = "") String searchKey,
       @RequestParam(defaultValue = "ALL") String mailTab,
+      @RequestParam(required = false) java.util.List<com.familywishes.entity.enums.EmailStatus> statuses,
+      @RequestParam(required = false) java.util.List<com.familywishes.entity.enums.EmailType> emailTypes,
       @RequestParam(defaultValue = "id") String sortBy,
       @RequestParam(defaultValue = "desc") String sortDir) {
     boolean isAdmin =
         authentication.getAuthorities().stream()
             .map(GrantedAuthority::getAuthority)
             .anyMatch("ROLE_ADMIN"::equals);
+
+    if ((statuses != null && !statuses.isEmpty()) || (emailTypes != null && !emailTypes.isEmpty())) {
+      return emailService.getStatusWithFilters(
+          page, size, searchKey, statuses, emailTypes, authentication.getName(), isAdmin, sortBy, sortDir);
+    }
 
     return emailService.getStatus(
         page, size, searchKey, mailTab, authentication.getName(), isAdmin, sortBy, sortDir);

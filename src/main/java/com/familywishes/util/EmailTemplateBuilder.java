@@ -60,7 +60,7 @@ public class EmailTemplateBuilder {
     return """
         <div style="margin-top:8px;padding-top:16px;border-top:1px solid #e5e7eb;text-align:center;">
           %s
-          <p style="margin:0;font-size:12px;color:#9ca3af;">Thanks and regards,<br/>Golden Greetings Team</p>
+          <p style="margin:0;font-size:12px;color:#9ca3af;">Thanks and regards,<br/>Golden Greetings Team<br/>Visit <a href="https://chandu-goldengreetings.web.app/" style="color:#2563eb;text-decoration:underline;">Golden Greetings</a></p>
         </div>
         """
         .formatted(imageHtml);

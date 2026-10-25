@@ -38,6 +38,28 @@ public interface UserRepository extends JpaRepository<User, Long> {
                     OR LOWER(u.name) LIKE LOWER(CONCAT('%', :searchKey, '%'))
                     OR LOWER(u.email) LIKE LOWER(CONCAT('%', :searchKey, '%'))
                   )
+              AND (:roles IS NULL OR u.role IN :roles)
+              AND (:genders IS NULL OR u.gender IN :genders)
+              AND (:relationships IS NULL OR u.relationShip.code IN :relationships)
+              AND (:active IS NULL OR u.active = :active)
+            """)
+  Page<User> findAllByFilters(
+      @Param("searchKey") String searchKey,
+      @Param("roles") List<com.familywishes.entity.enums.Role> roles,
+      @Param("genders") List<com.familywishes.entity.enums.Gender> genders,
+      @Param("relationships") List<String> relationships,
+      @Param("active") Boolean active,
+      Pageable pageable);
+
+  @Query(
+      """
+            SELECT u FROM User u
+            WHERE u.deleted = false
+              AND (
+                    :searchKey = ''
+                    OR LOWER(u.name) LIKE LOWER(CONCAT('%', :searchKey, '%'))
+                    OR LOWER(u.email) LIKE LOWER(CONCAT('%', :searchKey, '%'))
+                  )
             """)
   Page<User> findAllActiveUsers(@Param("searchKey") String searchKey, Pageable pageable);
 

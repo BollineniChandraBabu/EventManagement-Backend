@@ -13,7 +13,13 @@ public interface EventTypeSeedService {
   List<EnumSeedResponse> listActive();
 
   PagedResponse<EnumSeedResponse> list(
-      int page, int size, String searchKey, String sortBy, String sortDir);
+      int page,
+      int size,
+      String searchKey,
+      List<String> codes,
+      Boolean active,
+      String sortBy,
+      String sortDir);
 
   EnumSeedResponse getById(Long id);
 

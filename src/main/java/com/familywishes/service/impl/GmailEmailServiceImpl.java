@@ -227,6 +227,31 @@ public class GmailEmailServiceImpl implements GmailEmailService {
   // ==========================
 
   @Override
+  public PagedResponse<EmailStatusResponse> getStatusWithFilters(
+      int page,
+      int size,
+      String searchKey,
+      List<EmailStatus> statuses,
+      List<EmailType> emailTypes,
+      String requesterEmail,
+      boolean isAdmin,
+      String sortBy,
+      String sortDir) {
+    PageRequest pageRequest = createPageRequest(page, size, sortBy, sortDir);
+    String normalizedSearchKey = normalizeSearchKey(searchKey);
+    String targetEmail = isAdmin ? null : requesterEmail;
+
+    List<EmailStatus> cleanStatuses = (statuses == null || statuses.isEmpty()) ? null : statuses;
+    List<EmailType> cleanTypes = (emailTypes == null || emailTypes.isEmpty()) ? null : emailTypes;
+
+    Page<EmailLog> logPage =
+        logRepository.findAllByFilters(
+            normalizedSearchKey, targetEmail, cleanStatuses, cleanTypes, pageRequest);
+
+    return toPagedResponse(logPage);
+  }
+
+  @Override
   public PagedResponse<EmailDtos.EmailStatusResponse> getStatus(
       int page,
       int size,

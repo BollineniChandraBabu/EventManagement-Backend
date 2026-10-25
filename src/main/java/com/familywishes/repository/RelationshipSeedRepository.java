@@ -25,6 +25,21 @@ public interface RelationshipSeedRepository extends JpaRepository<RelationshipSe
       WHERE (:searchKey = ''
              OR LOWER(r.code) LIKE LOWER(CONCAT('%', :searchKey, '%'))
              OR LOWER(r.displayName) LIKE LOWER(CONCAT('%', :searchKey, '%')))
+        AND (:codes IS NULL OR r.code IN :codes)
+        AND (:active IS NULL OR r.active = :active)
+      """)
+  Page<RelationshipSeed> findAllByFilters(
+      @Param("searchKey") String searchKey,
+      @Param("codes") List<String> codes,
+      @Param("active") Boolean active,
+      Pageable pageable);
+
+  @Query(
+      """
+      SELECT r FROM RelationshipSeed r
+      WHERE (:searchKey = ''
+             OR LOWER(r.code) LIKE LOWER(CONCAT('%', :searchKey, '%'))
+             OR LOWER(r.displayName) LIKE LOWER(CONCAT('%', :searchKey, '%')))
       """)
   Page<RelationshipSeed> findAllBySearchKey(
       @Param("searchKey") String searchKey, Pageable pageable);

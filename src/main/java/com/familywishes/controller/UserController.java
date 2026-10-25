@@ -32,15 +32,29 @@ public class UserController {
     return userService.getById(id);
   }
 
+  @GetMapping("/filter-values")
+  @PreAuthorize("hasRole('ADMIN')")
+  public java.util.Map<String, Object> getFilterValues() {
+    return java.util.Map.of(
+        "roles", java.util.Arrays.stream(com.familywishes.entity.enums.Role.values()).map(Enum::name).toList(),
+        "genders", java.util.Arrays.stream(com.familywishes.entity.enums.Gender.values()).map(Enum::name).toList(),
+        "active", java.util.List.of(true, false));
+  }
+
   @GetMapping
   @PreAuthorize("hasRole('ADMIN')")
   public PagedResponse<UserResponse> list(
       @RequestParam(defaultValue = "0") int page,
       @RequestParam(defaultValue = "10") int size,
       @RequestParam(defaultValue = "") String searchKey,
+      @RequestParam(required = false) java.util.List<com.familywishes.entity.enums.Role> roles,
+      @RequestParam(required = false) java.util.List<com.familywishes.entity.enums.Gender> genders,
+      @RequestParam(required = false) java.util.List<String> relationships,
+      @RequestParam(required = false) Boolean active,
       @RequestParam(defaultValue = "createdAt") String sortBy,
       @RequestParam(defaultValue = "desc") String sortDir) {
-    return userService.list(page, size, searchKey, sortBy, sortDir);
+    return userService.list(
+        page, size, searchKey, roles, genders, relationships, active, sortBy, sortDir);
   }
 
   @GetMapping("/me")

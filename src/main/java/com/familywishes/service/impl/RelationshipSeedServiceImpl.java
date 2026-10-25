@@ -57,15 +57,25 @@ public class RelationshipSeedServiceImpl implements RelationshipSeedService {
 
   @Override
   public PagedResponse<EnumSeedResponse> list(
-      int page, int size, String searchKey, String sortBy, String sortDir) {
+      int page,
+      int size,
+      String searchKey,
+      List<String> codes,
+      Boolean active,
+      String sortBy,
+      String sortDir) {
     String normalizedSortBy = resolveSortBy(sortBy);
     Sort sort =
         "desc".equalsIgnoreCase(sortDir)
             ? Sort.by(normalizedSortBy).descending()
             : Sort.by(normalizedSortBy).ascending();
+    List<String> cleanCodes = (codes == null || codes.isEmpty()) ? null : codes;
     var pageResult =
-        relationshipSeedRepository.findAllBySearchKey(
-            searchKey == null ? "" : searchKey.trim(), PageRequest.of(page, size, sort));
+        relationshipSeedRepository.findAllByFilters(
+            searchKey == null ? "" : searchKey.trim(),
+            cleanCodes,
+            active,
+            PageRequest.of(page, size, sort));
     return new PagedResponse<>(
         pageResult.getContent().stream().map(this::toResponse).toList(),
         pageResult.getNumber(),

@@ -35,6 +35,9 @@ public class FestivalWishMapping extends ActivatableEntity {
   @Column(length = 1000)
   private String customMessage;
 
+  @Column(length = 500)
+  private String imageObjectKey;
+
   private LocalDate lastWishSentOn;
 
   @Column(nullable = false, columnDefinition = "SMALLINT")

@@ -12,7 +12,15 @@ public interface UserService {
   UserResponse update(UserRequest request);
 
   PagedResponse<UserResponse> list(
-      int page, int size, String searchKey, String sortBy, String sortDir);
+      int page,
+      int size,
+      String searchKey,
+      List<com.familywishes.entity.enums.Role> roles,
+      List<com.familywishes.entity.enums.Gender> genders,
+      List<String> relationships,
+      Boolean active,
+      String sortBy,
+      String sortDir);
 
   UserResponse getById(Long id);
 

@@ -14,6 +14,16 @@ public interface WishImageService {
   PagedResponse<WishImageResponse> list(
       int page, int size, String searchKey, String eventType, Long userId, Boolean active, String sortBy, String sortDir);
 
+  PagedResponse<WishImageResponse> list(
+      int page,
+      int size,
+      String searchKey,
+      List<String> eventTypes,
+      List<Long> userIds,
+      Boolean active,
+      String sortBy,
+      String sortDir);
+
   void delete(Long id);
 
   byte[] findRandomImage(String eventType, Long userId);

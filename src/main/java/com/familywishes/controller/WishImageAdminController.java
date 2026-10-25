@@ -37,17 +37,28 @@ public class WishImageAdminController {
     return wishImageService.update(id, userId, clearUser, eventType, active, file);
   }
 
+  @GetMapping("/filter-values")
+  public java.util.Map<String, Object> getFilterValues() {
+    java.util.List<Boolean> activeStatuses = java.util.List.of(true, false);
+    return java.util.Map.of("active", activeStatuses);
+  }
+
   @GetMapping
   public PagedResponse<WishImageResponse> list(
       @RequestParam(defaultValue = "0") int page,
       @RequestParam(defaultValue = "10") int size,
       @RequestParam(defaultValue = "") String searchKey,
-      @RequestParam(defaultValue = "") String eventType,
+      @RequestParam(required = false) String eventType,
       @RequestParam(required = false) Long userId,
+      @RequestParam(required = false) java.util.List<String> eventTypes,
+      @RequestParam(required = false) java.util.List<Long> userIds,
       @RequestParam(required = false) Boolean active,
       @RequestParam(defaultValue = "id") String sortBy,
       @RequestParam(defaultValue = "desc") String sortDir) {
-    return wishImageService.list(page, size, searchKey, eventType, userId, active, sortBy, sortDir);
+    if ((eventTypes != null && !eventTypes.isEmpty()) || (userIds != null && !userIds.isEmpty())) {
+      return wishImageService.list(page, size, searchKey, eventTypes, userIds, active, sortBy, sortDir);
+    }
+    return wishImageService.list(page, size, searchKey, eventType == null ? "" : eventType, userId, active, sortBy, sortDir);
   }
 
   @DeleteMapping("/{id}")

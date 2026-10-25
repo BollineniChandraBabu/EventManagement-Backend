@@ -82,14 +82,20 @@ public class NotificationServiceImpl implements NotificationService {
   @Override
   public PagedResponse<NotificationResponse> getAll(
       int page, int size, String searchKey, String sortBy, String sortDir) {
+    return getAll(page, size, searchKey, null, sortBy, sortDir);
+  }
+
+  @Override
+  public PagedResponse<NotificationResponse> getAll(
+      int page, int size, String searchKey, Boolean published, String sortBy, String sortDir) {
     String normalizedSortBy = resolveSortBy(sortBy);
     Sort sort =
         "asc".equalsIgnoreCase(sortDir)
             ? Sort.by(normalizedSortBy).ascending()
             : Sort.by(normalizedSortBy).descending();
     var notificationPage =
-        notificationRepository.findAllBySearchKey(
-            searchKey == null ? "" : searchKey.trim(), PageRequest.of(page, size, sort));
+        notificationRepository.findAllByFilters(
+            searchKey == null ? "" : searchKey.trim(), published, PageRequest.of(page, size, sort));
 
     return new PagedResponse<>(
         notificationPage.getContent().stream().map(this::toResponse).toList(),

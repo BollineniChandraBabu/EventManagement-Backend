@@ -30,6 +30,7 @@ public class FestivalScheduler implements Job {
   private final GmailEmailService gmailEmailService;
   private final SchedulerTrackingService schedulerTrackingService;
   private final AiService aiService;
+  private final com.familywishes.service.impl.SupabaseStorageService storageService;
 
   @Value("${alert.email.to}")
   private String alertEmail;
@@ -93,8 +94,17 @@ public class FestivalScheduler implements Job {
             "EN",
             festivalWishMapping.getUser().getId());
     AiWishResponse ai = aiService.generate(request);
-    // An image uploaded for this festival (or for "Festival") is used, otherwise one is generated.
-    byte[] image = aiService.callGeminiImage(request);
+
+    // If an image is specifically available for this festival mapping, use it; else generate/resolve a new image
+    byte[] image = null;
+    if (festivalWishMapping.getImageObjectKey() != null
+        && !festivalWishMapping.getImageObjectKey().isBlank()) {
+      image = storageService.downloadImage(festivalWishMapping.getImageObjectKey());
+    }
+    if (image == null || image.length == 0) {
+      image = aiService.callGeminiImage(request);
+    }
+
     // The personal note is only added to mappings that have one.
     String body = WishEmailExtras.appendPersonalNote(ai.htmlMessage(), festivalWishMapping.getCustomMessage());
     gmailEmailService.sendEmailWithAttachments(

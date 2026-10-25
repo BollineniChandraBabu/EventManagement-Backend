@@ -14,6 +14,21 @@ public interface NotificationRepository extends JpaRepository<Notification, Long
   @Query(
       """
           SELECT n FROM Notification n
+          WHERE (:searchKey = ''
+             OR LOWER(n.title) LIKE LOWER(CONCAT('%', :searchKey, '%'))
+             OR LOWER(n.message) LIKE LOWER(CONCAT('%', :searchKey, '%'))
+             OR LOWER(n.createdBy) LIKE LOWER(CONCAT('%', :searchKey, '%'))
+             OR LOWER(n.updatedBy) LIKE LOWER(CONCAT('%', :searchKey, '%')))
+            AND (:published IS NULL OR n.published = :published)
+          """)
+  Page<Notification> findAllByFilters(
+      @Param("searchKey") String searchKey,
+      @Param("published") Boolean published,
+      Pageable pageable);
+
+  @Query(
+      """
+          SELECT n FROM Notification n
           WHERE :searchKey = ''
              OR LOWER(n.title) LIKE LOWER(CONCAT('%', :searchKey, '%'))
              OR LOWER(n.message) LIKE LOWER(CONCAT('%', :searchKey, '%'))
