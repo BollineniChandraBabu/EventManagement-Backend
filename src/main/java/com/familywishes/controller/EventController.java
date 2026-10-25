@@ -37,12 +37,21 @@ public class EventController {
     return eventService.getById(id, isAdmin, authentication.getName());
   }
 
+  @GetMapping("/filter-values")
+  public java.util.Map<String, Object> getFilterValues() {
+    java.util.List<Boolean> activeStatuses = java.util.List.of(true, false);
+    return java.util.Map.of("active", activeStatuses);
+  }
+
   @GetMapping
   public PagedResponse<EventResponse> list(
       Authentication authentication,
       @RequestParam(defaultValue = "0") int page,
       @RequestParam(defaultValue = "10") int size,
       @RequestParam(defaultValue = "") String searchKey,
+      @RequestParam(required = false) java.util.List<String> eventTypes,
+      @RequestParam(required = false) java.util.List<Long> userIds,
+      @RequestParam(required = false) Boolean active,
       @RequestParam(defaultValue = "id") String sortBy,
       @RequestParam(defaultValue = "desc") String sortDir) {
     boolean isAdmin =
@@ -50,7 +59,16 @@ public class EventController {
             .map(GrantedAuthority::getAuthority)
             .anyMatch("ROLE_ADMIN"::equals);
     return eventService.list(
-        page, size, searchKey, sortBy, sortDir, isAdmin, authentication.getName());
+        page,
+        size,
+        searchKey,
+        eventTypes,
+        userIds,
+        active,
+        sortBy,
+        sortDir,
+        isAdmin,
+        authentication.getName());
   }
 
   @DeleteMapping("/{id}")

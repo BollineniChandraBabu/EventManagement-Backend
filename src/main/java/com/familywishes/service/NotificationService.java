@@ -14,6 +14,9 @@ public interface NotificationService {
   PagedResponse<NotificationResponse> getAll(
       int page, int size, String searchKey, String sortBy, String sortDir);
 
+  PagedResponse<NotificationResponse> getAll(
+      int page, int size, String searchKey, Boolean published, String sortBy, String sortDir);
+
   void delete(Long id);
 
   NotificationResponse publish(Long id);

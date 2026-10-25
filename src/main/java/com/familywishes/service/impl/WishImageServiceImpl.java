@@ -92,6 +92,21 @@ public class WishImageServiceImpl implements WishImageService {
       Boolean active,
       String sortBy,
       String sortDir) {
+    List<String> eventTypes = StringUtils.hasText(eventType) ? List.of(eventType.trim()) : null;
+    List<Long> userIds = userId != null ? List.of(userId) : null;
+    return list(page, size, searchKey, eventTypes, userIds, active, sortBy, sortDir);
+  }
+
+  @Override
+  public PagedResponse<WishImageResponse> list(
+      int page,
+      int size,
+      String searchKey,
+      List<String> eventTypes,
+      List<Long> userIds,
+      Boolean active,
+      String sortBy,
+      String sortDir) {
     String field =
         switch (sortBy) {
           case "id", "eventType", "active", "createdAt", "updatedAt" -> sortBy;
@@ -101,12 +116,19 @@ public class WishImageServiceImpl implements WishImageService {
         "asc".equalsIgnoreCase(sortDir)
             ? Sort.by(field).ascending()
             : Sort.by(field).descending();
+
+    List<String> cleanTypes =
+        (eventTypes == null || eventTypes.isEmpty())
+            ? null
+            : eventTypes.stream().map(String::toLowerCase).toList();
+    List<Long> cleanUserIds = (userIds == null || userIds.isEmpty()) ? null : userIds;
+
     var result =
-        wishImageRepository.findAllFiltered(
+        wishImageRepository.findAllByFilters(
             searchKey == null ? "" : searchKey.trim(),
-            eventType == null ? "" : eventType.trim(),
-            userId,
-            WishImage.toActiveFilter(active),
+            cleanTypes,
+            cleanUserIds,
+            active,
             PageRequest.of(Math.max(page, 0), Math.min(Math.max(size, 1), 100), sort));
     return new PagedResponse<>(
         result.getContent().stream().map(this::toResponse).toList(),

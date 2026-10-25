@@ -25,6 +25,21 @@ public interface TemplateTypeSeedRepository extends JpaRepository<TemplateTypeSe
       WHERE (:searchKey = ''
              OR LOWER(t.code) LIKE LOWER(CONCAT('%', :searchKey, '%'))
              OR LOWER(t.displayName) LIKE LOWER(CONCAT('%', :searchKey, '%')))
+        AND (:codes IS NULL OR t.code IN :codes)
+        AND (:active IS NULL OR t.active = :active)
+      """)
+  Page<TemplateTypeSeed> findAllByFilters(
+      @Param("searchKey") String searchKey,
+      @Param("codes") List<String> codes,
+      @Param("active") Boolean active,
+      Pageable pageable);
+
+  @Query(
+      """
+      SELECT t FROM TemplateTypeSeed t
+      WHERE (:searchKey = ''
+             OR LOWER(t.code) LIKE LOWER(CONCAT('%', :searchKey, '%'))
+             OR LOWER(t.displayName) LIKE LOWER(CONCAT('%', :searchKey, '%')))
       """)
   Page<TemplateTypeSeed> findAllBySearchKey(
       @Param("searchKey") String searchKey, Pageable pageable);

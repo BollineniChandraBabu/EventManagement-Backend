@@ -26,16 +26,45 @@ public class FestivalWishMappingController {
     return festivalWishMappingService.upsert(request);
   }
 
+  @PostMapping(value = "/with-image", consumes = "multipart/form-data")
+  @PreAuthorize("hasRole('ADMIN')")
+  public FestivalWishMappingResponse upsertWithImage(
+      @RequestParam Long specialEventId,
+      @RequestParam Long userId,
+      @RequestParam Boolean active,
+      @RequestParam(required = false) String customMessage,
+      @RequestPart(value = "image", required = false) org.springframework.web.multipart.MultipartFile image) {
+    FestivalWishMappingRequest request =
+        new FestivalWishMappingRequest(specialEventId, userId, active, customMessage);
+    return festivalWishMappingService.upsertWithImage(request, image);
+  }
+
+  @GetMapping("/filter-values")
+  @PreAuthorize("hasRole('ADMIN')")
+  public java.util.Map<String, Object> getFilterValues() {
+    return java.util.Map.of("statuses", java.util.List.of("ALL", "ACTIVE", "INACTIVE", "FAILED"));
+  }
+
   @GetMapping
   @PreAuthorize("hasRole('ADMIN')")
   public PagedResponse<FestivalWishMappingResponse> list(
       @RequestParam(defaultValue = "0") int page,
       @RequestParam(defaultValue = "10") int size,
       @RequestParam(defaultValue = "") String searchKey,
-      @RequestParam(defaultValue = "ALL") String status,
+      @RequestParam(required = false) String status,
+      @RequestParam(required = false) java.util.List<Long> specialEventIds,
+      @RequestParam(required = false) java.util.List<Long> userIds,
+      @RequestParam(required = false) java.util.List<String> statuses,
       @RequestParam(defaultValue = "id") String sortBy,
       @RequestParam(defaultValue = "desc") String sortDir) {
-    return festivalWishMappingService.list(page, size, searchKey, status, sortBy, sortDir);
+    if ((specialEventIds != null && !specialEventIds.isEmpty())
+        || (userIds != null && !userIds.isEmpty())
+        || (statuses != null && !statuses.isEmpty())) {
+      return festivalWishMappingService.list(
+          page, size, searchKey, specialEventIds, userIds, statuses, sortBy, sortDir);
+    }
+    return festivalWishMappingService.list(
+        page, size, searchKey, status == null ? "ALL" : status, sortBy, sortDir);
   }
 
   @PostMapping("/bulk")

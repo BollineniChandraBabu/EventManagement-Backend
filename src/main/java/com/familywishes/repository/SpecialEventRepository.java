@@ -36,6 +36,21 @@ public interface SpecialEventRepository extends JpaRepository<SpecialEvent, Long
   @Query(
       """
             SELECT s FROM SpecialEvent s
+            WHERE (:searchKey = ''
+                   OR LOWER(s.eventName) LIKE LOWER(CONCAT('%', :searchKey, '%'))
+                   OR LOWER(COALESCE(s.message, '')) LIKE LOWER(CONCAT('%', :searchKey, '%')))
+              AND (:months IS NULL OR FUNCTION('DATE_PART', 'month', s.eventDate) IN :months)
+              AND (:active IS NULL OR s.active = :active)
+            """)
+  Page<SpecialEvent> findAllByFilters(
+      @Param("searchKey") String searchKey,
+      @Param("months") List<Integer> months,
+      @Param("active") Boolean active,
+      Pageable pageable);
+
+  @Query(
+      """
+            SELECT s FROM SpecialEvent s
             WHERE :searchKey = ''
             OR LOWER(s.eventName) LIKE LOWER(CONCAT('%', :searchKey, '%'))
             OR LOWER(s.message) LIKE LOWER(CONCAT('%', :searchKey, '%'))

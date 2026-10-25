@@ -26,14 +26,20 @@ public class NotificationController {
     return notificationService.getById(id);
   }
 
+  @GetMapping("/filter-values")
+  public java.util.Map<String, Object> getFilterValues() {
+    return java.util.Map.of("published", java.util.List.of(true, false));
+  }
+
   @GetMapping
   public PagedResponse<NotificationResponse> getAll(
       @RequestParam(defaultValue = "0") int page,
       @RequestParam(defaultValue = "10") int size,
       @RequestParam(defaultValue = "") String searchKey,
+      @RequestParam(required = false) Boolean published,
       @RequestParam(defaultValue = "createdAt") String sortBy,
       @RequestParam(defaultValue = "desc") String sortDir) {
-    return notificationService.getAll(page, size, searchKey, sortBy, sortDir);
+    return notificationService.getAll(page, size, searchKey, published, sortBy, sortDir);
   }
 
   @PutMapping("/{id}")

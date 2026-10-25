@@ -44,14 +44,24 @@ public class SpecialEventSeedServiceImpl implements SpecialEventSeedService {
 
   @Override
   public PagedResponse<SpecialEventSeedResponse> list(
-      int page, int size, String searchKey, String sortBy, String sortDir) {
+      int page,
+      int size,
+      String searchKey,
+      java.util.List<Integer> months,
+      Boolean active,
+      String sortBy,
+      String sortDir) {
     Sort.Direction direction =
         "asc".equalsIgnoreCase(sortDir) ? Sort.Direction.ASC : Sort.Direction.DESC;
     String normalizedSortBy = (sortBy == null || sortBy.isBlank()) ? "id" : sortBy.trim();
 
+    java.util.List<Integer> cleanMonths = (months == null || months.isEmpty()) ? null : months;
+
     Page<SpecialEvent> specialEventPage =
-        specialEventRepository.findAllBySearchKey(
+        specialEventRepository.findAllByFilters(
             searchKey == null ? "" : searchKey.trim(),
+            cleanMonths,
+            active,
             PageRequest.of(page, size, Sort.by(direction, normalizedSortBy)));
 
     return new PagedResponse<>(

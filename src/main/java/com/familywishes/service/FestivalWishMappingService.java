@@ -12,6 +12,9 @@ public interface FestivalWishMappingService {
 
   FestivalWishMappingResponse upsert(FestivalWishMappingRequest request);
 
+  FestivalWishMappingResponse upsertWithImage(
+      FestivalWishMappingRequest request, org.springframework.web.multipart.MultipartFile imageFile);
+
   List<FestivalWishMappingResponse> list();
 
   PagedResponse<FestivalWishMappingResponse> list(
@@ -30,4 +33,14 @@ public interface FestivalWishMappingService {
   /** status is ALL, ACTIVE, INACTIVE or FAILED. */
   PagedResponse<FestivalWishMappingResponse> list(
       int page, int size, String searchKey, String status, String sortBy, String sortDir);
+
+  PagedResponse<FestivalWishMappingResponse> list(
+      int page,
+      int size,
+      String searchKey,
+      List<Long> specialEventIds,
+      List<Long> userIds,
+      List<String> statuses,
+      String sortBy,
+      String sortDir);
 }

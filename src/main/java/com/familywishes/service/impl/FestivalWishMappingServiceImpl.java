@@ -36,6 +36,7 @@ public class FestivalWishMappingServiceImpl implements FestivalWishMappingServic
 
   private final FestivalWishMappingRepository mappingRepository;
   private final SpecialEventRepository specialEventRepository;
+  private final SupabaseStorageService storageService;
   private static final long UPCOMING_DAYS = 30;
   private static final Set<String> STATUSES = Set.of("ALL", "ACTIVE", "INACTIVE", "FAILED");
 
@@ -46,6 +47,12 @@ public class FestivalWishMappingServiceImpl implements FestivalWishMappingServic
 
   @Override
   public FestivalWishMappingResponse upsert(FestivalWishMappingRequest request) {
+    return upsertWithImage(request, null);
+  }
+
+  @Override
+  public FestivalWishMappingResponse upsertWithImage(
+      FestivalWishMappingRequest request, org.springframework.web.multipart.MultipartFile imageFile) {
     SpecialEvent specialEvent =
         specialEventRepository
             .findById(request.specialEventId())
@@ -65,6 +72,14 @@ public class FestivalWishMappingServiceImpl implements FestivalWishMappingServic
     mapping.setUser(user);
     mapping.setCustomMessage(normalizeNote(request.customMessage()));
     mapping.setActive(request.active());
+
+    if (imageFile != null && !imageFile.isEmpty()) {
+      if (mapping.getImageObjectKey() != null && !mapping.getImageObjectKey().isBlank()) {
+        storageService.deleteObject(mapping.getImageObjectKey());
+      }
+      String key = storageService.uploadWishImage(imageFile);
+      mapping.setImageObjectKey(key);
+    }
 
     return toResponse(mappingRepository.save(mapping));
   }
@@ -133,17 +148,40 @@ public class FestivalWishMappingServiceImpl implements FestivalWishMappingServic
   @Override
   public PagedResponse<FestivalWishMappingResponse> list(
       int page, int size, String searchKey, String status, String sortBy, String sortDir) {
+    List<String> statuses = (status == null || status.isBlank() || "ALL".equalsIgnoreCase(status.trim()))
+        ? null
+        : List.of(status.trim().toUpperCase(Locale.ROOT));
+    return list(page, size, searchKey, null, null, statuses, sortBy, sortDir);
+  }
+
+  @Override
+  public PagedResponse<FestivalWishMappingResponse> list(
+      int page,
+      int size,
+      String searchKey,
+      List<Long> specialEventIds,
+      List<Long> userIds,
+      List<String> statuses,
+      String sortBy,
+      String sortDir) {
     String normalizedSortBy = resolveSortBy(sortBy);
     Sort sort =
         "desc".equalsIgnoreCase(sortDir)
             ? Sort.by(normalizedSortBy).descending()
             : Sort.by(normalizedSortBy).ascending();
 
+    List<Long> cleanEventIds = (specialEventIds == null || specialEventIds.isEmpty()) ? null : specialEventIds;
+    List<Long> cleanUserIds = (userIds == null || userIds.isEmpty()) ? null : userIds;
+    List<String> cleanStatuses = (statuses == null || statuses.isEmpty())
+        ? null
+        : statuses.stream().map(s -> s.trim().toUpperCase(Locale.ROOT)).toList();
+
     var pageResult =
-        mappingRepository.findAllBySearchKey(
+        mappingRepository.findAllByFilters(
             searchKey == null ? "" : searchKey.trim(),
-            normalizeStatus(status),
-            true, // value of the "failed" flag the FAILED filter looks for
+            cleanEventIds,
+            cleanUserIds,
+            cleanStatuses,
             PageRequest.of(page, size, sort));
     return new PagedResponse<>(
         pageResult.getContent().stream().map(this::toResponse).toList(),
@@ -195,6 +233,10 @@ public class FestivalWishMappingServiceImpl implements FestivalWishMappingServic
   }
 
   private FestivalWishMappingResponse toResponse(FestivalWishMapping mapping) {
+    String imageUrl =
+        mapping.getImageObjectKey() != null && !mapping.getImageObjectKey().isBlank()
+            ? storageService.getSignedUrl(mapping.getImageObjectKey())
+            : null;
     return new FestivalWishMappingResponse(
         mapping.getId(),
         mapping.getSpecialEvent().getId(),
@@ -204,6 +246,7 @@ public class FestivalWishMappingServiceImpl implements FestivalWishMappingServic
         mapping.getUser().getName(),
         mapping.isActive(),
         mapping.getCustomMessage(),
+        imageUrl,
         mapping.getLastWishSentOn(),
         mapping.isError());
   }

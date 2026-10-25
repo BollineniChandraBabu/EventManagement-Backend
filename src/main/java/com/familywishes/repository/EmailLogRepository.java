@@ -60,6 +60,25 @@ public interface EmailLogRepository extends JpaRepository<EmailLog, Long> {
   @Query(
       """
             SELECT e FROM EmailLog e JOIN FETCH e.recipientUser
+            WHERE (:searchKey = ''
+                    OR LOWER(e.recipientUser.email) LIKE LOWER(CONCAT('%', :searchKey, '%'))
+                    OR LOWER(e.subject) LIKE LOWER(CONCAT('%', :searchKey, '%'))
+                    OR LOWER(CAST(e.status as string)) LIKE LOWER(CONCAT('%', :searchKey, '%'))
+                    OR LOWER(CAST(e.emailType as string)) LIKE LOWER(CONCAT('%', :searchKey, '%')))
+              AND (:recipientEmail IS NULL OR e.recipientUser.email = :recipientEmail)
+              AND (:statuses IS NULL OR e.status IN :statuses)
+              AND (:emailTypes IS NULL OR e.emailType IN :emailTypes)
+            """)
+  Page<EmailLog> findAllByFilters(
+      @Param("searchKey") String searchKey,
+      @Param("recipientEmail") String recipientEmail,
+      @Param("statuses") List<EmailStatus> statuses,
+      @Param("emailTypes") List<EmailType> emailTypes,
+      Pageable pageable);
+
+  @Query(
+      """
+            SELECT e FROM EmailLog e JOIN FETCH e.recipientUser
             WHERE :searchKey = ''
                OR LOWER(e.recipientUser.email) LIKE LOWER(CONCAT('%', :searchKey, '%'))
                OR LOWER(e.subject) LIKE LOWER(CONCAT('%', :searchKey, '%'))

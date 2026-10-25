@@ -11,7 +11,13 @@ public interface SpecialEventSeedService {
   SpecialEventSeedResponse getById(Long id);
 
   PagedResponse<SpecialEventSeedResponse> list(
-      int page, int size, String searchKey, String sortBy, String sortDir);
+      int page,
+      int size,
+      String searchKey,
+      java.util.List<Integer> months,
+      Boolean active,
+      String sortBy,
+      String sortDir);
 
   PagedResponse<SpecialEventSeedResponse> listTodayActive(
       LocalDate eventDate, int page, int size, String searchKey, String sortBy, String sortDir);

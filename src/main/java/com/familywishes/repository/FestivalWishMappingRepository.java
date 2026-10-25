@@ -30,6 +30,27 @@ public interface FestivalWishMappingRepository extends JpaRepository<FestivalWis
       WHERE (:searchKey = ''
              OR LOWER(f.specialEvent.eventName) LIKE LOWER(CONCAT('%', :searchKey, '%'))
              OR LOWER(f.user.name) LIKE LOWER(CONCAT('%', :searchKey, '%'))
+             OR LOWER(f.user.email) LIKE LOWER(CONCAT('%', :searchKey, '%')))
+        AND (:specialEventIds IS NULL OR f.specialEvent.id IN :specialEventIds)
+        AND (:userIds IS NULL OR f.user.id IN :userIds)
+        AND (:statuses IS NULL OR 'ALL' IN :statuses
+             OR ('ACTIVE' IN :statuses AND f.active = true)
+             OR ('INACTIVE' IN :statuses AND f.active = false)
+             OR ('FAILED' IN :statuses AND f.isError = true))
+      """)
+  Page<FestivalWishMapping> findAllByFilters(
+      @Param("searchKey") String searchKey,
+      @Param("specialEventIds") List<Long> specialEventIds,
+      @Param("userIds") List<Long> userIds,
+      @Param("statuses") List<String> statuses,
+      Pageable pageable);
+
+  @Query(
+      """
+      SELECT f FROM FestivalWishMapping f
+      WHERE (:searchKey = ''
+             OR LOWER(f.specialEvent.eventName) LIKE LOWER(CONCAT('%', :searchKey, '%'))
+             OR LOWER(f.user.name) LIKE LOWER(CONCAT('%', :searchKey, '%'))
              OR LOWER(COALESCE(f.customMessage, '')) LIKE LOWER(CONCAT('%', :searchKey, '%')))
         AND (:status = 'ALL'
              OR (:status = 'ACTIVE' AND f.active = true)

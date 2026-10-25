@@ -19,6 +19,17 @@ public interface GmailEmailService {
       String sortBy,
       String sortDir);
 
+  PagedResponse<EmailDtos.EmailStatusResponse> getStatusWithFilters(
+      int page,
+      int size,
+      String searchKey,
+      java.util.List<com.familywishes.entity.enums.EmailStatus> statuses,
+      java.util.List<com.familywishes.entity.enums.EmailType> emailTypes,
+      String requesterEmail,
+      boolean isAdmin,
+      String sortBy,
+      String sortDir);
+
   PagedResponse<EmailDtos.EmailStatusResponse> getOtpStatus(
       int page, int size, String searchKey, String sortBy, String sortDir);
 

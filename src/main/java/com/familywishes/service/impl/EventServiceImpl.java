@@ -86,6 +86,9 @@ public class EventServiceImpl implements EventService {
       int page,
       int size,
       String searchKey,
+      List<String> eventTypes,
+      List<Long> userIds,
+      Boolean active,
       String sortBy,
       String sortDir,
       boolean isAdmin,
@@ -93,17 +96,25 @@ public class EventServiceImpl implements EventService {
     Sort.Direction direction =
         "asc".equalsIgnoreCase(sortDir) ? Sort.Direction.ASC : Sort.Direction.DESC;
     String normalizedSortBy = (sortBy == null || sortBy.isBlank()) ? "id" : sortBy.trim();
+    List<String> cleanTypes = (eventTypes == null || eventTypes.isEmpty()) ? null : eventTypes;
+    List<Long> cleanUserIds = (userIds == null || userIds.isEmpty()) ? null : userIds;
+
     Page<Event> events;
     if (isAdmin) {
       events =
-          eventRepository.findAllBySearchKey(
+          eventRepository.findAllByFilters(
               searchKey == null ? "" : searchKey.trim(),
+              cleanTypes,
+              cleanUserIds,
+              active,
               PageRequest.of(page, size, Sort.by(direction, normalizedSortBy)));
     } else {
       events =
-          eventRepository.findAllBySearchKeyAndUSer(
+          eventRepository.findAllByFiltersAndUser(
               userEmail,
               searchKey == null ? "" : searchKey.trim(),
+              cleanTypes,
+              active,
               PageRequest.of(page, size, Sort.by(direction, normalizedSortBy)));
     }
 
