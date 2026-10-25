@@ -783,24 +783,4 @@ public class ChatServiceImpl implements ChatService {
         ? Sort.by(normalizedSortBy).descending()
         : Sort.by(normalizedSortBy).ascending();
   }
-
-  private <T> PagedResponse<T> page(
-      List<T> source, int page, int size, Predicate<T> filter, Comparator<T> comparator) {
-    List<T> filteredSorted = source.stream().filter(filter).sorted(comparator).toList();
-    int safePage = Math.max(page, 0);
-    int safeSize = Math.max(size, 1);
-    int fromIndex = Math.min(safePage * safeSize, filteredSorted.size());
-    int toIndex = Math.min(fromIndex + safeSize, filteredSorted.size());
-    List<T> content = filteredSorted.subList(fromIndex, toIndex);
-    int totalPages = (int) Math.ceil((double) filteredSorted.size() / safeSize);
-
-    return new PagedResponse<>(
-        content,
-        safePage,
-        safeSize,
-        filteredSorted.size(),
-        totalPages,
-        safePage + 1 < totalPages,
-        safePage > 0 && totalPages > 0);
-  }
 }

@@ -77,10 +77,10 @@ public class GmailEmailServiceImpl implements GmailEmailService {
   public void sendEmailWithAttachments(
       String to, String subject, String html, Long logId, byte[] image, EmailType emailType) {
 
+    EmailType resolvedType = emailType != null ? emailType : classifyEmailType(subject, html);
     EmailLog logEntry =
         logId == null
-            ? createPendingEmailLog(
-                to, subject, emailType == null ? classifyEmailType(subject, html) : emailType)
+            ? createPendingEmailLog(to, subject, resolvedType)
             : logRepository.findById(logId).orElseThrow();
 
     if (emailType != null) {
@@ -164,7 +164,7 @@ public class GmailEmailServiceImpl implements GmailEmailService {
 
     message.setFrom(new InternetAddress(senderEmail));
 
-    message.addRecipient(MimeMessage.RecipientType.TO, new InternetAddress(to));
+    message.addRecipient(jakarta.mail.Message.RecipientType.TO, new InternetAddress(to));
 
     message.setSubject(subject);
 
