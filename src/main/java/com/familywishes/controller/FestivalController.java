@@ -18,7 +18,7 @@ public class FestivalController {
 
   @GetMapping
   public PagedResponse<FestivalResponse> listByMonth(
-      @RequestParam(required = false) Integer month,
+      @RequestParam(defaultValue = "1") Integer month,
       @RequestParam(defaultValue = "0") int page,
       @RequestParam(defaultValue = "10") int size,
       @RequestParam(defaultValue = "") String searchKey,

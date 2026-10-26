@@ -178,7 +178,7 @@ public class UserServiceImpl implements UserService {
             cleanRoles,
             cleanGenders,
             cleanRelations,
-            active,
+            User.toActiveFilter(active),
             PageRequest.of(page, size, Sort.by(direction, normalizedSortBy)));
 
     return new PagedResponse<>(

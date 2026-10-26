@@ -41,14 +41,16 @@ public interface UserRepository extends JpaRepository<User, Long> {
               AND (:roles IS NULL OR u.role IN :roles)
               AND (:genders IS NULL OR u.gender IN :genders)
               AND (:relationships IS NULL OR u.relationShip.code IN :relationships)
-              AND (:active IS NULL OR u.active = :active)
+             AND (:activeFilter = -1
+             OR (:activeFilter = 1 AND u.active = true)
+             OR (:activeFilter = 0 AND u.active = false))
             """)
   Page<User> findAllByFilters(
       @Param("searchKey") String searchKey,
       @Param("roles") List<com.familywishes.entity.enums.Role> roles,
       @Param("genders") List<com.familywishes.entity.enums.Gender> genders,
       @Param("relationships") List<String> relationships,
-      @Param("active") Boolean active,
+      @Param("activeFilter") Integer activeFilter,
       Pageable pageable);
 
   @Query(
