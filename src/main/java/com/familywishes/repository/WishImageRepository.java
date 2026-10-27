@@ -23,8 +23,8 @@ public interface WishImageRepository extends JpaRepository<WishImage, Long> {
         AND (:eventTypes IS NULL OR LOWER(w.eventType) IN :eventTypes)
         AND (:userIds IS NULL OR u.id IN :userIds)
         AND (:activeFilter = -1
-         OR (:activeFilter = 1 AND active = true)
-         OR (:activeFilter = 0 AND active = false))
+         OR (:activeFilter = 1 AND w.active = true)
+         OR (:activeFilter = 0 AND w.active = false))
       """)
   Page<WishImage> findAllByFilters(
       @Param("searchKey") String searchKey,

@@ -32,8 +32,8 @@ public interface EventRepository extends JpaRepository<Event, Long> {
               AND (:eventTypes IS NULL OR e.eventType.code IN :eventTypes)
               AND (:userIds IS NULL OR e.user.id IN :userIds)
               AND (:activeFilter = -1
-              OR (:activeFilter = 1 AND active = true)
-              OR (:activeFilter = 0 AND active = false))
+              OR (:activeFilter = 1 AND e.active = true)
+              OR (:activeFilter = 0 AND e.active = false))
             """)
   Page<Event> findAllByFilters(
       @Param("searchKey") String searchKey,
@@ -50,8 +50,8 @@ public interface EventRepository extends JpaRepository<Event, Long> {
               OR LOWER(CAST(e.eventType.code as string)) LIKE LOWER(CONCAT('%', :searchKey, '%')))
             AND (:eventTypes IS NULL OR e.eventType.code IN :eventTypes)
             AND (:activeFilter = -1
-              OR (:activeFilter = 1 AND active = true)
-              OR (:activeFilter = 0 AND active = false))
+              OR (:activeFilter = 1 AND e.active = true)
+              OR (:activeFilter = 0 AND e.active = false))
             """)
   Page<Event> findAllByFiltersAndUser(
       @Param("userEmail") String userEmail,
