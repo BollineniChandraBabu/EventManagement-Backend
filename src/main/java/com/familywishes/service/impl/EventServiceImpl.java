@@ -106,7 +106,7 @@ public class EventServiceImpl implements EventService {
               searchKey == null ? "" : searchKey.trim(),
               cleanTypes,
               cleanUserIds,
-              active,
+              Event.toActiveFilter(active),
               PageRequest.of(page, size, Sort.by(direction, normalizedSortBy)));
     } else {
       events =
@@ -114,7 +114,7 @@ public class EventServiceImpl implements EventService {
               userEmail,
               searchKey == null ? "" : searchKey.trim(),
               cleanTypes,
-              active,
+              Event.toActiveFilter(active),
               PageRequest.of(page, size, Sort.by(direction, normalizedSortBy)));
     }
 

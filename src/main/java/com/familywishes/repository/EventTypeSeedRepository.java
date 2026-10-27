@@ -28,12 +28,14 @@ public interface EventTypeSeedRepository extends JpaRepository<EventTypeSeed, Lo
              OR LOWER(e.code) LIKE LOWER(CONCAT('%', :searchKey, '%'))
              OR LOWER(e.displayName) LIKE LOWER(CONCAT('%', :searchKey, '%')))
         AND (:codes IS NULL OR e.code IN :codes)
-        AND (:active IS NULL OR e.active = :active)
+        AND (:activeFilter = -1
+              OR (:activeFilter = 1 AND active = true)
+              OR (:activeFilter = 0 AND active = false))
       """)
   Page<EventTypeSeed> findAllByFilters(
       @Param("searchKey") String searchKey,
       @Param("codes") List<String> codes,
-      @Param("active") Boolean active,
+      @Param("activeFilter") Integer activeFilter,
       Pageable pageable);
 
   @Query(

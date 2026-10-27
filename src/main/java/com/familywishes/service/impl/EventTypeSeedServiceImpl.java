@@ -10,6 +10,7 @@ import com.familywishes.service.EventTypeSeedService;
 import java.util.List;
 import java.util.Objects;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
@@ -70,11 +71,11 @@ public class EventTypeSeedServiceImpl implements EventTypeSeedService {
             ? Sort.by(normalizedSortBy).descending()
             : Sort.by(normalizedSortBy).ascending();
     List<String> cleanCodes = (codes == null || codes.isEmpty()) ? null : codes;
-    var pageResult =
+    Page<EventTypeSeed> pageResult =
         eventTypeSeedRepository.findAllByFilters(
             searchKey == null ? "" : searchKey.trim(),
             cleanCodes,
-            active,
+            EventTypeSeed.toActiveFilter(active),
             PageRequest.of(page, size, sort));
     return new PagedResponse<>(
         pageResult.getContent().stream().map(this::toResponse).toList(),

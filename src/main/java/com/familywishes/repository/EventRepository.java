@@ -31,29 +31,33 @@ public interface EventRepository extends JpaRepository<Event, Long> {
                OR LOWER(e.user.name) LIKE LOWER(CONCAT('%', :searchKey, '%')))
               AND (:eventTypes IS NULL OR e.eventType.code IN :eventTypes)
               AND (:userIds IS NULL OR e.user.id IN :userIds)
-              AND (:active IS NULL OR e.active = :active)
+              AND (:activeFilter = -1
+              OR (:activeFilter = 1 AND active = true)
+              OR (:activeFilter = 0 AND active = false))
             """)
   Page<Event> findAllByFilters(
       @Param("searchKey") String searchKey,
       @Param("eventTypes") List<String> eventTypes,
       @Param("userIds") List<Long> userIds,
-      @Param("active") Boolean active,
+      @Param("activeFilter") Integer activeFilter,
       Pageable pageable);
 
   @Query(
       """
             SELECT e FROM Event e
             WHERE e.user.email = :userEmail
-              AND (:searchKey = ''
-                 OR LOWER(CAST(e.eventType.code as string)) LIKE LOWER(CONCAT('%', :searchKey, '%')))
-              AND (:eventTypes IS NULL OR e.eventType.code IN :eventTypes)
-              AND (:active IS NULL OR e.active = :active)
+            AND (:searchKey = ''
+              OR LOWER(CAST(e.eventType.code as string)) LIKE LOWER(CONCAT('%', :searchKey, '%')))
+            AND (:eventTypes IS NULL OR e.eventType.code IN :eventTypes)
+            AND (:activeFilter = -1
+              OR (:activeFilter = 1 AND active = true)
+              OR (:activeFilter = 0 AND active = false))
             """)
   Page<Event> findAllByFiltersAndUser(
       @Param("userEmail") String userEmail,
       @Param("searchKey") String searchKey,
       @Param("eventTypes") List<String> eventTypes,
-      @Param("active") Boolean active,
+      @Param("activeFilter") Integer activeFilter,
       Pageable pageable);
 
   @Query(

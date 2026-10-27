@@ -22,13 +22,15 @@ public interface WishImageRepository extends JpaRepository<WishImage, Long> {
              OR LOWER(u.email) LIKE LOWER(CONCAT('%', :searchKey, '%')))
         AND (:eventTypes IS NULL OR LOWER(w.eventType) IN :eventTypes)
         AND (:userIds IS NULL OR u.id IN :userIds)
-        AND (:active IS NULL OR w.active = :active)
+        AND (:activeFilter = -1
+         OR (:activeFilter = 1 AND active = true)
+         OR (:activeFilter = 0 AND active = false))
       """)
   Page<WishImage> findAllByFilters(
       @Param("searchKey") String searchKey,
       @Param("eventTypes") List<String> eventTypes,
       @Param("userIds") List<Long> userIds,
-      @Param("active") Boolean active,
+      @Param("activeFilter") Integer activeFilter,
       Pageable pageable);
 
   @Query(

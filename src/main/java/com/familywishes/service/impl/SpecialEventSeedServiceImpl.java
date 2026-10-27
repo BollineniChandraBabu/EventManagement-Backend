@@ -61,7 +61,7 @@ public class SpecialEventSeedServiceImpl implements SpecialEventSeedService {
         specialEventRepository.findAllByFilters(
             searchKey == null ? "" : searchKey.trim(),
             cleanMonths,
-            active,
+            SpecialEvent.toActiveFilter(active),
             PageRequest.of(page, size, Sort.by(direction, normalizedSortBy)));
 
     return new PagedResponse<>(

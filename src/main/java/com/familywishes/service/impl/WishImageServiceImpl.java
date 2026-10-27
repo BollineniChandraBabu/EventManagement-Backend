@@ -19,6 +19,7 @@ import java.util.Set;
 import java.util.concurrent.ThreadLocalRandom;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
@@ -123,12 +124,12 @@ public class WishImageServiceImpl implements WishImageService {
             : eventTypes.stream().map(String::toLowerCase).toList();
     List<Long> cleanUserIds = (userIds == null || userIds.isEmpty()) ? null : userIds;
 
-    var result =
+    Page<WishImage> result =
         wishImageRepository.findAllByFilters(
             searchKey == null ? "" : searchKey.trim(),
             cleanTypes,
             cleanUserIds,
-            active,
+            WishImage.toActiveFilter(active),
             PageRequest.of(Math.max(page, 0), Math.min(Math.max(size, 1), 100), sort));
     return new PagedResponse<>(
         result.getContent().stream().map(this::toResponse).toList(),
