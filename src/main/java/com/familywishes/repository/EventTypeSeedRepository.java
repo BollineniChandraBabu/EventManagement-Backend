@@ -29,8 +29,8 @@ public interface EventTypeSeedRepository extends JpaRepository<EventTypeSeed, Lo
              OR LOWER(e.displayName) LIKE LOWER(CONCAT('%', :searchKey, '%')))
         AND (:codes IS NULL OR e.code IN :codes)
         AND (:activeFilter = -1
-              OR (:activeFilter = 1 AND active = true)
-              OR (:activeFilter = 0 AND active = false))
+              OR (:activeFilter = 1 AND e.active = true)
+              OR (:activeFilter = 0 AND e.active = false))
       """)
   Page<EventTypeSeed> findAllByFilters(
       @Param("searchKey") String searchKey,

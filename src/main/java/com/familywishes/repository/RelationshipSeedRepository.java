@@ -27,8 +27,8 @@ public interface RelationshipSeedRepository extends JpaRepository<RelationshipSe
              OR LOWER(r.displayName) LIKE LOWER(CONCAT('%', :searchKey, '%')))
         AND (:codes IS NULL OR r.code IN :codes)
         AND (:activeFilter = -1
-         OR (:activeFilter = 1 AND active = true)
-         OR (:activeFilter = 0 AND active = false))
+         OR (:activeFilter = 1 AND r.active = true)
+         OR (:activeFilter = 0 AND r.active = false))
       """)
   Page<RelationshipSeed> findAllByFilters(
       @Param("searchKey") String searchKey,
