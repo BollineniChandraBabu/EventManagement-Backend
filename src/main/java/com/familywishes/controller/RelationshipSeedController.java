@@ -29,7 +29,8 @@ public class RelationshipSeedController {
 
   @GetMapping("/filter-values")
   public java.util.Map<String, Object> getFilterValues() {
-    java.util.List<String> codes = relationshipSeedService.listActive().stream().map(EnumSeedResponse::code).toList();
+    java.util.List<String> codes =
+        relationshipSeedService.listActive().stream().map(EnumSeedResponse::code).toList();
     java.util.List<Boolean> activeStatuses = java.util.List.of(true, false);
     return java.util.Map.of("codes", codes, "active", activeStatuses);
   }
@@ -52,7 +53,16 @@ public class RelationshipSeedController {
   }
 
   @DeleteMapping("/{id}")
-  public void deleteById(@PathVariable Long id) {
-    relationshipSeedService.deleteById(id);
+  public void deleteById(
+      @PathVariable String id, @RequestParam(required = false) java.util.List<Long> ids) {
+    java.util.List<Long> resolvedIds = com.familywishes.util.IdListUtil.parseIds(id, ids);
+    resolvedIds.forEach(relationshipSeedService::deleteById);
+  }
+
+  @DeleteMapping
+  public void deleteMultiple(@RequestParam java.util.List<Long> ids) {
+    if (ids != null) {
+      ids.forEach(relationshipSeedService::deleteById);
+    }
   }
 }

@@ -31,7 +31,8 @@ class AgentRunnerTest {
   private static Map<String, Object> modelText(String text) {
     return Map.of(
         "candidates",
-        List.of(Map.of("content", Map.of("role", "model", "parts", List.of(Map.of("text", text))))));
+        List.of(
+            Map.of("content", Map.of("role", "model", "parts", List.of(Map.of("text", text))))));
   }
 
   @Test
@@ -39,8 +40,7 @@ class AgentRunnerTest {
     GeminiAgentClient client = mock(GeminiAgentClient.class);
     when(client.generate(anyMap()))
         .thenReturn(modelCall("submit", Map.of("subject", "Hi", "htmlMessage", "<p>Hello</p>")));
-    AgentTool submit =
-        AgentTool.of("submit", "submit", null, a -> Map.of("accepted", true));
+    AgentTool submit = AgentTool.of("submit", "submit", null, a -> Map.of("accepted", true));
 
     AgentResult r =
         new AgentRunner(client, new ObjectMapper())
@@ -62,7 +62,10 @@ class AgentRunnerTest {
             "submit",
             "submit",
             null,
-            a -> "good".equals(a.get("subject")) ? Map.of("accepted", true) : Map.of("accepted", false));
+            a ->
+                "good".equals(a.get("subject"))
+                    ? Map.of("accepted", true)
+                    : Map.of("accepted", false));
 
     AgentResult r =
         new AgentRunner(client, new ObjectMapper())

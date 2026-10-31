@@ -12,10 +12,10 @@ import org.springframework.context.annotation.Primary;
 import org.springframework.stereotype.Service;
 
 /**
- * Drop-in replacement for AiService (marked @Primary) so every existing caller - birthday, festival,
- * good-morning/night schedulers, UserServiceImpl, AiController - gets agentic wish generation
- * without code changes. Falls back to the original single-prompt implementation on any failure.
- * Enable with app.agent.wish.enabled=true.
+ * Drop-in replacement for AiService (marked @Primary) so every existing caller - birthday,
+ * festival, good-morning/night schedulers, UserServiceImpl, AiController - gets agentic wish
+ * generation without code changes. Falls back to the original single-prompt implementation on any
+ * failure. Enable with app.agent.wish.enabled=true.
  */
 @Service
 @Primary

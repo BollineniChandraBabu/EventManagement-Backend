@@ -9,11 +9,13 @@ import com.familywishes.dto.FestivalDtos.FestivalWishMappingSummary;
 import com.familywishes.entity.FestivalWishMapping;
 import com.familywishes.entity.SpecialEvent;
 import com.familywishes.entity.User;
+import com.familywishes.exception.BadRequestException;
 import com.familywishes.exception.NotFoundException;
 import com.familywishes.repository.FestivalWishMappingRepository;
 import com.familywishes.repository.SpecialEventRepository;
 import com.familywishes.repository.UserRepository;
 import com.familywishes.service.FestivalWishMappingService;
+import com.familywishes.util.WishesUrls;
 import java.time.LocalDate;
 import java.time.ZoneId;
 import java.util.ArrayList;
@@ -43,7 +45,7 @@ public class FestivalWishMappingServiceImpl implements FestivalWishMappingServic
   private final UserRepository userRepository;
 
   @Value("${scheduler.time-zone:Asia/Kolkata}")
-  private String schedulerTimeZone;
+  private String schedulerTimeZone = "Asia/Kolkata";
 
   @Override
   public FestivalWishMappingResponse upsert(FestivalWishMappingRequest request) {
@@ -52,7 +54,8 @@ public class FestivalWishMappingServiceImpl implements FestivalWishMappingServic
 
   @Override
   public FestivalWishMappingResponse upsertWithImage(
-      FestivalWishMappingRequest request, org.springframework.web.multipart.MultipartFile imageFile) {
+      FestivalWishMappingRequest request,
+      org.springframework.web.multipart.MultipartFile imageFile) {
     SpecialEvent specialEvent =
         specialEventRepository
             .findById(request.specialEventId())
@@ -71,6 +74,7 @@ public class FestivalWishMappingServiceImpl implements FestivalWishMappingServic
     mapping.setSpecialEvent(specialEvent);
     mapping.setUser(user);
     mapping.setCustomMessage(normalizeNote(request.customMessage()));
+    mapping.setWebsiteLink(normalizeWishesUrl(request.websiteLink()));
     mapping.setActive(request.active());
 
     if (imageFile != null && !imageFile.isEmpty()) {
@@ -94,7 +98,8 @@ public class FestivalWishMappingServiceImpl implements FestivalWishMappingServic
 
     List<Long> userIds = request.userIds().stream().distinct().toList();
     Map<Long, User> usersById =
-        userRepository.findAllById(userIds).stream().collect(Collectors.toMap(User::getId, user -> user));
+        userRepository.findAllById(userIds).stream()
+            .collect(Collectors.toMap(User::getId, user -> user));
     if (usersById.size() != userIds.size()) {
       throw new NotFoundException("One or more users were not found");
     }
@@ -104,6 +109,7 @@ public class FestivalWishMappingServiceImpl implements FestivalWishMappingServic
             .collect(Collectors.toMap(mapping -> mapping.getUser().getId(), mapping -> mapping));
 
     String note = normalizeNote(request.customMessage());
+    String websiteLink = normalizeWishesUrl(request.websiteLink());
     int created = 0;
     List<FestivalWishMapping> toSave = new ArrayList<>();
     for (Long userId : userIds) {
@@ -116,6 +122,7 @@ public class FestivalWishMappingServiceImpl implements FestivalWishMappingServic
       }
       mapping.setActive(request.active());
       mapping.setCustomMessage(note);
+      mapping.setWebsiteLink(websiteLink);
       toSave.add(mapping);
     }
     mappingRepository.saveAll(toSave);
@@ -148,9 +155,10 @@ public class FestivalWishMappingServiceImpl implements FestivalWishMappingServic
   @Override
   public PagedResponse<FestivalWishMappingResponse> list(
       int page, int size, String searchKey, String status, String sortBy, String sortDir) {
-    List<String> statuses = (status == null || status.isBlank() || "ALL".equalsIgnoreCase(status.trim()))
-        ? null
-        : List.of(status.trim().toUpperCase(Locale.ROOT));
+    List<String> statuses =
+        (status == null || status.isBlank() || "ALL".equalsIgnoreCase(status.trim()))
+            ? null
+            : List.of(status.trim().toUpperCase(Locale.ROOT));
     return list(page, size, searchKey, null, null, statuses, sortBy, sortDir);
   }
 
@@ -170,11 +178,13 @@ public class FestivalWishMappingServiceImpl implements FestivalWishMappingServic
             ? Sort.by(normalizedSortBy).descending()
             : Sort.by(normalizedSortBy).ascending();
 
-    List<Long> cleanEventIds = (specialEventIds == null || specialEventIds.isEmpty()) ? null : specialEventIds;
+    List<Long> cleanEventIds =
+        (specialEventIds == null || specialEventIds.isEmpty()) ? null : specialEventIds;
     List<Long> cleanUserIds = (userIds == null || userIds.isEmpty()) ? null : userIds;
-    List<String> cleanStatuses = (statuses == null || statuses.isEmpty())
-        ? null
-        : statuses.stream().map(s -> s.trim().toUpperCase(Locale.ROOT)).toList();
+    List<String> cleanStatuses =
+        (statuses == null || statuses.isEmpty())
+            ? null
+            : statuses.stream().map(s -> s.trim().toUpperCase(Locale.ROOT)).toList();
 
     var pageResult =
         mappingRepository.findAllByFilters(
@@ -220,7 +230,9 @@ public class FestivalWishMappingServiceImpl implements FestivalWishMappingServic
             : Sort.by(normalizedSortBy).ascending();
     var pageResult =
         mappingRepository.findActiveByUserIdAndSearchKey(
-            me.getId(), searchKey == null ? "" : searchKey.trim(), PageRequest.of(page, size, sort));
+            me.getId(),
+            searchKey == null ? "" : searchKey.trim(),
+            PageRequest.of(page, size, sort));
 
     return new PagedResponse<>(
         pageResult.getContent().stream().map(this::toResponse).toList(),
@@ -248,12 +260,21 @@ public class FestivalWishMappingServiceImpl implements FestivalWishMappingServic
         mapping.getCustomMessage(),
         imageUrl,
         mapping.getLastWishSentOn(),
-        mapping.isError());
+        mapping.isError(),
+        mapping.getWebsiteLink());
   }
 
   /** Blank means "no note"; the limit also protects the 1000 character column. */
   private static String normalizeNote(String note) {
     return note == null || note.isBlank() ? null : note.trim();
+  }
+
+  private static String normalizeWishesUrl(String raw) {
+    try {
+      return WishesUrls.normalizeOrNull(raw);
+    } catch (IllegalArgumentException e) {
+      throw new BadRequestException(e.getMessage());
+    }
   }
 
   private String resolveSortBy(String sortBy) {

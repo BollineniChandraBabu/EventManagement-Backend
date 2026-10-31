@@ -13,7 +13,8 @@ public interface FestivalWishMappingService {
   FestivalWishMappingResponse upsert(FestivalWishMappingRequest request);
 
   FestivalWishMappingResponse upsertWithImage(
-      FestivalWishMappingRequest request, org.springframework.web.multipart.MultipartFile imageFile);
+      FestivalWishMappingRequest request,
+      org.springframework.web.multipart.MultipartFile imageFile);
 
   List<FestivalWishMappingResponse> list();
 

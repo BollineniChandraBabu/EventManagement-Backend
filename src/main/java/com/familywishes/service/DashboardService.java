@@ -1,8 +1,8 @@
 package com.familywishes.service;
 
 import com.familywishes.dto.DashboardDtos.DashboardGraphResponse;
-import com.familywishes.dto.DashboardDtos.LoginLocationChartResponse;
 import com.familywishes.dto.DashboardDtos.DashboardResponse;
+import com.familywishes.dto.DashboardDtos.LoginLocationChartResponse;
 import com.familywishes.dto.DashboardDtos.ViolatedUsersDashboardResponse;
 import java.time.LocalDate;
 import java.util.List;
@@ -35,5 +35,10 @@ public interface DashboardService {
       List<Long> userIds);
 
   ViolatedUsersDashboardResponse getViolatedUsersDashboard(
-      LocalDate startDate, LocalDate endDate, int page, int size, boolean includeIpInfo, String searchKey);
+      LocalDate startDate,
+      LocalDate endDate,
+      int page,
+      int size,
+      boolean includeIpInfo,
+      String searchKey);
 }

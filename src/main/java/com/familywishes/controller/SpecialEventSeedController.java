@@ -69,7 +69,16 @@ public class SpecialEventSeedController {
   }
 
   @DeleteMapping("/{id}")
-  public void delete(@PathVariable Long id) {
-    specialEventSeedService.delete(id);
+  public void delete(
+      @PathVariable String id, @RequestParam(required = false) java.util.List<Long> ids) {
+    java.util.List<Long> resolvedIds = com.familywishes.util.IdListUtil.parseIds(id, ids);
+    resolvedIds.forEach(specialEventSeedService::delete);
+  }
+
+  @DeleteMapping
+  public void deleteMultiple(@RequestParam java.util.List<Long> ids) {
+    if (ids != null) {
+      ids.forEach(specialEventSeedService::delete);
+    }
   }
 }

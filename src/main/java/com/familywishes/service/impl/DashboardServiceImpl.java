@@ -9,8 +9,8 @@ import com.familywishes.dto.DashboardDtos.LoginLocationChartResponse;
 import com.familywishes.dto.DashboardDtos.ViolatedUserChartPoint;
 import com.familywishes.dto.DashboardDtos.ViolatedUserEmailSummary;
 import com.familywishes.dto.DashboardDtos.ViolatedUserInfo;
-import com.familywishes.dto.DashboardDtos.ViolatedUserIpSummary;
 import com.familywishes.dto.DashboardDtos.ViolatedUserIpInfo;
+import com.familywishes.dto.DashboardDtos.ViolatedUserIpSummary;
 import com.familywishes.dto.DashboardDtos.ViolatedUserMapPoint;
 import com.familywishes.dto.DashboardDtos.ViolatedUsersDashboardResponse;
 import com.familywishes.entity.LoginLocationEvent;
@@ -36,7 +36,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.cache.annotation.Cacheable;
@@ -52,7 +51,7 @@ import org.springframework.util.CollectionUtils;
 public class DashboardServiceImpl implements DashboardService {
 
   @Value("${scheduler.time-zone:Asia/Kolkata}")
-  private String schedulerTimeZone;
+  private String schedulerTimeZone = "Asia/Kolkata";
 
   /** Most failed-login points drawn on the map at once. */
   private static final int MAX_VIOLATED_MAP_POINTS = 300;
@@ -270,7 +269,6 @@ public class DashboardServiceImpl implements DashboardService {
     return new DashboardGraphResponse(days, points);
   }
 
-
   @Override
   public LoginLocationChartResponse getLoginLocationChart(
       Long userId,
@@ -285,8 +283,7 @@ public class DashboardServiceImpl implements DashboardService {
         (toDate == null || toDate.isBlank())
             ? LocalDate.now(ZoneId.of(schedulerTimeZone)).toString()
             : toDate;
-    LocalDateTime to =
-        LocalDate.parse(normalizedToDate).plusDays(1).atStartOfDay().minusNanos(1);
+    LocalDateTime to = LocalDate.parse(normalizedToDate).plusDays(1).atStartOfDay().minusNanos(1);
 
     Long effectiveUserId = resolveEffectiveUserId(userId, requesterEmail, isAdmin);
     if (Objects.nonNull(effectiveUserId)) {
@@ -339,7 +336,8 @@ public class DashboardServiceImpl implements DashboardService {
             .findByLoggedInAtGreaterThanEqualAndLoggedInAtLessThanEqualAndLatitudeIsNotNullAndLongitudeIsNotNull(
                 start,
                 end,
-                PageRequest.of(0, MAX_VIOLATED_MAP_POINTS, Sort.by(Sort.Direction.DESC, "loggedInAt")));
+                PageRequest.of(
+                    0, MAX_VIOLATED_MAP_POINTS, Sort.by(Sort.Direction.DESC, "loggedInAt")));
     long totalAttempts =
         violatedUserRepository.countByLoggedInAtGreaterThanEqualAndLoggedInAtLessThanEqual(
             start, end);
@@ -357,9 +355,7 @@ public class DashboardServiceImpl implements DashboardService {
             .toList();
 
     List<ViolatedUserMapPoint> mapPoints =
-        mapUsers.stream()
-            .map(user -> toViolatedUserMapPoint(user, false))
-            .toList();
+        mapUsers.stream().map(user -> toViolatedUserMapPoint(user, false)).toList();
     List<ViolatedUserInfo> users =
         violatedUsers.getContent().stream()
             .map(user -> toViolatedUserInfo(user, includeIpInfo))
@@ -385,7 +381,9 @@ public class DashboardServiceImpl implements DashboardService {
   }
 
   private List<ViolatedUserIpSummary> topIps(LocalDateTime start, LocalDateTime end) {
-    return violatedUserRepository.findTopIps(start, end, PageRequest.of(0, TOP_VIOLATION_LIMIT)).stream()
+    return violatedUserRepository
+        .findTopIps(start, end, PageRequest.of(0, TOP_VIOLATION_LIMIT))
+        .stream()
         .map(
             row ->
                 new ViolatedUserIpSummary(
@@ -410,8 +408,7 @@ public class DashboardServiceImpl implements DashboardService {
         .toList();
   }
 
-  private ViolatedUserInfo toViolatedUserInfo(
-      ViolatedUser user, boolean includeIpInfo) {
+  private ViolatedUserInfo toViolatedUserInfo(ViolatedUser user, boolean includeIpInfo) {
     return new ViolatedUserInfo(
         user.getId(),
         user.getEmail(),
@@ -424,8 +421,7 @@ public class DashboardServiceImpl implements DashboardService {
         resolveIpInfo(user.getIpAddress(), includeIpInfo));
   }
 
-  private ViolatedUserMapPoint toViolatedUserMapPoint(
-      ViolatedUser user, boolean includeIpInfo) {
+  private ViolatedUserMapPoint toViolatedUserMapPoint(ViolatedUser user, boolean includeIpInfo) {
     return new ViolatedUserMapPoint(
         user.getId(),
         user.getEmail(),
@@ -444,7 +440,8 @@ public class DashboardServiceImpl implements DashboardService {
     return ipInfoService.lookup(ipAddress.strip());
   }
 
-  private Long resolveEffectiveUserId(Long requestedUserId, String requesterEmail, boolean isAdmin) {
+  private Long resolveEffectiveUserId(
+      Long requestedUserId, String requesterEmail, boolean isAdmin) {
     if (isAdmin) {
       return requestedUserId;
     }

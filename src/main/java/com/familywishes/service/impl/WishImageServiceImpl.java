@@ -40,7 +40,8 @@ public class WishImageServiceImpl implements WishImageService {
   private final SupabaseStorageService storageService;
 
   @Override
-  public WishImageResponse create(Long userId, String eventType, boolean active, MultipartFile file) {
+  public WishImageResponse create(
+      Long userId, String eventType, boolean active, MultipartFile file) {
     validateImage(file);
     WishImage image = new WishImage();
     image.setUser(resolveUser(userId));
@@ -114,9 +115,7 @@ public class WishImageServiceImpl implements WishImageService {
           default -> "id";
         };
     Sort sort =
-        "asc".equalsIgnoreCase(sortDir)
-            ? Sort.by(field).ascending()
-            : Sort.by(field).descending();
+        "asc".equalsIgnoreCase(sortDir) ? Sort.by(field).ascending() : Sort.by(field).descending();
 
     List<String> cleanTypes =
         (eventTypes == null || eventTypes.isEmpty())
@@ -162,7 +161,10 @@ public class WishImageServiceImpl implements WishImageService {
       String normalizedEvent = normalizeEvent(eventType);
       byte[] image = downloadAny(userCandidates(normalizedEvent, userId));
       if (image == null) {
-        image = downloadAny(wishImageRepository.findByEventTypeIgnoreCaseAndActiveTrueAndUserIsNull(normalizedEvent));
+        image =
+            downloadAny(
+                wishImageRepository.findByEventTypeIgnoreCaseAndActiveTrueAndUserIsNull(
+                    normalizedEvent));
       }
       if (image != null) {
         return image;
@@ -177,7 +179,9 @@ public class WishImageServiceImpl implements WishImageService {
         : wishImageRepository.findByEventTypeIgnoreCaseAndActiveTrueAndUser_Id(eventType, userId);
   }
 
-  /** Picks images in random order until one can be downloaded (a file may be missing in storage). */
+  /**
+   * Picks images in random order until one can be downloaded (a file may be missing in storage).
+   */
   private byte[] downloadAny(List<WishImage> candidates) {
     List<WishImage> shuffled = new ArrayList<>(candidates);
     Collections.shuffle(shuffled, ThreadLocalRandom.current());
@@ -200,7 +204,9 @@ public class WishImageServiceImpl implements WishImageService {
   private User resolveUser(Long userId) {
     return userId == null
         ? null
-        : userRepository.findById(userId).orElseThrow(() -> new NotFoundException("User not found"));
+        : userRepository
+            .findById(userId)
+            .orElseThrow(() -> new NotFoundException("User not found"));
   }
 
   private String normalizeEvent(String value) {
@@ -209,7 +215,8 @@ public class WishImageServiceImpl implements WishImageService {
     }
     String eventType = value.trim();
     if (eventType.length() > MAX_EVENT_TYPE_LENGTH) {
-      throw new BadRequestException("Event type must be at most " + MAX_EVENT_TYPE_LENGTH + " characters");
+      throw new BadRequestException(
+          "Event type must be at most " + MAX_EVENT_TYPE_LENGTH + " characters");
     }
     return eventType;
   }
@@ -222,8 +229,10 @@ public class WishImageServiceImpl implements WishImageService {
     if (file.getSize() > MAX_IMAGE_BYTES) {
       throw new BadRequestException("The image must be 5 MB or smaller");
     }
-    String declaredType = file.getContentType() == null ? "" : file.getContentType().toLowerCase(Locale.ROOT);
-    if (!ALLOWED_IMAGE_TYPES.contains(declaredType) || !ALLOWED_IMAGE_TYPES.contains(detectType(file))) {
+    String declaredType =
+        file.getContentType() == null ? "" : file.getContentType().toLowerCase(Locale.ROOT);
+    if (!ALLOWED_IMAGE_TYPES.contains(declaredType)
+        || !ALLOWED_IMAGE_TYPES.contains(detectType(file))) {
       throw new BadRequestException("Only PNG, JPEG, GIF or WebP images are allowed");
     }
   }

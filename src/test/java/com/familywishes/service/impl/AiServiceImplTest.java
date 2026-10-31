@@ -12,8 +12,8 @@ import static org.mockito.Mockito.when;
 
 import com.familywishes.ai.GeminiClient;
 import com.familywishes.dto.AiWishRequest;
-import com.familywishes.service.WishImageService;
 import com.familywishes.exception.BadRequestException;
+import com.familywishes.service.WishImageService;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import java.util.Map;
 import org.junit.jupiter.api.BeforeEach;

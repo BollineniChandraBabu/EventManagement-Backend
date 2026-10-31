@@ -84,12 +84,7 @@ public class DeliveryOpsAgent {
     AgentResult result =
         runner.run(
             new AgentSpec(
-                system,
-                "Triage the current failed emails now.",
-                tools,
-                8,
-                Set.of(),
-                false));
+                system, "Triage the current failed emails now.", tools, 8, Set.of(), false));
     log.info("DeliveryOpsAgent dryRun={} trace={}", dryRun, result.trace());
     return result.finalText();
   }
@@ -111,7 +106,8 @@ public class DeliveryOpsAgent {
   private Object retry(Map<String, Object> args, AtomicInteger retries) {
     Long id = toLong(args.get("logId"));
     if (id == null) return Map.of("error", "logId required");
-    if (retries.get() >= maxRetriesPerRun) return Map.of("error", "retry budget for this run used up");
+    if (retries.get() >= maxRetriesPerRun)
+      return Map.of("error", "retry budget for this run used up");
 
     EmailLog l = emailLogRepository.findWithRecipientById(id).orElse(null);
     if (l == null) return Map.of("error", "email log not found");
@@ -135,9 +131,9 @@ public class DeliveryOpsAgent {
     alerts.incrementAndGet();
     if (dryRun) return Map.of("dryRun", true, "wouldAlert", subject);
 
-    String html = "<p>" + body.replace("&", "&amp;").replace("<", "&lt;").replace("\n", "<br>") + "</p>";
-    gmailEmailService.sendEmailWithAttachments(
-        alertEmail, "🤖 " + subject, html, null, null);
+    String html =
+        "<p>" + body.replace("&", "&amp;").replace("<", "&lt;").replace("\n", "<br>") + "</p>";
+    gmailEmailService.sendEmailWithAttachments(alertEmail, "🤖 " + subject, html, null, null);
     return Map.of("alertSent", true);
   }
 

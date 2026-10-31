@@ -30,4 +30,8 @@ public class OtpCode extends AuditableEntity {
   @Column(nullable = false, columnDefinition = "SMALLINT")
   @Convert(converter = BooleanToZeroOneConverter.class)
   private boolean used;
+
+  @Column(nullable = false)
+  @Builder.Default
+  private int resendAttempts = 1;
 }

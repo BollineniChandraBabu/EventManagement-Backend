@@ -42,9 +42,7 @@ public class DashboardController {
 
   @GetMapping("/chart")
   public DashboardGraphResponse chart(
-      Authentication authentication,
-      @RequestParam String startDate,
-      @RequestParam String endDate) {
+      Authentication authentication, @RequestParam String startDate, @RequestParam String endDate) {
     DateRange dateRange = validateDateRange(startDate, endDate);
     return dashboardService.getInstaChart(
         dateRange.startDate(),
@@ -55,9 +53,7 @@ public class DashboardController {
 
   @GetMapping("/chart/mail")
   public DashboardGraphResponse mailChart(
-      Authentication authentication,
-      @RequestParam String startDate,
-      @RequestParam String endDate) {
+      Authentication authentication, @RequestParam String startDate, @RequestParam String endDate) {
     DateRange dateRange = validateDateRange(startDate, endDate);
     return dashboardService.getMailChart(
         dateRange.startDate(),
@@ -68,9 +64,7 @@ public class DashboardController {
 
   @GetMapping("/chart/insta")
   public DashboardGraphResponse instaChart(
-      Authentication authentication,
-      @RequestParam String startDate,
-      @RequestParam String endDate) {
+      Authentication authentication, @RequestParam String startDate, @RequestParam String endDate) {
     DateRange dateRange = validateDateRange(startDate, endDate);
     return dashboardService.getInstaChart(
         dateRange.startDate(),
@@ -94,8 +88,7 @@ public class DashboardController {
   @GetMapping("/chart/mail/otp")
   @PreAuthorize("hasRole('ADMIN')")
   public DashboardGraphResponse otpMailChart(
-      @RequestParam String startDate,
-      @RequestParam String endDate) {
+      @RequestParam String startDate, @RequestParam String endDate) {
     DateRange dateRange = validateDateRange(startDate, endDate);
     return dashboardService.getOtpChart(dateRange.startDate(), dateRange.endDate());
   }
@@ -103,19 +96,18 @@ public class DashboardController {
   @GetMapping("/chart/mail/forgot-password")
   @PreAuthorize("hasRole('ADMIN')")
   public DashboardGraphResponse forgotPasswordMailChart(
-      @RequestParam String startDate,
-      @RequestParam String endDate) {
+      @RequestParam String startDate, @RequestParam String endDate) {
     DateRange dateRange = validateDateRange(startDate, endDate);
     return dashboardService.getForgotPasswordChart(dateRange.startDate(), dateRange.endDate());
   }
 
   @GetMapping("/chart/login-locations")
   public LoginLocationChartResponse loginLocationChart(
-          Authentication authentication,
-          @RequestParam(required = false) Long userId,
-          @RequestParam(required = false) String startDate,
-          @RequestParam(required = false) String endDate,
-          @RequestParam(required = false) List<Long> userIds) {
+      Authentication authentication,
+      @RequestParam(required = false) Long userId,
+      @RequestParam(required = false) String startDate,
+      @RequestParam(required = false) String endDate,
+      @RequestParam(required = false) List<Long> userIds) {
     validateInclusiveDateRange(startDate, endDate); // a single day (start = end) is valid here
     return dashboardService.getLoginLocationChart(
         userId, startDate, endDate, authentication.getName(), isAdmin(authentication), userIds);
@@ -131,7 +123,8 @@ public class DashboardController {
       @RequestParam(defaultValue = "true") boolean includeIpInfo,
       @RequestParam(defaultValue = "") String searchKey) {
     if (searchKey.length() > MAX_SEARCH_LENGTH) {
-      throw new BadRequestException("searchKey must be at most " + MAX_SEARCH_LENGTH + " characters");
+      throw new BadRequestException(
+          "searchKey must be at most " + MAX_SEARCH_LENGTH + " characters");
     }
     if (page < 0) {
       throw new BadRequestException("page must not be negative");
@@ -201,7 +194,8 @@ public class DashboardController {
       startDate = LocalDate.parse(startDateParam);
       endDate = LocalDate.parse(endDateParam);
     } catch (Exception ex) {
-      throw new BadRequestException("Invalid date format. Use yyyy-MM-dd for startDate and endDate");
+      throw new BadRequestException(
+          "Invalid date format. Use yyyy-MM-dd for startDate and endDate");
     }
 
     return new DateRange(startDate, endDate);

@@ -27,6 +27,7 @@ public class WishesScheduler implements Job {
   private final EventRepository eventRepository;
   private final GmailEmailService emailService;
   private final AiService aiService;
+  private final com.familywishes.service.impl.SupabaseStorageService storageService;
 
   @Value("${scheduler.time-zone:Asia/Kolkata}")
   private String schedulerTimeZone;
@@ -56,19 +57,33 @@ public class WishesScheduler implements Job {
               event.getEventType().getCode());
       AiWishResponse ai = aiService.generate(request);
       // An uploaded image is used when there is one, otherwise an image is generated.
-      byte[] image = aiService.callGeminiImage(request);
+      byte[] image = null;
+      if (event.getImageObjectKey() != null && !event.getImageObjectKey().isBlank()) {
+        image = storageService.downloadImage(event.getImageObjectKey());
+      }
+      if (image == null || image.length == 0) {
+        image = aiService.callGeminiImage(request);
+      }
       // The custom wishes page is only added for events that have one.
       String body =
-          WishEmailExtras.appendWishesLink(ai.htmlMessage(), event.getWishesUrl(), linkLabel(event));
-      emailService.sendEmailWithAttachments(event.getUser().getEmail(), ai.subject(), body, null, image);
+          WishEmailExtras.appendWishesLink(
+              ai.htmlMessage(), event.getWishesUrl(), linkLabel(event));
+      emailService.sendEmailWithAttachments(
+          event.getUser().getEmail(), ai.subject(), body, null, image);
     } catch (Exception e) {
-      log.error("Could not send the {} wish for event {}", event.getEventType().getCode(), event.getId(), e);
+      log.error(
+          "Could not send the {} wish for event {}",
+          event.getEventType().getCode(),
+          event.getId(),
+          e);
     }
   }
 
   private static String linkLabel(Event event) {
     String name = event.getEventType().getDisplayName();
-    return "Open your " + (name == null || name.isBlank() ? "event" : name.toLowerCase()) + " wishes";
+    return "Open your "
+        + (name == null || name.isBlank() ? "event" : name.toLowerCase())
+        + " wishes";
   }
 
   private AiWishRequest buildRequest(Long userId, String name, String relation, String eventType) {

@@ -29,7 +29,8 @@ public class TemplateTypeSeedController {
 
   @GetMapping("/filter-values")
   public java.util.Map<String, Object> getFilterValues() {
-    java.util.List<String> codes = templateTypeSeedService.listActive().stream().map(EnumSeedResponse::code).toList();
+    java.util.List<String> codes =
+        templateTypeSeedService.listActive().stream().map(EnumSeedResponse::code).toList();
     java.util.List<Boolean> activeStatuses = java.util.List.of(true, false);
     return java.util.Map.of("codes", codes, "active", activeStatuses);
   }

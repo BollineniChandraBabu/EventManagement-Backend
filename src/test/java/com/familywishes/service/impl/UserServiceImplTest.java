@@ -1,9 +1,9 @@
 package com.familywishes.service.impl;
 
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.never;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.familywishes.dto.UserDtos.UserRequest;
@@ -179,8 +179,7 @@ class UserServiceImplTest {
 
   private void givenCreatableUser() {
     when(relationshipSeedRepository.findByCodeAndActiveTrue("BROTHER"))
-        .thenReturn(
-            Optional.of(RelationshipSeed.builder().code("BROTHER").active(true).build()));
+        .thenReturn(Optional.of(RelationshipSeed.builder().code("BROTHER").active(true).build()));
     when(passwordEncoder.encode("Test")).thenReturn("encoded-password");
     when(supabaseStorageService.getDefaultProfilePictureUrl(any())).thenReturn("default.png");
     when(userRepository.save(any(User.class)))
@@ -212,8 +211,7 @@ class UserServiceImplTest {
   @Test
   void createShouldRejectALinkThatIsNotAWebAddress() {
     when(relationshipSeedRepository.findByCodeAndActiveTrue("BROTHER"))
-        .thenReturn(
-            Optional.of(RelationshipSeed.builder().code("BROTHER").active(true).build()));
+        .thenReturn(Optional.of(RelationshipSeed.builder().code("BROTHER").active(true).build()));
     when(passwordEncoder.encode("Test")).thenReturn("encoded-password");
 
     assertThrows(

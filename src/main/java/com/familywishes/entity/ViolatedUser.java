@@ -1,14 +1,8 @@
 package com.familywishes.entity;
 
-import com.familywishes.entity.converter.BooleanToZeroOneConverter;
-import com.familywishes.entity.enums.Gender;
-import com.familywishes.entity.enums.Role;
 import jakarta.persistence.*;
-import lombok.*;
-import lombok.experimental.SuperBuilder;
-
-import java.time.LocalDate;
 import java.time.LocalDateTime;
+import lombok.*;
 
 @Entity
 @Table(name = "violated_users")

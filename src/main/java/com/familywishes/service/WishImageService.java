@@ -9,10 +9,22 @@ public interface WishImageService {
   WishImageResponse create(Long userId, String eventType, boolean active, MultipartFile file);
 
   WishImageResponse update(
-      Long id, Long userId, boolean clearUser, String eventType, Boolean active, MultipartFile file);
+      Long id,
+      Long userId,
+      boolean clearUser,
+      String eventType,
+      Boolean active,
+      MultipartFile file);
 
   PagedResponse<WishImageResponse> list(
-      int page, int size, String searchKey, String eventType, Long userId, Boolean active, String sortBy, String sortDir);
+      int page,
+      int size,
+      String searchKey,
+      String eventType,
+      Long userId,
+      Boolean active,
+      String sortBy,
+      String sortDir);
 
   PagedResponse<WishImageResponse> list(
       int page,

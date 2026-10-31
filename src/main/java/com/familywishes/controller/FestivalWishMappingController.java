@@ -33,9 +33,11 @@ public class FestivalWishMappingController {
       @RequestParam Long userId,
       @RequestParam Boolean active,
       @RequestParam(required = false) String customMessage,
-      @RequestPart(value = "image", required = false) org.springframework.web.multipart.MultipartFile image) {
+      @RequestParam(required = false) String websiteLink,
+      @RequestPart(value = "image", required = false)
+          org.springframework.web.multipart.MultipartFile image) {
     FestivalWishMappingRequest request =
-        new FestivalWishMappingRequest(specialEventId, userId, active, customMessage);
+        new FestivalWishMappingRequest(specialEventId, userId, active, customMessage, websiteLink);
     return festivalWishMappingService.upsertWithImage(request, image);
   }
 
@@ -93,7 +95,17 @@ public class FestivalWishMappingController {
 
   @DeleteMapping("/{id}")
   @PreAuthorize("hasRole('ADMIN')")
-  public void delete(@PathVariable Long id) {
-    festivalWishMappingService.delete(id);
+  public void delete(
+      @PathVariable String id, @RequestParam(required = false) java.util.List<Long> ids) {
+    java.util.List<Long> resolvedIds = com.familywishes.util.IdListUtil.parseIds(id, ids);
+    resolvedIds.forEach(festivalWishMappingService::delete);
+  }
+
+  @DeleteMapping
+  @PreAuthorize("hasRole('ADMIN')")
+  public void deleteMultiple(@RequestParam java.util.List<Long> ids) {
+    if (ids != null) {
+      ids.forEach(festivalWishMappingService::delete);
+    }
   }
 }

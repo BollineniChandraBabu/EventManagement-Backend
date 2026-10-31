@@ -35,6 +35,9 @@ public class FestivalWishMapping extends ActivatableEntity {
   @Column(length = 1000)
   private String customMessage;
 
+  @Column(name = "website_link", length = 500)
+  private String websiteLink;
+
   @Column(length = 500)
   private String imageObjectKey;
 

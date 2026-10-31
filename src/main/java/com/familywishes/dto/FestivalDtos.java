@@ -18,10 +18,16 @@ public class FestivalDtos {
       @NotNull Long specialEventId,
       @NotNull Long userId,
       @NotNull Boolean active,
-      @Size(max = 500) String customMessage) {
+      @Size(max = 500) String customMessage,
+      @Size(max = 500) String websiteLink) {
 
     public FestivalWishMappingRequest(Long specialEventId, Long userId, Boolean active) {
-      this(specialEventId, userId, active, null);
+      this(specialEventId, userId, active, null, null);
+    }
+
+    public FestivalWishMappingRequest(
+        Long specialEventId, Long userId, Boolean active, String customMessage) {
+      this(specialEventId, userId, active, customMessage, null);
     }
   }
 
@@ -30,11 +36,21 @@ public class FestivalDtos {
       @NotNull Long specialEventId,
       @NotEmpty @Size(max = 500) List<Long> userIds,
       @NotNull Boolean active,
-      @Size(max = 500) String customMessage) {}
+      @Size(max = 500) String customMessage,
+      @Size(max = 500) String websiteLink) {
+
+    public FestivalWishMappingBulkRequest(
+        Long specialEventId, List<Long> userIds, Boolean active, String customMessage) {
+      this(specialEventId, userIds, active, customMessage, null);
+    }
+  }
 
   public record FestivalWishMappingBulkResponse(int created, int updated) {}
 
-  /** Numbers for the dashboard header. upcoming = active mappings whose festival is in the next 30 days. */
+  /**
+   * Numbers for the dashboard header. upcoming = active mappings whose festival is in the next 30
+   * days.
+   */
   public record FestivalWishMappingSummary(
       long total, long active, long inactive, long upcoming, long failed) {}
 
@@ -49,5 +65,34 @@ public class FestivalDtos {
       String customMessage,
       String imageUrl,
       LocalDate lastWishSentOn,
-      boolean error) {}
+      boolean error,
+      String websiteLink) {
+
+    public FestivalWishMappingResponse(
+        Long id,
+        Long specialEventId,
+        String festivalName,
+        LocalDate eventDate,
+        Long userId,
+        String userName,
+        boolean active,
+        String customMessage,
+        String imageUrl,
+        LocalDate lastWishSentOn,
+        boolean error) {
+      this(
+          id,
+          specialEventId,
+          festivalName,
+          eventDate,
+          userId,
+          userName,
+          active,
+          customMessage,
+          imageUrl,
+          lastWishSentOn,
+          error,
+          null);
+    }
+  }
 }

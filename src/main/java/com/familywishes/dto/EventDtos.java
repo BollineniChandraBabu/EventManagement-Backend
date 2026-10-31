@@ -11,11 +11,17 @@ public class EventDtos {
       LocalDate eventDate,
       boolean recurring,
       @NotNull Long userId,
-      @Size(max = 500) String wishesUrl) {
+      @Size(max = 500) String wishesUrl,
+      String imageObjectKey) {
 
     /** Without a wishes link (the link feature is then skipped for this event). */
     public EventRequest(String eventType, LocalDate eventDate, boolean recurring, Long userId) {
-      this(eventType, eventDate, recurring, userId, null);
+      this(eventType, eventDate, recurring, userId, null, null);
+    }
+
+    public EventRequest(
+        String eventType, LocalDate eventDate, boolean recurring, Long userId, String wishesUrl) {
+      this(eventType, eventDate, recurring, userId, wishesUrl, null);
     }
   }
 
@@ -27,5 +33,19 @@ public class EventDtos {
       String userName,
       boolean active,
       Long userId,
-      String wishesUrl) {}
+      String wishesUrl,
+      String imageUrl) {
+
+    public EventResponse(
+        Long id,
+        String eventType,
+        LocalDate eventDate,
+        boolean recurring,
+        String userName,
+        boolean active,
+        Long userId,
+        String wishesUrl) {
+      this(id, eventType, eventDate, recurring, userName, active, userId, wishesUrl, null);
+    }
+  }
 }

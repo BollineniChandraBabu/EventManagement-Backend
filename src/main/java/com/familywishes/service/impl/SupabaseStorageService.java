@@ -101,7 +101,8 @@ public class SupabaseStorageService {
       return null;
     }
     try {
-      String original = file.getOriginalFilename() == null ? "wish.png" : file.getOriginalFilename();
+      String original =
+          file.getOriginalFilename() == null ? "wish.png" : file.getOriginalFilename();
       String safeName = original.replaceAll("[^a-zA-Z0-9._-]", "_");
       String objectKey =
           "Wish Images/"

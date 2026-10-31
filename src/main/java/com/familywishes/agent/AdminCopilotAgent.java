@@ -103,25 +103,34 @@ public class AdminCopilotAgent {
       addDistinct(g, "ips", v.getIpAddress());
     }
     List<Map<String, Object>> out = new ArrayList<>();
-    byEmail.forEach((email, g) -> {
-      g.put("email", email);
-      out.add(g);
-    });
+    byEmail.forEach(
+        (email, g) -> {
+          g.put("email", email);
+          out.add(g);
+        });
     out.sort((x, y) -> (int) y.get("attempts") - (int) x.get("attempts"));
-    return Map.of("windowHours", hours, "totalAttempts", rows.size(),
-        "accounts", out.size() > 20 ? out.subList(0, 20) : out);
+    return Map.of(
+        "windowHours",
+        hours,
+        "totalAttempts",
+        rows.size(),
+        "accounts",
+        out.size() > 20 ? out.subList(0, 20) : out);
   }
 
   private Object birthdays(Map<String, Object> a) {
     Integer month = monthArg(a);
     if (month == null) return Map.of("error", "month must be 1-12");
     List<Map<String, Object>> out = new ArrayList<>();
-    userRepository.findByMonth(month).forEach(u -> {
-      Map<String, Object> m = new HashMap<>();
-      m.put("name", u.getName());
-      m.put("day", u.getBirthday().getDayOfMonth());
-      out.add(m);
-    });
+    userRepository
+        .findByMonth(month)
+        .forEach(
+            u -> {
+              Map<String, Object> m = new HashMap<>();
+              m.put("name", u.getName());
+              m.put("day", u.getBirthday().getDayOfMonth());
+              out.add(m);
+            });
     return Map.of("birthdays", out);
   }
 

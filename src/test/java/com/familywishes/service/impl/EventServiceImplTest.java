@@ -71,7 +71,8 @@ class EventServiceImplTest {
 
     EventResponse response =
         eventService.create(
-            new EventRequest("anniversary", LocalDate.of(2018, 6, 10), true, 1L, " " + WISHES_URL + " "));
+            new EventRequest(
+                "anniversary", LocalDate.of(2018, 6, 10), true, 1L, " " + WISHES_URL + " "));
 
     assertEquals(WISHES_URL, response.wishesUrl());
     assertEquals(1L, response.userId());
@@ -84,7 +85,8 @@ class EventServiceImplTest {
     when(eventRepository.save(any(Event.class))).thenAnswer(call -> call.getArgument(0));
 
     EventResponse response =
-        eventService.create(new EventRequest("ANNIVERSARY", LocalDate.of(2018, 6, 10), true, 1L, "  "));
+        eventService.create(
+            new EventRequest("ANNIVERSARY", LocalDate.of(2018, 6, 10), true, 1L, "  "));
 
     assertNull(response.wishesUrl());
   }
@@ -98,7 +100,8 @@ class EventServiceImplTest {
         BadRequestException.class,
         () ->
             eventService.create(
-                new EventRequest("ANNIVERSARY", LocalDate.of(2018, 6, 10), true, 1L, "javascript:alert(1)")));
+                new EventRequest(
+                    "ANNIVERSARY", LocalDate.of(2018, 6, 10), true, 1L, "javascript:alert(1)")));
     verify(eventRepository, never()).save(any());
   }
 
@@ -111,7 +114,8 @@ class EventServiceImplTest {
     when(eventRepository.save(any(Event.class))).thenAnswer(call -> call.getArgument(0));
 
     EventResponse response =
-        eventService.update(5L, new EventRequest("ANNIVERSARY", LocalDate.of(2019, 7, 1), false, 1L, ""));
+        eventService.update(
+            5L, new EventRequest("ANNIVERSARY", LocalDate.of(2019, 7, 1), false, 1L, ""));
 
     assertEquals(LocalDate.of(2019, 7, 1), response.eventDate());
     assertEquals(false, response.recurring());

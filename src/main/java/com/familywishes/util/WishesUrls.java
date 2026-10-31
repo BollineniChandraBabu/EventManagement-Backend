@@ -22,7 +22,8 @@ public final class WishesUrls {
     }
     String url = raw.trim();
     if (url.length() > MAX_LENGTH) {
-      throw new IllegalArgumentException("The wishes link must be at most " + MAX_LENGTH + " characters");
+      throw new IllegalArgumentException(
+          "The wishes link must be at most " + MAX_LENGTH + " characters");
     }
     if (containsWhitespaceOrControlCharacters(url)) {
       throw new IllegalArgumentException("The wishes link must not contain spaces");

@@ -7,8 +7,8 @@ import java.util.List;
  * Works out which image "event types" to look for when a wish is sent, most specific first.
  *
  * <p>A festival wish looks for an image named after the festival (for example "Diwali") and then
- * for a general "Festival" image. Event types such as WEDDING_ANNIVERSARY also match images that
- * an admin named "Wedding Anniversary".
+ * for a general "Festival" image. Event types such as WEDDING_ANNIVERSARY also match images that an
+ * admin named "Wedding Anniversary".
  */
 public final class WishImageKeys {
 

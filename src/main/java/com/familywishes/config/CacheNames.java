@@ -2,7 +2,8 @@ package com.familywishes.config;
 
 /**
  * Names of the Ehcache caches. Every name here must have a matching {@code <cache alias="...">} in
- * {@code ehcache.xml} (CacheConfigurationTest checks this), otherwise Spring fails at the first use.
+ * {@code ehcache.xml} (CacheConfigurationTest checks this), otherwise Spring fails at the first
+ * use.
  */
 public final class CacheNames {
 
