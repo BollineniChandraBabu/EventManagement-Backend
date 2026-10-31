@@ -117,8 +117,7 @@ public class AgentRunner {
       body.put("tools", List.of(Map.of("functionDeclarations", declarations)));
       body.put(
           "toolConfig",
-          Map.of(
-              "functionCallingConfig", Map.of("mode", spec.forceToolCall() ? "ANY" : "AUTO")));
+          Map.of("functionCallingConfig", Map.of("mode", spec.forceToolCall() ? "ANY" : "AUTO")));
     }
     return body;
   }

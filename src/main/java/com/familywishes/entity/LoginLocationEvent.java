@@ -34,5 +34,4 @@ public class LoginLocationEvent extends AuditableEntity {
 
   @Column(name = "longitude")
   private Double longitude;
-
 }

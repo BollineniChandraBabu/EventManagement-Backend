@@ -3,7 +3,9 @@ package com.familywishes.agent;
 import java.util.Map;
 import java.util.function.Function;
 
-/** A capability the model may invoke. Implementations must be side-effect safe or guard themselves. */
+/**
+ * A capability the model may invoke. Implementations must be side-effect safe or guard themselves.
+ */
 public interface AgentTool {
   String name();
 

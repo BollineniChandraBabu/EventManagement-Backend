@@ -40,7 +40,7 @@ public class NotificationServiceImpl implements NotificationService {
   private final Map<String, ScheduledFuture<?>> scheduledTasks = new ConcurrentHashMap<>();
 
   @Value("${scheduler.time-zone:Asia/Kolkata}")
-  private String schedulerTimeZone;
+  private String schedulerTimeZone = "Asia/Kolkata";
 
   @Override
   public NotificationResponse create(NotificationRequest request) {
@@ -132,24 +132,20 @@ public class NotificationServiceImpl implements NotificationService {
     Notification notification = getEntity(id);
     validateScheduleWindow(notification.getScheduledFrom(), notification.getScheduledTo());
     LocalDateTime now = LocalDateTime.now(ZoneId.of(schedulerTimeZone));
-    LocalDateTime effectivePublishTime =
-        notification.getScheduledFrom() != null ? notification.getScheduledFrom() : now;
+    if (notification.getScheduledFrom() == null || !notification.getScheduledFrom().isAfter(now)) {
+      throw new BadRequestException("Notification can only be published to future dates");
+    }
+    LocalDateTime effectivePublishTime = notification.getScheduledFrom();
     notification.setPublished(true);
     notification.setPublishedAt(effectivePublishTime);
     notification.setUpdatedBy(actor);
     Notification saved = notificationRepository.save(notification);
     NotificationResponse response = toResponse(saved);
 
-    if (effectivePublishTime.isAfter(now)) {
-      pushNotificationToQueue(response);
-      if (Objects.nonNull(response.scheduledTo())) {
-        pushUnPublishNotificationToQueue(response);
-      }
-      return response;
+    pushNotificationToQueue(response);
+    if (Objects.nonNull(response.scheduledTo())) {
+      pushUnPublishNotificationToQueue(response);
     }
-
-    sendNotificationEmailIfEnabled(saved, response);
-    notificationRealtimePublisher.publishNotification(response);
     return response;
   }
 
@@ -173,8 +169,8 @@ public class NotificationServiceImpl implements NotificationService {
             notification.setPublished(false);
             notificationRepository.save(notification);
             notificationRealtimePublisher.publishNotification(
-                    new NotificationResponse(
-                            null, null, null, null, null, null, null, null, null, null, null, null));
+                new NotificationResponse(
+                    null, null, null, null, null, null, null, null, null, null, null, null));
             System.out.println("Notification UnPublished: " + response.id());
           }
         };
@@ -283,23 +279,23 @@ public class NotificationServiceImpl implements NotificationService {
         : value.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;");
   }
 
-
   private String resolveSortBy(String sortBy) {
     if (sortBy == null || sortBy.isBlank()) {
       return "createdAt";
     }
     return switch (sortBy.trim()) {
       case "id",
-          "title",
-          "published",
-          "canSendEmail",
-          "scheduledFrom",
-          "scheduledTo",
-          "publishedAt",
-          "createdBy",
-          "updatedBy",
-          "createdAt",
-          "updatedAt" -> sortBy.trim();
+              "title",
+              "published",
+              "canSendEmail",
+              "scheduledFrom",
+              "scheduledTo",
+              "publishedAt",
+              "createdBy",
+              "updatedBy",
+              "createdAt",
+              "updatedAt" ->
+          sortBy.trim();
       default -> "createdAt";
     };
   }

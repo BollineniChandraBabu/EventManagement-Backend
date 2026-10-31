@@ -20,7 +20,8 @@ public class UserDtos {
       boolean isGoodMorningEnabled,
       boolean isGoodNightEnabled,
       boolean isBirthdayEnabled,
-      @Size(max = 500) String birthdayWishesUrl) {
+      @Size(max = 500) String birthdayWishesUrl,
+      Boolean mfaEnabled) {
 
     /** Without a wishes link (the link feature is then skipped for this user). */
     public UserRequest(
@@ -43,6 +44,32 @@ public class UserDtos {
           isGoodMorningEnabled,
           isGoodNightEnabled,
           isBirthdayEnabled,
+          null,
+          null);
+    }
+
+    public UserRequest(
+        String name,
+        String email,
+        Role role,
+        Gender gender,
+        LocalDate dateOfBirth,
+        String relationShip,
+        boolean isGoodMorningEnabled,
+        boolean isGoodNightEnabled,
+        boolean isBirthdayEnabled,
+        String birthdayWishesUrl) {
+      this(
+          name,
+          email,
+          role,
+          gender,
+          dateOfBirth,
+          relationShip,
+          isGoodMorningEnabled,
+          isGoodNightEnabled,
+          isBirthdayEnabled,
+          birthdayWishesUrl,
           null);
     }
   }
@@ -75,5 +102,42 @@ public class UserDtos {
       boolean online,
       LocalDateTime lastSeenAt,
       String profilePictureUrl,
-      String birthdayWishesUrl) {}
+      String birthdayWishesUrl,
+      boolean mfaEnabled) {
+
+    public UserResponse(
+        Long id,
+        String name,
+        String email,
+        Role role,
+        Gender gender,
+        LocalDate dateOfBirth,
+        boolean active,
+        String relationShip,
+        boolean isGoodMorningEnabled,
+        boolean isGoodNightEnabled,
+        boolean isBirthdayEnabled,
+        boolean online,
+        LocalDateTime lastSeenAt,
+        String profilePictureUrl,
+        String birthdayWishesUrl) {
+      this(
+          id,
+          name,
+          email,
+          role,
+          gender,
+          dateOfBirth,
+          active,
+          relationShip,
+          isGoodMorningEnabled,
+          isGoodNightEnabled,
+          isBirthdayEnabled,
+          online,
+          lastSeenAt,
+          profilePictureUrl,
+          birthdayWishesUrl,
+          false);
+    }
+  }
 }

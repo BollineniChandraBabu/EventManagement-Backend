@@ -62,7 +62,9 @@ public class AgentController {
     return ResponseEntity.ok(Map.of("answer", adminCopilot.ask(request.question())));
   }
 
-  /** Manual triage run. Same guardrails as the scheduled run (dry-run flag, retry/alert budgets). */
+  /**
+   * Manual triage run. Same guardrails as the scheduled run (dry-run flag, retry/alert budgets).
+   */
   @PostMapping("/delivery-ops/run")
   public ResponseEntity<Map<String, Object>> runDeliveryOps() {
     Map<String, Object> out = new LinkedHashMap<>();
@@ -70,8 +72,7 @@ public class AgentController {
 
     if (!deliveryOpsEnabled) {
       out.put("ran", false);
-      out.put(
-          "report", "Delivery ops agent is disabled (app.agent.delivery-ops.enabled=false).");
+      out.put("report", "Delivery ops agent is disabled (app.agent.delivery-ops.enabled=false).");
       return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).body(out);
     }
     if (!deliveryOpsRunning.compareAndSet(false, true)) {
@@ -87,7 +88,8 @@ public class AgentController {
       }
       String report = deliveryOps.run();
       out.put("ran", true);
-      out.put("report", report == null || report.isBlank() ? "Run finished without a report." : report);
+      out.put(
+          "report", report == null || report.isBlank() ? "Run finished without a report." : report);
       return ResponseEntity.ok(out);
     } finally {
       deliveryOpsRunning.set(false);

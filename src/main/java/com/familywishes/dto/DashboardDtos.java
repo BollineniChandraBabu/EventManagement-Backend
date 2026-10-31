@@ -16,7 +16,13 @@ public class DashboardDtos {
   public record DashboardGraphResponse(int days, List<DashboardGraphPoint> points) {}
 
   public record LoginLocationChartPoint(
-         String email, String userName, String location, String ipAddress, Double latitude, Double longitude, LocalDateTime loggedInAt) {}
+      String email,
+      String userName,
+      String location,
+      String ipAddress,
+      Double latitude,
+      Double longitude,
+      LocalDateTime loggedInAt) {}
 
   /** truncated = older logins in the range were left out (only the newest ones are returned). */
   public record LoginLocationChartResponse(

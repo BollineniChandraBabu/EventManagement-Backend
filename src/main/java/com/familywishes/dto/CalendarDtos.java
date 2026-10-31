@@ -1,7 +1,5 @@
 package com.familywishes.dto;
 
-import jakarta.validation.constraints.NotNull;
-
 import java.time.LocalDate;
 
 public class CalendarDtos {

@@ -64,13 +64,19 @@ public class AuthServiceImpl implements AuthService {
   private int passwordResetTtlMinutes;
 
   @Value("${app.login.failed-attempt-threshold:5}")
-  private int failedLoginAttemptThreshold;
+  private int failedLoginAttemptThreshold = 5;
+
+  @Value("${app.otp.max-resend-attempts:5}")
+  private int maxOtpResendAttempts = 5;
+
+  @Value("${app.password-reset.max-attempts:5}")
+  private int maxPasswordResetAttempts = 5;
 
   @Value("${app.google.sso.client-id:${gmail.client-id:}}")
   private String googleSsoClientId;
 
   @Value("${scheduler.time-zone:Asia/Kolkata}")
-  private String schedulerTimeZone;
+  private String schedulerTimeZone = "Asia/Kolkata";
 
   @Value("${alert.email.to}")
   private String alertEmail;
@@ -83,9 +89,9 @@ public class AuthServiceImpl implements AuthService {
   public AuthResponse login(LoginRequest request, HttpServletRequest httpRequest) {
     try {
       User user =
-              userRepository
-                      .findByEmailAndDeletedFalse(request.email())
-                      .orElseThrow(() -> new NotFoundException(USER_NOT_FOUND));
+          userRepository
+              .findByEmailAndDeletedFalse(request.email())
+              .orElseThrow(() -> new NotFoundException(USER_NOT_FOUND));
 
       if (user.getFailedLoginAttempts() >= failedLoginAttemptThreshold) {
         throw new BadRequestException(CONTACT_ADMIN_MESSAGE);
@@ -105,31 +111,35 @@ public class AuthServiceImpl implements AuthService {
       String access = jwtService.generateAccessToken(user, user.getEmail());
       String refresh = jwtService.generateRefreshToken(user, user.getEmail());
       refreshTokenRepository.save(
-              RefreshToken.builder()
-                      .token(refresh)
-                      .user(user)
-                      .expiresAt(LocalDateTime.now(ZoneId.of(schedulerTimeZone)).plusDays(7))
-                      .revoked(false)
-                      .build());
+          RefreshToken.builder()
+              .token(refresh)
+              .user(user)
+              .expiresAt(LocalDateTime.now(ZoneId.of(schedulerTimeZone)).plusDays(7))
+              .revoked(false)
+              .build());
       recordLoginLocation(
-              user,
-              request.loginLocation(),
-              request.ipAddress(),
-              request.latitude(),
-              request.longitude(),
-              httpRequest);
+          user,
+          request.loginLocation(),
+          request.ipAddress(),
+          request.latitude(),
+          request.longitude(),
+          httpRequest);
       return buildAuthResponse(user, access, refresh);
-    }catch (NotFoundException e){
+    } catch (NotFoundException e) {
       insertViolatedUserInfo(request, httpRequest);
-      List<ViolatedUser> violatedUserList=violatedUserRepository.findByEmail(request.email());
-      if (!CollectionUtils.isEmpty(violatedUserList) && violatedUserList.size() >= failedLoginAttemptThreshold) {
+      List<ViolatedUser> violatedUserList = violatedUserRepository.findByEmail(request.email());
+      if (!CollectionUtils.isEmpty(violatedUserList)
+          && violatedUserList.size() >= failedLoginAttemptThreshold) {
         emailService.sendEmailWithAttachments(
-                alertEmail,
-                "Account Security Alert",
-                buildUnknownUserLoginAttemptEmailBody(request.email(),request.ipAddress(),LocalDateTime.now(ZoneId.of(schedulerTimeZone)).format(
-                        DateTimeFormatter.ofPattern("dd-MMM-yyyy HH:mm:ss"))),
-                null,
-                null);
+            alertEmail,
+            "Account Security Alert",
+            buildUnknownUserLoginAttemptEmailBody(
+                request.email(),
+                request.ipAddress(),
+                LocalDateTime.now(ZoneId.of(schedulerTimeZone))
+                    .format(DateTimeFormatter.ofPattern("dd-MMM-yyyy HH:mm:ss"))),
+            null,
+            null);
       }
       throw new NotFoundException(e.getMessage());
     }
@@ -137,8 +147,7 @@ public class AuthServiceImpl implements AuthService {
 
   private void authenticateUser(User user, String email, String password) {
     try {
-      authManager.authenticate(
-              new UsernamePasswordAuthenticationToken(email, password));
+      authManager.authenticate(new UsernamePasswordAuthenticationToken(email, password));
     } catch (BadCredentialsException ex) {
       int failedAttempts = user.getFailedLoginAttempts() + 1;
       user.setFailedLoginAttempts(failedAttempts);
@@ -146,11 +155,11 @@ public class AuthServiceImpl implements AuthService {
 
       if (failedAttempts >= failedLoginAttemptThreshold) {
         emailService.sendEmailWithAttachments(
-                user.getEmail(),
-                "Account Security Alert",
-                buildFailedLoginThresholdEmailBody(),
-                null,
-                null);
+            user.getEmail(),
+            "Account Security Alert",
+            buildFailedLoginThresholdEmailBody(),
+            null,
+            null);
         throw new BadRequestException(CONTACT_ADMIN_MESSAGE);
       }
       throw new BadRequestException("Invalid email or password");
@@ -184,10 +193,10 @@ public class AuthServiceImpl implements AuthService {
             """;
   }
 
-    private String buildUnknownUserLoginAttemptEmailBody(
-            String email, String ipAddress, String loginTime) {
+  private String buildUnknownUserLoginAttemptEmailBody(
+      String email, String ipAddress, String loginTime) {
 
-        return """
+    return """
             <div style='font-family:Arial,sans-serif;line-height:1.5;color:#111827'>
               <h3 style='margin-bottom:8px'>Unknown Login Attempt Detected</h3>
 
@@ -214,8 +223,9 @@ public class AuthServiceImpl implements AuthService {
                 Please review this activity to determine whether any further action is required.
               </p>
             </div>
-            """.formatted(email, ipAddress, loginTime);
-    }
+            """
+        .formatted(email, ipAddress, loginTime);
+  }
 
   @Override
   @Transactional
@@ -326,14 +336,31 @@ public class AuthServiceImpl implements AuthService {
             .filter(User::isActive)
             .orElseThrow(() -> new NotFoundException(USER_NOT_FOUND));
 
-    String otp = String.format("%06d", SECURE_RANDOM.nextInt(1_000_000));
-    otpCodeRepository.save(
-        OtpCode.builder()
-            .user(user)
-            .code(otp)
-            .expiresAt(LocalDateTime.now(ZoneId.of(schedulerTimeZone)).plusMinutes(OTP_TTL_MINUTES))
-            .used(false)
-            .build());
+    var existingOtpOpt = otpCodeRepository.findTopByUserIdOrderByIdDesc(user.getId());
+    String otp;
+    LocalDateTime now = LocalDateTime.now(ZoneId.of(schedulerTimeZone));
+    if (existingOtpOpt.isPresent()
+        && !existingOtpOpt.get().isUsed()
+        && existingOtpOpt.get().getExpiresAt().isAfter(now)) {
+      OtpCode existingOtp = existingOtpOpt.get();
+      if (existingOtp.getResendAttempts() >= maxOtpResendAttempts) {
+        throw new BadRequestException(
+            "Maximum OTP resend limit reached. Please wait until current OTP expires.");
+      }
+      existingOtp.setResendAttempts(existingOtp.getResendAttempts() + 1);
+      otpCodeRepository.save(existingOtp);
+      otp = existingOtp.getCode();
+    } else {
+      otp = String.format("%06d", SECURE_RANDOM.nextInt(1_000_000));
+      otpCodeRepository.save(
+          OtpCode.builder()
+              .user(user)
+              .code(otp)
+              .expiresAt(now.plusMinutes(OTP_TTL_MINUTES))
+              .used(false)
+              .resendAttempts(1)
+              .build());
+    }
 
     emailService.sendEmailWithAttachments(
         request.email(), "Your Golden Greetings OTP", buildOtpEmailBody(otp), null, null);
@@ -384,9 +411,9 @@ public class AuthServiceImpl implements AuthService {
     return buildAuthResponse(user, access, refresh);
   }
 
-
   @Override
-  public AuthResponse verifyLoginOtp(LoginOtpVerifyRequest request, HttpServletRequest httpRequest) {
+  public AuthResponse verifyLoginOtp(
+      LoginOtpVerifyRequest request, HttpServletRequest httpRequest) {
     User user =
         userRepository
             .findByEmailAndDeletedFalse(request.email())
@@ -464,6 +491,7 @@ public class AuthServiceImpl implements AuthService {
 
     return httpRequest.getRemoteAddr();
   }
+
   @Override
   @Transactional
   public void forgotPassword(ForgotPasswordRequest request) {
@@ -472,17 +500,34 @@ public class AuthServiceImpl implements AuthService {
             .findByEmailAndDeletedFalse(request.email())
             .filter(User::isActive)
             .orElseThrow(() -> new NotFoundException("User not found"));
-    String token = UUID.randomUUID().toString();
-    resetTokenRepository.invalidateAllByUserId(user.getId());
-    resetTokenRepository.save(
-        PasswordResetToken.builder()
-            .token(token)
-            .user(user)
-            .expiresAt(
-                LocalDateTime.now(ZoneId.of(schedulerTimeZone))
-                    .plusMinutes(passwordResetTtlMinutes))
-            .used(false)
-            .build());
+
+    LocalDateTime now = LocalDateTime.now(ZoneId.of(schedulerTimeZone));
+    var existingTokenOpt = resetTokenRepository.findTopByUserIdOrderByIdDesc(user.getId());
+    String token;
+
+    if (existingTokenOpt.isPresent()
+        && !existingTokenOpt.get().isUsed()
+        && existingTokenOpt.get().getExpiresAt().isAfter(now)) {
+      PasswordResetToken existingToken = existingTokenOpt.get();
+      if (existingToken.getSendAttempts() >= maxPasswordResetAttempts) {
+        throw new BadRequestException(
+            "Maximum password reset email limit reached. Please wait until current link expires or contact Administrator.");
+      }
+      existingToken.setSendAttempts(existingToken.getSendAttempts() + 1);
+      resetTokenRepository.save(existingToken);
+      token = existingToken.getToken();
+    } else {
+      token = UUID.randomUUID().toString();
+      resetTokenRepository.invalidateAllByUserId(user.getId());
+      resetTokenRepository.save(
+          PasswordResetToken.builder()
+              .token(token)
+              .user(user)
+              .expiresAt(now.plusMinutes(passwordResetTtlMinutes))
+              .used(false)
+              .sendAttempts(1)
+              .build());
+    }
 
     String resetUrl = passwordResetUiUrl + "?token=" + token + "&email=" + user.getEmail();
     String body =

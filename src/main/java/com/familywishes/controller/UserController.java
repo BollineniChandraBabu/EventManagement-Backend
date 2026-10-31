@@ -36,8 +36,14 @@ public class UserController {
   @PreAuthorize("hasRole('ADMIN')")
   public java.util.Map<String, Object> getFilterValues() {
     return java.util.Map.of(
-        "roles", java.util.Arrays.stream(com.familywishes.entity.enums.Role.values()).map(Enum::name).toList(),
-        "genders", java.util.Arrays.stream(com.familywishes.entity.enums.Gender.values()).map(Enum::name).toList(),
+        "roles",
+            java.util.Arrays.stream(com.familywishes.entity.enums.Role.values())
+                .map(Enum::name)
+                .toList(),
+        "genders",
+            java.util.Arrays.stream(com.familywishes.entity.enums.Gender.values())
+                .map(Enum::name)
+                .toList(),
         "active", java.util.List.of(true, false));
   }
 

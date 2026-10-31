@@ -25,10 +25,8 @@ import java.io.ByteArrayOutputStream;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.*;
-
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.context.annotation.Lazy;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -401,16 +399,16 @@ public class GmailEmailServiceImpl implements GmailEmailService {
         && !SENSITIVE_TYPES.contains(log.getEmailType());
   }
 
-  public void deleteEmailStatus(Long id){
+  public void deleteEmailStatus(Long id) {
     Optional<EmailLog> emailLogOptional = logRepository.findById(id);
-    if(emailLogOptional.isPresent()) {
+    if (emailLogOptional.isPresent()) {
       logRepository.deleteById(id);
       emailImageService.evict(id);
-      if(Objects.nonNull(emailLogOptional.get().getImageUrl())) {
+      if (Objects.nonNull(emailLogOptional.get().getImageUrl())) {
         supabaseStorageService.deleteByPublicUrl(emailLogOptional.get().getImageUrl());
       }
-    }else {
-      throw new NotFoundException("Email Info not found for ID: " +id);
+    } else {
+      throw new NotFoundException("Email Info not found for ID: " + id);
     }
   }
 

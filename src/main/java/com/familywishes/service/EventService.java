@@ -2,11 +2,13 @@ package com.familywishes.service;
 
 import com.familywishes.dto.CommonDtos.PagedResponse;
 import com.familywishes.dto.EventDtos.*;
-
 import java.util.List;
 
 public interface EventService {
   EventResponse create(EventRequest request);
+
+  EventResponse createWithImage(
+      EventRequest request, org.springframework.web.multipart.MultipartFile imageFile);
 
   EventResponse getById(Long id);
 
@@ -14,6 +16,9 @@ public interface EventService {
   EventResponse getById(Long id, boolean isAdmin, String requesterEmail);
 
   EventResponse update(Long id, EventRequest request);
+
+  EventResponse updateWithImage(
+      Long id, EventRequest request, org.springframework.web.multipart.MultipartFile imageFile);
 
   void deleteById(Long id);
 

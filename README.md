@@ -227,4 +227,3 @@ Event types are not case-sensitive, and codes such as `WEDDING_ANNIVERSARY` also
 ## Events and violated users
 - `PUT /api/events/{id}` updates an event (it did not exist before, so editing an event could not be saved). `GET /api/events/{id}` is limited to admins and the event's owner.
 - `GET /api/dashboard/violated-users` accepts `searchKey` (email or IP) and returns `uniqueIps`, `uniqueEmails`, `topIps` and `topEmails`. Map points are limited to the newest 300 and are no longer looked up one by one in ip-api.com.
-

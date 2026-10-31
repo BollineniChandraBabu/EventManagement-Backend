@@ -73,8 +73,23 @@ public class ChatController {
   }
 
   @DeleteMapping("/messages/{messageId}")
-  public ChatDtos.DeleteMessageResponse deleteMessageById(@PathVariable Long messageId) {
-    return chatService.deleteMessageById(messageId);
+  public ChatDtos.DeleteMessageResponse deleteMessageById(
+      @PathVariable String messageId, @RequestParam(required = false) java.util.List<Long> ids) {
+    java.util.List<Long> resolvedIds = com.familywishes.util.IdListUtil.parseIds(messageId, ids);
+    ChatDtos.DeleteMessageResponse lastResponse = null;
+    for (Long id : resolvedIds) {
+      lastResponse = chatService.deleteMessageById(id);
+    }
+    return lastResponse;
+  }
+
+  @DeleteMapping("/messages")
+  public void deleteMultipleMessages(@RequestParam java.util.List<Long> ids) {
+    if (ids != null) {
+      for (Long id : ids) {
+        chatService.deleteMessageById(id);
+      }
+    }
   }
 
   @PatchMapping("/messages/{messageId}")

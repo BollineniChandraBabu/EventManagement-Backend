@@ -10,7 +10,10 @@ import org.springframework.data.repository.query.Param;
 
 public interface LoginLocationEventRepository extends JpaRepository<LoginLocationEvent, Long> {
 
-  /** Newest first. The user is fetched in the same query, so reading it does not cost one query per row. */
+  /**
+   * Newest first. The user is fetched in the same query, so reading it does not cost one query per
+   * row.
+   */
   @Query(
       """
       SELECT e

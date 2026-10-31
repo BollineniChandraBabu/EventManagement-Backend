@@ -8,12 +8,11 @@ import com.familywishes.service.CalendarService;
 import com.familywishes.service.EventService;
 import com.familywishes.service.FestivalService;
 import com.familywishes.service.UserService;
+import java.util.ArrayList;
+import java.util.List;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
-
-import java.util.ArrayList;
-import java.util.List;
 
 @Service
 @RequiredArgsConstructor
@@ -23,7 +22,6 @@ public class CalendarServiceImpl implements CalendarService {
   private final FestivalService festivalService;
   private final EventService eventService;
   private final UserService userService;
-
 
   @Override
   public List<CalendarResponse> listByMonth(Integer month, boolean isAdmin, String userEmail) {

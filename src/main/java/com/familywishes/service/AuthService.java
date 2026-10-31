@@ -6,6 +6,10 @@ import jakarta.servlet.http.HttpServletRequest;
 public interface AuthService {
   AuthResponse login(LoginRequest request, HttpServletRequest httpRequest);
 
+  default AuthResponse login(LoginRequest request) {
+    return login(request, null);
+  }
+
   AuthResponse adminLoginAsUser(AdminLoginAsUserRequest request);
 
   AuthResponse switchBackToAdmin(String authorizationHeader);

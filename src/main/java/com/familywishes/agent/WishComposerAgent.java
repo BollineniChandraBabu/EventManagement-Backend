@@ -21,8 +21,8 @@ import org.springframework.stereotype.Component;
 
 /**
  * Agentic wish writer. Instead of one blind prompt it: reads the recipient's profile, checks what
- * was already sent to them, drafts a fresh message, and must pass a validator tool
- * (submit_wish) before the draft is accepted. Rejections are fed back so the model self-corrects.
+ * was already sent to them, drafts a fresh message, and must pass a validator tool (submit_wish)
+ * before the draft is accepted. Rejections are fed back so the model self-corrects.
  */
 @Component
 @RequiredArgsConstructor
@@ -114,7 +114,9 @@ public class WishComposerAgent {
                       m.put("name", u.getName());
                       m.put(
                           "relationship",
-                          u.getRelationShip() == null ? null : u.getRelationShip().getDisplayName());
+                          u.getRelationShip() == null
+                              ? null
+                              : u.getRelationShip().getDisplayName());
                       m.put("gender", u.getGender() == null ? null : u.getGender().name());
                       if (u.getBirthday() != null) {
                         m.put("birthdayMonth", u.getBirthday().getMonth().toString());
@@ -164,13 +166,14 @@ public class WishComposerAgent {
           if (subject.length() > 120) problems.add("subject longer than 120 characters");
           if (html.length() < 20) problems.add("htmlMessage is too short");
           if (html.contains("```")) problems.add("remove markdown code fences");
-          if (html.toLowerCase(Locale.ROOT).contains("<script")) problems.add("no <script> allowed");
+          if (html.toLowerCase(Locale.ROOT).contains("<script"))
+            problems.add("no <script> allowed");
           if (PLACEHOLDER.matcher(subject + " " + html).find()) {
             problems.add("contains a placeholder-like token; use real values");
           }
-          String name = request.name() == null ? "" : request.name().trim().toLowerCase(Locale.ROOT);
-          if (!name.isEmpty()
-              && !(subject + " " + html).toLowerCase(Locale.ROOT).contains(name)) {
+          String name =
+              request.name() == null ? "" : request.name().trim().toLowerCase(Locale.ROOT);
+          if (!name.isEmpty() && !(subject + " " + html).toLowerCase(Locale.ROOT).contains(name)) {
             problems.add("recipient name '" + request.name() + "' must appear in the message");
           }
           if (userId != null) {

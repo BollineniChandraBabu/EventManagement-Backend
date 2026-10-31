@@ -10,7 +10,12 @@ public class AuthDtos {
       String loginLocation,
       String ipAddress,
       Double latitude,
-      Double longitude) {}
+      Double longitude) {
+
+    public LoginRequest(String email, String password) {
+      this(email, password, null, null, null, null);
+    }
+  }
 
   public record AdminLoginAsUserRequest(@Email String email) {}
 

@@ -2,9 +2,8 @@ package com.familywishes.service;
 
 import com.familywishes.dto.CommonDtos.PagedResponse;
 import com.familywishes.dto.UserDtos.*;
-import org.springframework.web.multipart.MultipartFile;
-
 import java.util.List;
+import org.springframework.web.multipart.MultipartFile;
 
 public interface UserService {
   UserResponse create(UserRequest request);

@@ -95,17 +95,23 @@ class WishImageServiceImplTest {
                 null,
                 "Birthday",
                 true,
-                new MockMultipartFile("file", "x.svg", "image/svg+xml", "<svg onload=alert(1)/>".getBytes())));
+                new MockMultipartFile(
+                    "file", "x.svg", "image/svg+xml", "<svg onload=alert(1)/>".getBytes())));
     // an SVG renamed to PNG is caught by looking at the bytes
     assertThrows(
         BadRequestException.class,
         () ->
             service.create(
-                null, "Birthday", true, new MockMultipartFile("file", "x.png", "image/png", "<svg/>".getBytes())));
+                null,
+                "Birthday",
+                true,
+                new MockMultipartFile("file", "x.png", "image/png", "<svg/>".getBytes())));
     // a real PNG must not be stored under a script-capable content type
     assertThrows(
         BadRequestException.class,
-        () -> service.create(null, "Birthday", true, new MockMultipartFile("file", "x.png", "text/html", PNG)));
+        () ->
+            service.create(
+                null, "Birthday", true, new MockMultipartFile("file", "x.png", "text/html", PNG)));
   }
 
   @Test
@@ -115,11 +121,16 @@ class WishImageServiceImplTest {
 
     assertThrows(
         BadRequestException.class,
-        () -> service.create(null, "Birthday", true, new MockMultipartFile("file", "x.png", "image/png", huge)));
+        () ->
+            service.create(
+                null, "Birthday", true, new MockMultipartFile("file", "x.png", "image/png", huge)));
     assertThrows(
         BadRequestException.class,
         () ->
             service.create(
-                null, "x".repeat(151), true, new MockMultipartFile("file", "x.png", "image/png", PNG)));
+                null,
+                "x".repeat(151),
+                true,
+                new MockMultipartFile("file", "x.png", "image/png", PNG)));
   }
 }

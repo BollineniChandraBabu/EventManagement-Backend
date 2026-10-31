@@ -49,8 +49,17 @@ public class NotificationController {
   }
 
   @DeleteMapping("/{id}")
-  public void delete(@PathVariable Long id) {
-    notificationService.delete(id);
+  public void delete(
+      @PathVariable String id, @RequestParam(required = false) java.util.List<Long> ids) {
+    java.util.List<Long> resolvedIds = com.familywishes.util.IdListUtil.parseIds(id, ids);
+    resolvedIds.forEach(notificationService::delete);
+  }
+
+  @DeleteMapping
+  public void deleteMultiple(@RequestParam java.util.List<Long> ids) {
+    if (ids != null) {
+      ids.forEach(notificationService::delete);
+    }
   }
 
   @PostMapping("/{id}/publish")

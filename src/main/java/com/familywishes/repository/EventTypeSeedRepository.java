@@ -1,16 +1,14 @@
 package com.familywishes.repository;
 
-import jakarta.persistence.QueryHint;
-import org.springframework.data.jpa.repository.QueryHints;
 import com.familywishes.entity.EventTypeSeed;
+import jakarta.persistence.QueryHint;
 import java.util.List;
 import java.util.Optional;
-
-import com.familywishes.entity.SpecialEvent;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.jpa.repository.QueryHints;
 import org.springframework.data.repository.query.Param;
 
 public interface EventTypeSeedRepository extends JpaRepository<EventTypeSeed, Long> {

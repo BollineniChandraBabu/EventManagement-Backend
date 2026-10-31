@@ -56,14 +56,26 @@ public class WishImageAdminController {
       @RequestParam(defaultValue = "id") String sortBy,
       @RequestParam(defaultValue = "desc") String sortDir) {
     if ((eventTypes != null && !eventTypes.isEmpty()) || (userIds != null && !userIds.isEmpty())) {
-      return wishImageService.list(page, size, searchKey, eventTypes, userIds, active, sortBy, sortDir);
+      return wishImageService.list(
+          page, size, searchKey, eventTypes, userIds, active, sortBy, sortDir);
     }
-    return wishImageService.list(page, size, searchKey, eventType == null ? "" : eventType, userId, active, sortBy, sortDir);
+    return wishImageService.list(
+        page, size, searchKey, eventType == null ? "" : eventType, userId, active, sortBy, sortDir);
   }
 
   @DeleteMapping("/{id}")
   @ResponseStatus(HttpStatus.NO_CONTENT)
-  public void delete(@PathVariable Long id) {
-    wishImageService.delete(id);
+  public void delete(
+      @PathVariable String id, @RequestParam(required = false) java.util.List<Long> ids) {
+    java.util.List<Long> resolvedIds = com.familywishes.util.IdListUtil.parseIds(id, ids);
+    resolvedIds.forEach(wishImageService::delete);
+  }
+
+  @DeleteMapping
+  @ResponseStatus(HttpStatus.NO_CONTENT)
+  public void deleteMultiple(@RequestParam java.util.List<Long> ids) {
+    if (ids != null) {
+      ids.forEach(wishImageService::delete);
+    }
   }
 }

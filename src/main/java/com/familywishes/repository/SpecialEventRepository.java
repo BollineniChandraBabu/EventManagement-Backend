@@ -12,7 +12,8 @@ import org.springframework.data.repository.query.Param;
 
 public interface SpecialEventRepository extends JpaRepository<SpecialEvent, Long> {
 
-  @Query("""
+  @Query(
+      """
     SELECT s
     FROM SpecialEvent s
     WHERE (:month IS NULL OR MONTH(s.eventDate) = :month)

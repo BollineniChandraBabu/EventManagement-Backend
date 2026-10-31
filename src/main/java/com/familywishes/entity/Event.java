@@ -28,6 +28,9 @@ public class Event extends ActivatableEntity {
   @Column(name = "wishes_url", length = 500)
   private String wishesUrl;
 
+  @Column(name = "image_object_key", length = 500)
+  private String imageObjectKey;
+
   @Column(nullable = false, columnDefinition = "SMALLINT")
   @Convert(converter = BooleanToZeroOneConverter.class)
   private boolean recurring;
