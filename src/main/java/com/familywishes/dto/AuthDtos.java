@@ -10,7 +10,13 @@ public class AuthDtos {
       String loginLocation,
       String ipAddress,
       Double latitude,
-      Double longitude) {}
+      Double longitude) {
+
+    /** Email/password only; the optional location fields default to empty. */
+    public LoginRequest(String email, String password) {
+      this(email, password, null, null, null, null);
+    }
+  }
 
   public record AdminLoginAsUserRequest(@Email String email) {}
 

@@ -36,8 +36,14 @@ public class UserController {
   @PreAuthorize("hasRole('ADMIN')")
   public java.util.Map<String, Object> getFilterValues() {
     return java.util.Map.of(
-        "roles", java.util.Arrays.stream(com.familywishes.entity.enums.Role.values()).map(Enum::name).toList(),
-        "genders", java.util.Arrays.stream(com.familywishes.entity.enums.Gender.values()).map(Enum::name).toList(),
+        "roles",
+            java.util.Arrays.stream(com.familywishes.entity.enums.Role.values())
+                .map(Enum::name)
+                .toList(),
+        "genders",
+            java.util.Arrays.stream(com.familywishes.entity.enums.Gender.values())
+                .map(Enum::name)
+                .toList(),
         "active", java.util.List.of(true, false));
   }
 
@@ -67,6 +73,11 @@ public class UserController {
     return userService.updateCurrentUserWishSettings(request);
   }
 
+  @PatchMapping("/me/mfa")
+  public UserResponse updateMyMfa(@Valid @RequestBody MfaUpdateRequest request) {
+    return userService.updateCurrentUserMfa(request);
+  }
+
   @GetMapping("/me/wish-preview")
   public WishPreviewResponse myWishPreview() {
     return userService.getCurrentUserWishPreview();
@@ -92,6 +103,12 @@ public class UserController {
   @PreAuthorize("hasRole('ADMIN')")
   public void deactivate(@PathVariable Long id) {
     userService.deactivate(id);
+  }
+
+  @DeleteMapping
+  @PreAuthorize("hasRole('ADMIN')")
+  public void deactivateByIds(@RequestParam("ids") java.util.List<Long> ids) {
+    userService.deactivateByIds(ids);
   }
 
   @PatchMapping("/{id}/status")

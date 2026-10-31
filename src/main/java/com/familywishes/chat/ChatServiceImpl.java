@@ -10,11 +10,9 @@ import com.familywishes.repository.UserRepository;
 import com.familywishes.service.impl.SupabaseStorageService;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
-import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
@@ -624,6 +622,15 @@ public class ChatServiceImpl implements ChatService {
     realtimePublisher.publishMessageDeleted(
         deleted.conversationId(), deleted.messageId(), me.getId());
     return deleted;
+  }
+
+  @Override
+  public java.util.List<DeleteMessageResponse> deleteMessagesByIds(
+      java.util.List<Long> messageIds) {
+    if (messageIds == null || messageIds.isEmpty()) {
+      throw new BadRequestException("At least one message id is required");
+    }
+    return messageIds.stream().distinct().map(this::deleteMessageById).toList();
   }
 
   @Override

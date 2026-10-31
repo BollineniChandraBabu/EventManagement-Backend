@@ -25,4 +25,6 @@ public interface SpecialEventSeedService {
   SpecialEventSeedResponse update(Long id, SpecialEventSeedRequest request);
 
   void delete(Long id);
+
+  void deleteByIds(java.util.List<Long> ids);
 }

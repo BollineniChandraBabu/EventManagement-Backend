@@ -113,4 +113,13 @@ public class RelationshipSeedServiceImpl implements RelationshipSeedService {
   public void deleteById(Long id) {
     relationshipSeedRepository.deleteById(id);
   }
+
+  @Override
+  public void deleteByIds(java.util.List<Long> ids) {
+    if (ids == null || ids.isEmpty()) {
+      throw new com.familywishes.exception.BadRequestException(
+          "At least one relationship id is required");
+    }
+    ids.stream().distinct().forEach(relationshipSeedRepository::deleteById);
+  }
 }

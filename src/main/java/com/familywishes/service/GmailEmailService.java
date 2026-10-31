@@ -75,4 +75,6 @@ public interface GmailEmailService {
       com.familywishes.entity.enums.EmailType emailType);
 
   void deleteEmailStatus(Long id);
+
+  void deleteEmailStatuses(java.util.List<Long> ids);
 }

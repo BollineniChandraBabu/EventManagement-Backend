@@ -2,8 +2,8 @@ package com.familywishes.controller;
 
 import com.familywishes.dto.CommonDtos.PagedResponse;
 import com.familywishes.dto.EmailDtos.EmailStatusResponse;
-import com.familywishes.dto.EmailImage;
 import com.familywishes.dto.EmailDtos.SendEmailNowRequest;
+import com.familywishes.dto.EmailImage;
 import com.familywishes.service.GmailEmailService;
 import jakarta.validation.Valid;
 import java.time.Duration;
@@ -56,8 +56,14 @@ public class EmailController {
   @GetMapping("/filter-values")
   public java.util.Map<String, Object> getFilterValues() {
     return java.util.Map.of(
-        "statuses", java.util.Arrays.stream(com.familywishes.entity.enums.EmailStatus.values()).map(Enum::name).toList(),
-        "emailTypes", java.util.Arrays.stream(com.familywishes.entity.enums.EmailType.values()).map(Enum::name).toList());
+        "statuses",
+            java.util.Arrays.stream(com.familywishes.entity.enums.EmailStatus.values())
+                .map(Enum::name)
+                .toList(),
+        "emailTypes",
+            java.util.Arrays.stream(com.familywishes.entity.enums.EmailType.values())
+                .map(Enum::name)
+                .toList());
   }
 
   @GetMapping("/status")
@@ -67,8 +73,10 @@ public class EmailController {
       @RequestParam(defaultValue = "10") int size,
       @RequestParam(defaultValue = "") String searchKey,
       @RequestParam(defaultValue = "ALL") String mailTab,
-      @RequestParam(required = false) java.util.List<com.familywishes.entity.enums.EmailStatus> statuses,
-      @RequestParam(required = false) java.util.List<com.familywishes.entity.enums.EmailType> emailTypes,
+      @RequestParam(required = false)
+          java.util.List<com.familywishes.entity.enums.EmailStatus> statuses,
+      @RequestParam(required = false)
+          java.util.List<com.familywishes.entity.enums.EmailType> emailTypes,
       @RequestParam(defaultValue = "id") String sortBy,
       @RequestParam(defaultValue = "desc") String sortDir) {
     boolean isAdmin =
@@ -76,9 +84,18 @@ public class EmailController {
             .map(GrantedAuthority::getAuthority)
             .anyMatch("ROLE_ADMIN"::equals);
 
-    if ((statuses != null && !statuses.isEmpty()) || (emailTypes != null && !emailTypes.isEmpty())) {
+    if ((statuses != null && !statuses.isEmpty())
+        || (emailTypes != null && !emailTypes.isEmpty())) {
       return emailService.getStatusWithFilters(
-          page, size, searchKey, statuses, emailTypes, authentication.getName(), isAdmin, sortBy, sortDir);
+          page,
+          size,
+          searchKey,
+          statuses,
+          emailTypes,
+          authentication.getName(),
+          isAdmin,
+          sortBy,
+          sortDir);
     }
 
     return emailService.getStatus(
@@ -127,6 +144,12 @@ public class EmailController {
   @PreAuthorize("hasRole('ADMIN')")
   public void deleteWishStatus(@PathVariable Long id) {
     emailService.deleteEmailStatus(id);
+  }
+
+  @DeleteMapping("/status")
+  @PreAuthorize("hasRole('ADMIN')")
+  public void deleteWishStatuses(@RequestParam("ids") java.util.List<Long> ids) {
+    emailService.deleteEmailStatuses(ids);
   }
 
   @GetMapping("/status/unread-chat-messages")

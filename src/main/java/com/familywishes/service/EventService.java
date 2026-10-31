@@ -2,11 +2,13 @@ package com.familywishes.service;
 
 import com.familywishes.dto.CommonDtos.PagedResponse;
 import com.familywishes.dto.EventDtos.*;
-
 import java.util.List;
+import org.springframework.web.multipart.MultipartFile;
 
 public interface EventService {
   EventResponse create(EventRequest request);
+
+  EventResponse create(EventRequest request, MultipartFile image);
 
   EventResponse getById(Long id);
 
@@ -15,7 +17,11 @@ public interface EventService {
 
   EventResponse update(Long id, EventRequest request);
 
+  EventResponse update(Long id, EventRequest request, MultipartFile image);
+
   void deleteById(Long id);
+
+  void deleteByIds(List<Long> ids);
 
   PagedResponse<EventResponse> list(
       int page,

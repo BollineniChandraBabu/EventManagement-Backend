@@ -9,11 +9,13 @@ import com.familywishes.dto.FestivalDtos.FestivalWishMappingSummary;
 import com.familywishes.entity.FestivalWishMapping;
 import com.familywishes.entity.SpecialEvent;
 import com.familywishes.entity.User;
+import com.familywishes.exception.BadRequestException;
 import com.familywishes.exception.NotFoundException;
 import com.familywishes.repository.FestivalWishMappingRepository;
 import com.familywishes.repository.SpecialEventRepository;
 import com.familywishes.repository.UserRepository;
 import com.familywishes.service.FestivalWishMappingService;
+import com.familywishes.util.WishesUrls;
 import java.time.LocalDate;
 import java.time.ZoneId;
 import java.util.ArrayList;
@@ -52,7 +54,8 @@ public class FestivalWishMappingServiceImpl implements FestivalWishMappingServic
 
   @Override
   public FestivalWishMappingResponse upsertWithImage(
-      FestivalWishMappingRequest request, org.springframework.web.multipart.MultipartFile imageFile) {
+      FestivalWishMappingRequest request,
+      org.springframework.web.multipart.MultipartFile imageFile) {
     SpecialEvent specialEvent =
         specialEventRepository
             .findById(request.specialEventId())
@@ -72,6 +75,7 @@ public class FestivalWishMappingServiceImpl implements FestivalWishMappingServic
     mapping.setUser(user);
     mapping.setCustomMessage(normalizeNote(request.customMessage()));
     mapping.setActive(request.active());
+    mapping.setWishesUrl(normalizeWishesUrl(request.wishesUrl()));
 
     if (imageFile != null && !imageFile.isEmpty()) {
       if (mapping.getImageObjectKey() != null && !mapping.getImageObjectKey().isBlank()) {
@@ -94,7 +98,8 @@ public class FestivalWishMappingServiceImpl implements FestivalWishMappingServic
 
     List<Long> userIds = request.userIds().stream().distinct().toList();
     Map<Long, User> usersById =
-        userRepository.findAllById(userIds).stream().collect(Collectors.toMap(User::getId, user -> user));
+        userRepository.findAllById(userIds).stream()
+            .collect(Collectors.toMap(User::getId, user -> user));
     if (usersById.size() != userIds.size()) {
       throw new NotFoundException("One or more users were not found");
     }
@@ -148,9 +153,10 @@ public class FestivalWishMappingServiceImpl implements FestivalWishMappingServic
   @Override
   public PagedResponse<FestivalWishMappingResponse> list(
       int page, int size, String searchKey, String status, String sortBy, String sortDir) {
-    List<String> statuses = (status == null || status.isBlank() || "ALL".equalsIgnoreCase(status.trim()))
-        ? null
-        : List.of(status.trim().toUpperCase(Locale.ROOT));
+    String normalized = status == null ? "ALL" : status.trim().toUpperCase(Locale.ROOT);
+    // Unknown statuses are ignored so a stray value never reaches the query.
+    List<String> statuses =
+        STATUSES.contains(normalized) && !"ALL".equals(normalized) ? List.of(normalized) : null;
     return list(page, size, searchKey, null, null, statuses, sortBy, sortDir);
   }
 
@@ -170,11 +176,13 @@ public class FestivalWishMappingServiceImpl implements FestivalWishMappingServic
             ? Sort.by(normalizedSortBy).descending()
             : Sort.by(normalizedSortBy).ascending();
 
-    List<Long> cleanEventIds = (specialEventIds == null || specialEventIds.isEmpty()) ? null : specialEventIds;
+    List<Long> cleanEventIds =
+        (specialEventIds == null || specialEventIds.isEmpty()) ? null : specialEventIds;
     List<Long> cleanUserIds = (userIds == null || userIds.isEmpty()) ? null : userIds;
-    List<String> cleanStatuses = (statuses == null || statuses.isEmpty())
-        ? null
-        : statuses.stream().map(s -> s.trim().toUpperCase(Locale.ROOT)).toList();
+    List<String> cleanStatuses =
+        (statuses == null || statuses.isEmpty())
+            ? null
+            : statuses.stream().map(s -> s.trim().toUpperCase(Locale.ROOT)).toList();
 
     var pageResult =
         mappingRepository.findAllByFilters(
@@ -202,6 +210,14 @@ public class FestivalWishMappingServiceImpl implements FestivalWishMappingServic
   }
 
   @Override
+  public void deleteByIds(List<Long> ids) {
+    if (ids == null || ids.isEmpty()) {
+      throw new BadRequestException("At least one mapping id is required");
+    }
+    ids.stream().distinct().forEach(this::delete);
+  }
+
+  @Override
   public PagedResponse<FestivalWishMappingResponse> listForCurrentUser(
       int page, int size, String searchKey, String sortBy, String sortDir) {
     var auth = SecurityContextHolder.getContext().getAuthentication();
@@ -220,7 +236,9 @@ public class FestivalWishMappingServiceImpl implements FestivalWishMappingServic
             : Sort.by(normalizedSortBy).ascending();
     var pageResult =
         mappingRepository.findActiveByUserIdAndSearchKey(
-            me.getId(), searchKey == null ? "" : searchKey.trim(), PageRequest.of(page, size, sort));
+            me.getId(),
+            searchKey == null ? "" : searchKey.trim(),
+            PageRequest.of(page, size, sort));
 
     return new PagedResponse<>(
         pageResult.getContent().stream().map(this::toResponse).toList(),
@@ -248,12 +266,22 @@ public class FestivalWishMappingServiceImpl implements FestivalWishMappingServic
         mapping.getCustomMessage(),
         imageUrl,
         mapping.getLastWishSentOn(),
-        mapping.isError());
+        mapping.isError(),
+        mapping.getWishesUrl());
   }
 
   /** Blank means "no note"; the limit also protects the 1000 character column. */
   private static String normalizeNote(String note) {
     return note == null || note.isBlank() ? null : note.trim();
+  }
+
+  /** Blank means "no link"; a bad link is reported to the user as a 400. */
+  private static String normalizeWishesUrl(String raw) {
+    try {
+      return WishesUrls.normalizeOrNull(raw);
+    } catch (IllegalArgumentException e) {
+      throw new BadRequestException(e.getMessage());
+    }
   }
 
   private String resolveSortBy(String sortBy) {

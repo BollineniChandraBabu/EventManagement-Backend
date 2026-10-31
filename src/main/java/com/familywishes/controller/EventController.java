@@ -22,10 +22,39 @@ public class EventController {
     return eventService.create(request);
   }
 
+  @PostMapping(value = "/with-image", consumes = "multipart/form-data")
+  @PreAuthorize("hasRole('ADMIN')")
+  public EventResponse createWithImage(
+      @RequestParam String eventType,
+      @RequestParam(required = false) java.time.LocalDate eventDate,
+      @RequestParam(defaultValue = "false") boolean recurring,
+      @RequestParam Long userId,
+      @RequestParam(required = false) String wishesUrl,
+      @RequestPart(value = "image", required = false)
+          org.springframework.web.multipart.MultipartFile image) {
+    EventRequest request = new EventRequest(eventType, eventDate, recurring, userId, wishesUrl);
+    return eventService.create(request, image);
+  }
+
   @PutMapping("/{id}")
   @PreAuthorize("hasRole('ADMIN')")
   public EventResponse update(@PathVariable Long id, @Valid @RequestBody EventRequest request) {
     return eventService.update(id, request);
+  }
+
+  @PutMapping(value = "/{id}/with-image", consumes = "multipart/form-data")
+  @PreAuthorize("hasRole('ADMIN')")
+  public EventResponse updateWithImage(
+      @PathVariable Long id,
+      @RequestParam String eventType,
+      @RequestParam(required = false) java.time.LocalDate eventDate,
+      @RequestParam(defaultValue = "false") boolean recurring,
+      @RequestParam Long userId,
+      @RequestParam(required = false) String wishesUrl,
+      @RequestPart(value = "image", required = false)
+          org.springframework.web.multipart.MultipartFile image) {
+    EventRequest request = new EventRequest(eventType, eventDate, recurring, userId, wishesUrl);
+    return eventService.update(id, request, image);
   }
 
   @GetMapping("/{id}")
@@ -75,5 +104,11 @@ public class EventController {
   @PreAuthorize("hasRole('ADMIN')")
   public void deleteById(@PathVariable Long id) {
     eventService.deleteById(id);
+  }
+
+  @DeleteMapping
+  @PreAuthorize("hasRole('ADMIN')")
+  public void deleteByIds(@RequestParam("ids") java.util.List<Long> ids) {
+    eventService.deleteByIds(ids);
   }
 }

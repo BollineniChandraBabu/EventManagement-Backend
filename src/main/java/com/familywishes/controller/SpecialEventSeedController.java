@@ -72,4 +72,9 @@ public class SpecialEventSeedController {
   public void delete(@PathVariable Long id) {
     specialEventSeedService.delete(id);
   }
+
+  @DeleteMapping
+  public void deleteByIds(@RequestParam("ids") java.util.List<Long> ids) {
+    specialEventSeedService.deleteByIds(ids);
+  }
 }

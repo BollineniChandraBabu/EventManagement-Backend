@@ -2,9 +2,8 @@ package com.familywishes.service;
 
 import com.familywishes.dto.CommonDtos.PagedResponse;
 import com.familywishes.dto.UserDtos.*;
-import org.springframework.web.multipart.MultipartFile;
-
 import java.util.List;
+import org.springframework.web.multipart.MultipartFile;
 
 public interface UserService {
   UserResponse create(UserRequest request);
@@ -28,6 +27,8 @@ public interface UserService {
 
   UserResponse updateCurrentUserWishSettings(WishSettingsUpdateRequest request);
 
+  UserResponse updateCurrentUserMfa(MfaUpdateRequest request);
+
   WishPreviewResponse getCurrentUserWishPreview();
 
   ProfilePictureUploadUrlResponse getCurrentUserProfilePictureUploadUrl(
@@ -38,6 +39,8 @@ public interface UserService {
   UserResponse removeCurrentUserProfilePicture();
 
   void deactivate(Long id);
+
+  void deactivateByIds(List<Long> ids);
 
   UserResponse updateStatus(Long id, boolean active);
 

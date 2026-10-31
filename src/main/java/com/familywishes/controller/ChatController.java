@@ -77,6 +77,12 @@ public class ChatController {
     return chatService.deleteMessageById(messageId);
   }
 
+  @DeleteMapping("/messages")
+  public java.util.List<ChatDtos.DeleteMessageResponse> deleteMessagesByIds(
+      @RequestParam("ids") java.util.List<Long> messageIds) {
+    return chatService.deleteMessagesByIds(messageIds);
+  }
+
   @PatchMapping("/messages/{messageId}")
   public ChatDtos.MessageResponse editMessage(
       @PathVariable Long messageId, @RequestBody @Valid ChatDtos.EditMessageRequest payload) {

@@ -39,17 +39,16 @@ class SpecialEventSeedServiceImplTest {
         SpecialEvent.builder()
             .id(1L)
             .eventName("Diwali")
-            .day(1)
-            .month(11)
+            .eventDate(java.time.LocalDate.of(2026, 11, 8))
             .message("Happy Diwali")
             .active(true)
             .build();
 
-    when(specialEventRepository.findAllBySearchKey(any(), any(PageRequest.class)))
+    when(specialEventRepository.findAllByFilters(any(), any(), any(), any(PageRequest.class)))
         .thenReturn(new PageImpl<>(java.util.List.of(event), PageRequest.of(0, 10), 1));
 
     PagedResponse<SpecialEventSeedResponse> response =
-        specialEventSeedService.list(0, 10, "diw", "id", "desc");
+        specialEventSeedService.list(0, 10, "diw", null, null, "id", "desc");
 
     assertEquals(1, response.content().size());
     assertEquals("Diwali", response.content().get(0).eventName());

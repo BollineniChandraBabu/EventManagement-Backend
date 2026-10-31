@@ -20,9 +20,10 @@ public class UserDtos {
       boolean isGoodMorningEnabled,
       boolean isGoodNightEnabled,
       boolean isBirthdayEnabled,
-      @Size(max = 500) String birthdayWishesUrl) {
+      @Size(max = 500) String birthdayWishesUrl,
+      boolean mfaEnabled) {
 
-    /** Without a wishes link (the link feature is then skipped for this user). */
+    /** Without a wishes link or MFA choice (both default to off). */
     public UserRequest(
         String name,
         String email,
@@ -43,12 +44,41 @@ public class UserDtos {
           isGoodMorningEnabled,
           isGoodNightEnabled,
           isBirthdayEnabled,
-          null);
+          null,
+          false);
+    }
+
+    /** Without an MFA choice (defaults to off). */
+    public UserRequest(
+        String name,
+        String email,
+        Role role,
+        Gender gender,
+        LocalDate dateOfBirth,
+        String relationShip,
+        boolean isGoodMorningEnabled,
+        boolean isGoodNightEnabled,
+        boolean isBirthdayEnabled,
+        String birthdayWishesUrl) {
+      this(
+          name,
+          email,
+          role,
+          gender,
+          dateOfBirth,
+          relationShip,
+          isGoodMorningEnabled,
+          isGoodNightEnabled,
+          isBirthdayEnabled,
+          birthdayWishesUrl,
+          false);
     }
   }
 
   public record WishSettingsUpdateRequest(
       Boolean isGoodMorningEnabled, Boolean isGoodNightEnabled, Boolean isBirthdayEnabled) {}
+
+  public record MfaUpdateRequest(@NotNull Boolean mfaEnabled) {}
 
   public record UserStatusUpdateRequest(@NotNull Boolean active) {}
 
@@ -75,5 +105,6 @@ public class UserDtos {
       boolean online,
       LocalDateTime lastSeenAt,
       String profilePictureUrl,
-      String birthdayWishesUrl) {}
+      String birthdayWishesUrl,
+      boolean mfaEnabled) {}
 }

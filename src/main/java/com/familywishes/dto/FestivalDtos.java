@@ -18,10 +18,16 @@ public class FestivalDtos {
       @NotNull Long specialEventId,
       @NotNull Long userId,
       @NotNull Boolean active,
-      @Size(max = 500) String customMessage) {
+      @Size(max = 500) String customMessage,
+      @Size(max = 500) String wishesUrl) {
 
     public FestivalWishMappingRequest(Long specialEventId, Long userId, Boolean active) {
-      this(specialEventId, userId, active, null);
+      this(specialEventId, userId, active, null, null);
+    }
+
+    public FestivalWishMappingRequest(
+        Long specialEventId, Long userId, Boolean active, String customMessage) {
+      this(specialEventId, userId, active, customMessage, null);
     }
   }
 
@@ -34,7 +40,10 @@ public class FestivalDtos {
 
   public record FestivalWishMappingBulkResponse(int created, int updated) {}
 
-  /** Numbers for the dashboard header. upcoming = active mappings whose festival is in the next 30 days. */
+  /**
+   * Numbers for the dashboard header. upcoming = active mappings whose festival is in the next 30
+   * days.
+   */
   public record FestivalWishMappingSummary(
       long total, long active, long inactive, long upcoming, long failed) {}
 
@@ -49,5 +58,6 @@ public class FestivalDtos {
       String customMessage,
       String imageUrl,
       LocalDate lastWishSentOn,
-      boolean error) {}
+      boolean error,
+      String wishesUrl) {}
 }

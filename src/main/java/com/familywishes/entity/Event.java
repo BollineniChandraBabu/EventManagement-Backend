@@ -28,6 +28,10 @@ public class Event extends ActivatableEntity {
   @Column(name = "wishes_url", length = 500)
   private String wishesUrl;
 
+  /** Optional admin-uploaded greeting image; used instead of a generated one when present. */
+  @Column(name = "image_object_key", length = 1000)
+  private String imageObjectKey;
+
   @Column(nullable = false, columnDefinition = "SMALLINT")
   @Convert(converter = BooleanToZeroOneConverter.class)
   private boolean recurring;

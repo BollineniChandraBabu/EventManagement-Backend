@@ -1,7 +1,5 @@
 package com.familywishes.service.impl;
 
-import com.familywishes.util.WishEmailExtras;
-import com.familywishes.util.WishesUrls;
 import com.familywishes.dto.AiWishRequest;
 import com.familywishes.dto.AiWishResponse;
 import com.familywishes.dto.CommonDtos.PagedResponse;
@@ -17,6 +15,8 @@ import com.familywishes.repository.RelationshipSeedRepository;
 import com.familywishes.repository.UserRepository;
 import com.familywishes.service.AiService;
 import com.familywishes.service.UserService;
+import com.familywishes.util.WishEmailExtras;
+import com.familywishes.util.WishesUrls;
 import java.time.LocalDate;
 import java.time.ZoneId;
 import java.util.List;
@@ -61,6 +61,7 @@ public class UserServiceImpl implements UserService {
             .birthday(request.dateOfBirth())
             .relationShip(resolveRelationship(request.relationShip()))
             .birthdayWishesUrl(normalizeWishesUrl(request.birthdayWishesUrl()))
+            .mfaEnabled(request.mfaEnabled())
             .active(true)
             .deleted(false)
             .build();
@@ -103,7 +104,8 @@ public class UserServiceImpl implements UserService {
           user.isOnline(),
           user.getLastSeenAt(),
           resolveProfilePictureUrl(user),
-          user.getBirthdayWishesUrl());
+          user.getBirthdayWishesUrl(),
+          user.isMfaEnabled());
     } else {
       return new UserResponse(
           user.getId(),
@@ -120,7 +122,8 @@ public class UserServiceImpl implements UserService {
           user.isOnline(),
           user.getLastSeenAt(),
           resolveProfilePictureUrl(user),
-          user.getBirthdayWishesUrl());
+          user.getBirthdayWishesUrl(),
+          user.isMfaEnabled());
     }
   }
 
@@ -139,6 +142,7 @@ public class UserServiceImpl implements UserService {
     user.setBirthday(request.dateOfBirth());
     user.setRelationShip(resolveRelationship(request.relationShip()));
     user.setBirthdayWishesUrl(normalizeWishesUrl(request.birthdayWishesUrl())); // blank removes it
+    user.setMfaEnabled(request.mfaEnabled());
 
     UserWishSettings userWishSettings =
         user.getWishSettings() == null
@@ -168,9 +172,12 @@ public class UserServiceImpl implements UserService {
         "asc".equalsIgnoreCase(sortDir) ? Sort.Direction.ASC : Sort.Direction.DESC;
     String normalizedSortBy = (sortBy == null || sortBy.isBlank()) ? "createdAt" : sortBy.trim();
 
-    List<com.familywishes.entity.enums.Role> cleanRoles = (roles == null || roles.isEmpty()) ? null : roles;
-    List<com.familywishes.entity.enums.Gender> cleanGenders = (genders == null || genders.isEmpty()) ? null : genders;
-    List<String> cleanRelations = (relationships == null || relationships.isEmpty()) ? null : relationships;
+    List<com.familywishes.entity.enums.Role> cleanRoles =
+        (roles == null || roles.isEmpty()) ? null : roles;
+    List<com.familywishes.entity.enums.Gender> cleanGenders =
+        (genders == null || genders.isEmpty()) ? null : genders;
+    List<String> cleanRelations =
+        (relationships == null || relationships.isEmpty()) ? null : relationships;
 
     Page<User> userPage =
         userRepository.findAllByFilters(
@@ -192,15 +199,15 @@ public class UserServiceImpl implements UserService {
   }
 
   @Override
-  public List<UserResponse> listByMonth(
-          Integer month) {
+  public List<UserResponse> listByMonth(Integer month) {
     return userRepository.findByMonth(month).stream().map(this::toUserResponse).toList();
   }
 
   @Override
-  public List<UserResponse> listByMonthAndUserEmail(
-          Integer month, String userEmail) {
-    return userRepository.findByMonthAndUserEmail(month, userEmail).stream().map(this::toUserResponse).toList();
+  public List<UserResponse> listByMonthAndUserEmail(Integer month, String userEmail) {
+    return userRepository.findByMonthAndUserEmail(month, userEmail).stream()
+        .map(this::toUserResponse)
+        .toList();
   }
 
   @Override
@@ -233,6 +240,14 @@ public class UserServiceImpl implements UserService {
       settings.setBirthdayEnabled(request.isBirthdayEnabled());
 
     user.setWishSettings(settings);
+    user = userRepository.save(user);
+    return toUserResponse(user);
+  }
+
+  @Override
+  public UserResponse updateCurrentUserMfa(MfaUpdateRequest request) {
+    User user = findAuthenticatedUser();
+    user.setMfaEnabled(Boolean.TRUE.equals(request.mfaEnabled()));
     user = userRepository.save(user);
     return toUserResponse(user);
   }
@@ -297,7 +312,9 @@ public class UserServiceImpl implements UserService {
       String html =
           birthdayEnabled
               ? WishEmailExtras.appendWishesLink(
-                  aiWishResponse.htmlMessage(), user.getBirthdayWishesUrl(), "Open your birthday wishes")
+                  aiWishResponse.htmlMessage(),
+                  user.getBirthdayWishesUrl(),
+                  "Open your birthday wishes")
               : WishEmailExtras.appendPersonalNote(
                   aiWishResponse.htmlMessage(), selectedFestival.getCustomMessage());
       return new WishPreviewResponse(true, wishType, aiWishResponse.subject(), html, image);
@@ -356,6 +373,14 @@ public class UserServiceImpl implements UserService {
   @Override
   public void deactivate(Long id) {
     updateStatus(id, false);
+  }
+
+  @Override
+  public void deactivateByIds(List<Long> ids) {
+    if (ids == null || ids.isEmpty()) {
+      throw new BadRequestException("At least one user id is required");
+    }
+    ids.stream().distinct().forEach(this::deactivate);
   }
 
   @Override

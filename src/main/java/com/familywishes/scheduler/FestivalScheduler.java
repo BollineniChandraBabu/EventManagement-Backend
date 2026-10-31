@@ -95,7 +95,8 @@ public class FestivalScheduler implements Job {
             festivalWishMapping.getUser().getId());
     AiWishResponse ai = aiService.generate(request);
 
-    // If an image is specifically available for this festival mapping, use it; else generate/resolve a new image
+    // If an image is specifically available for this festival mapping, use it; else
+    // generate/resolve a new image
     byte[] image = null;
     if (festivalWishMapping.getImageObjectKey() != null
         && !festivalWishMapping.getImageObjectKey().isBlank()) {
@@ -105,8 +106,13 @@ public class FestivalScheduler implements Job {
       image = aiService.callGeminiImage(request);
     }
 
-    // The personal note is only added to mappings that have one.
-    String body = WishEmailExtras.appendPersonalNote(ai.htmlMessage(), festivalWishMapping.getCustomMessage());
+    // The personal note and the custom wishes page are only added when they exist.
+    String body =
+        WishEmailExtras.appendWishesLink(
+            WishEmailExtras.appendPersonalNote(
+                ai.htmlMessage(), festivalWishMapping.getCustomMessage()),
+            festivalWishMapping.getWishesUrl(),
+            "Open your festival wishes");
     gmailEmailService.sendEmailWithAttachments(
         festivalWishMapping.getUser().getEmail(),
         ai.subject(),

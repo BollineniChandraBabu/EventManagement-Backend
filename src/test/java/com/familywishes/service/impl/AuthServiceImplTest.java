@@ -13,6 +13,8 @@ import com.familywishes.dto.AuthDtos.AuthResponse;
 import com.familywishes.dto.AuthDtos.ForgotPasswordRequest;
 import com.familywishes.dto.AuthDtos.LoginRequest;
 import com.familywishes.dto.AuthDtos.OtpSendRequest;
+import com.familywishes.entity.OtpCode;
+import com.familywishes.entity.PasswordResetToken;
 import com.familywishes.entity.RefreshToken;
 import com.familywishes.entity.User;
 import com.familywishes.entity.enums.Role;
@@ -29,6 +31,7 @@ import com.familywishes.service.GmailEmailService;
 import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -40,6 +43,7 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.test.util.ReflectionTestUtils;
 
 @ExtendWith(MockitoExtension.class)
 class AuthServiceImplTest {
@@ -58,6 +62,16 @@ class AuthServiceImplTest {
   @Mock private ViolatedUserAuditService violatedUserAuditService;
 
   @InjectMocks private AuthServiceImpl authService;
+
+  @BeforeEach
+  void setUp() {
+    ReflectionTestUtils.setField(authService, "schedulerTimeZone", "UTC");
+    ReflectionTestUtils.setField(authService, "failedLoginAttemptThreshold", 5);
+    ReflectionTestUtils.setField(authService, "otpTtlMinutes", 5);
+    ReflectionTestUtils.setField(authService, "otpMaxResendAttempts", 5);
+    ReflectionTestUtils.setField(authService, "passwordResetTtlMinutes", 30);
+    ReflectionTestUtils.setField(authService, "passwordResetMaxAttempts", 5);
+  }
 
   @AfterEach
   void tearDown() {
@@ -266,6 +280,127 @@ class AuthServiceImplTest {
             any(String.class),
             any(),
             any());
+  }
+
+  @Test
+  void sendOtpShouldReuseTheActiveCodeInsteadOfGeneratingANewOne() {
+    User user = User.builder().id(7L).email("user@example.com").active(true).deleted(false).build();
+    OtpCode active =
+        OtpCode.builder()
+            .id(1L)
+            .user(user)
+            .code("123456")
+            .expiresAt(java.time.LocalDateTime.now().plusMinutes(3))
+            .used(false)
+            .build();
+    when(userRepository.findByEmailAndDeletedFalse("user@example.com"))
+        .thenReturn(Optional.of(user));
+    when(otpCodeRepository.findTopByUserIdAndUsedFalseAndExpiresAtAfterOrderByIdDesc(
+            org.mockito.ArgumentMatchers.eq(7L), any()))
+        .thenReturn(Optional.of(active));
+
+    authService.sendOtp(new OtpSendRequest("user@example.com"));
+
+    org.junit.jupiter.api.Assertions.assertEquals("123456", active.getCode());
+    org.junit.jupiter.api.Assertions.assertEquals(1, active.getResendCount());
+    verify(otpCodeRepository).save(active);
+  }
+
+  @Test
+  void sendOtpShouldRejectWhenResendLimitIsReached() {
+    User user = User.builder().id(7L).email("user@example.com").active(true).deleted(false).build();
+    OtpCode active =
+        OtpCode.builder()
+            .id(1L)
+            .user(user)
+            .code("123456")
+            .expiresAt(java.time.LocalDateTime.now().plusMinutes(3))
+            .used(false)
+            .resendCount(5)
+            .build();
+    when(userRepository.findByEmailAndDeletedFalse("user@example.com"))
+        .thenReturn(Optional.of(user));
+    when(otpCodeRepository.findTopByUserIdAndUsedFalseAndExpiresAtAfterOrderByIdDesc(
+            org.mockito.ArgumentMatchers.eq(7L), any()))
+        .thenReturn(Optional.of(active));
+
+    assertThrows(
+        BadRequestException.class,
+        () -> authService.sendOtp(new OtpSendRequest("user@example.com")));
+    verify(emailService, never())
+        .sendEmailWithAttachments(
+            any(String.class), any(String.class), any(String.class), any(), any());
+  }
+
+  @Test
+  void forgotPasswordShouldReuseTheActiveToken() {
+    User user = User.builder().id(9L).email("user@example.com").active(true).deleted(false).build();
+    PasswordResetToken active =
+        PasswordResetToken.builder()
+            .id(2L)
+            .token("existing-token")
+            .user(user)
+            .expiresAt(java.time.LocalDateTime.now().plusMinutes(20))
+            .used(false)
+            .build();
+    when(userRepository.findByEmailAndDeletedFalse("user@example.com"))
+        .thenReturn(Optional.of(user));
+    when(resetTokenRepository.findTopByUserIdAndUsedFalseAndExpiresAtAfterOrderByIdDesc(
+            org.mockito.ArgumentMatchers.eq(9L), any()))
+        .thenReturn(Optional.of(active));
+
+    authService.forgotPassword(new ForgotPasswordRequest("user@example.com"));
+
+    org.junit.jupiter.api.Assertions.assertEquals("existing-token", active.getToken());
+    org.junit.jupiter.api.Assertions.assertEquals(1, active.getResendCount());
+    verify(resetTokenRepository).save(active);
+  }
+
+  @Test
+  void forgotPasswordShouldRejectWhenAttemptLimitIsReached() {
+    User user = User.builder().id(9L).email("user@example.com").active(true).deleted(false).build();
+    PasswordResetToken active =
+        PasswordResetToken.builder()
+            .id(2L)
+            .token("existing-token")
+            .user(user)
+            .expiresAt(java.time.LocalDateTime.now().plusMinutes(20))
+            .used(false)
+            .resendCount(5)
+            .build();
+    when(userRepository.findByEmailAndDeletedFalse("user@example.com"))
+        .thenReturn(Optional.of(user));
+    when(resetTokenRepository.findTopByUserIdAndUsedFalseAndExpiresAtAfterOrderByIdDesc(
+            org.mockito.ArgumentMatchers.eq(9L), any()))
+        .thenReturn(Optional.of(active));
+
+    assertThrows(
+        BadRequestException.class,
+        () -> authService.forgotPassword(new ForgotPasswordRequest("user@example.com")));
+    verify(emailService, never())
+        .sendEmailWithAttachments(
+            any(String.class), any(String.class), any(String.class), any(), any());
+  }
+
+  @Test
+  void loginShouldRequireOtpWhenMfaIsEnabled() {
+    User user =
+        User.builder()
+            .id(11L)
+            .email("mfa@example.com")
+            .password("encoded")
+            .role(Role.ROLE_USER)
+            .mfaEnabled(true)
+            .build();
+    when(userRepository.findByEmailAndDeletedFalse("mfa@example.com"))
+        .thenReturn(Optional.of(user));
+
+    BadRequestException ex =
+        assertThrows(
+            BadRequestException.class,
+            () -> authService.login(new LoginRequest("mfa@example.com", "correct")));
+    org.junit.jupiter.api.Assertions.assertEquals("MFA_OTP_REQUIRED", ex.getMessage());
+    verify(refreshTokenRepository, never()).save(any());
   }
 
   @Test

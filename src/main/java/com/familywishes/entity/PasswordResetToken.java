@@ -30,4 +30,9 @@ public class PasswordResetToken extends AuditableEntity {
   @Column(nullable = false, columnDefinition = "SMALLINT")
   @Convert(converter = BooleanToZeroOneConverter.class)
   private boolean used;
+
+  /** How many reset emails have been sent for this token while it was still valid. */
+  @Column(name = "resend_count", nullable = false)
+  @Builder.Default
+  private int resendCount = 0;
 }

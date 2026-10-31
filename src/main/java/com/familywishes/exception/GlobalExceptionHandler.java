@@ -26,6 +26,11 @@ public class GlobalExceptionHandler {
     return build(HttpStatus.BAD_REQUEST, ex.getMessage());
   }
 
+  @ExceptionHandler(RateLimitExceededException.class)
+  public ResponseEntity<?> handleRateLimit(RateLimitExceededException ex) {
+    return build(HttpStatus.TOO_MANY_REQUESTS, ex.getMessage());
+  }
+
   @ExceptionHandler(MethodArgumentNotValidException.class)
   public ResponseEntity<?> validation(MethodArgumentNotValidException ex) {
     return build(

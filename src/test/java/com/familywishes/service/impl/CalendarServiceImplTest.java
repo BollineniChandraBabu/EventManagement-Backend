@@ -36,8 +36,22 @@ class CalendarServiceImplTest {
 
   private static UserResponse birthdayOf(String name, LocalDate dateOfBirth) {
     return new UserResponse(
-        1L, name, name + "@x.com", null, null, dateOfBirth, true, null, false, false, false, false,
-        null, null, null);
+        1L,
+        name,
+        name + "@x.com",
+        null,
+        null,
+        dateOfBirth,
+        true,
+        null,
+        false,
+        false,
+        false,
+        false,
+        null,
+        null,
+        null,
+        false);
   }
 
   @Test
@@ -60,8 +74,18 @@ class CalendarServiceImplTest {
     when(eventService.listByMonth(NOVEMBER))
         .thenReturn(
             List.of(
-                new EventResponse(9L, "Wedding", LocalDate.of(2018, 11, 20), true, "Ravi", true, 3L, null),
-                new EventResponse(10L, "Housewarming", LocalDate.of(2026, 11, 2), false, "Meena", true, 4L, null)));
+                new EventResponse(
+                    9L, "Wedding", LocalDate.of(2018, 11, 20), true, "Ravi", true, 3L, null, null),
+                new EventResponse(
+                    10L,
+                    "Housewarming",
+                    LocalDate.of(2026, 11, 2),
+                    false,
+                    "Meena",
+                    true,
+                    4L,
+                    null,
+                    null)));
     when(userService.listByMonth(NOVEMBER)).thenReturn(List.of());
 
     List<CalendarResponse> calendar = calendarService.listByMonth(NOVEMBER, true, "admin@x.com");

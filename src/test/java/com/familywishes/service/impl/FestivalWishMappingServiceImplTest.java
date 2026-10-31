@@ -33,7 +33,6 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 import org.springframework.test.util.ReflectionTestUtils;
 
@@ -68,8 +67,10 @@ class FestivalWishMappingServiceImplTest {
   void upsertKeepsATrimmedPersonalNoteAndBlankMeansNoNote() {
     givenFestival();
     when(userRepository.findById(1L)).thenReturn(Optional.of(user(1L)));
-    when(mappingRepository.findBySpecialEvent_IdAndUser_Id(FESTIVAL_ID, 1L)).thenReturn(Optional.empty());
-    when(mappingRepository.save(any(FestivalWishMapping.class))).thenAnswer(call -> call.getArgument(0));
+    when(mappingRepository.findBySpecialEvent_IdAndUser_Id(FESTIVAL_ID, 1L))
+        .thenReturn(Optional.empty());
+    when(mappingRepository.save(any(FestivalWishMapping.class)))
+        .thenAnswer(call -> call.getArgument(0));
 
     FestivalWishMappingResponse withNote =
         service.upsert(new FestivalWishMappingRequest(FESTIVAL_ID, 1L, true, "  Happy Diwali!  "));
@@ -93,7 +94,8 @@ class FestivalWishMappingServiceImplTest {
 
     FestivalWishMappingBulkResponse result =
         service.upsertBulk(
-            new FestivalWishMappingBulkRequest(FESTIVAL_ID, List.of(1L, 2L, 3L, 2L, 1L), true, " Dear all "));
+            new FestivalWishMappingBulkRequest(
+                FESTIVAL_ID, List.of(1L, 2L, 3L, 2L, 1L), true, " Dear all "));
 
     assertEquals(2, result.created());
     assertEquals(1, result.updated());
@@ -112,7 +114,9 @@ class FestivalWishMappingServiceImplTest {
 
     assertThrows(
         NotFoundException.class,
-        () -> service.upsertBulk(new FestivalWishMappingBulkRequest(FESTIVAL_ID, List.of(1L, 99L), true, null)));
+        () ->
+            service.upsertBulk(
+                new FestivalWishMappingBulkRequest(FESTIVAL_ID, List.of(1L, 99L), true, null)));
   }
 
   @Test
@@ -121,7 +125,8 @@ class FestivalWishMappingServiceImplTest {
 
     assertThrows(
         NotFoundException.class,
-        () -> service.upsertBulk(new FestivalWishMappingBulkRequest(404L, List.of(1L), true, null)));
+        () ->
+            service.upsertBulk(new FestivalWishMappingBulkRequest(404L, List.of(1L), true, null)));
   }
 
   @Test
@@ -130,7 +135,8 @@ class FestivalWishMappingServiceImplTest {
     when(mappingRepository.count()).thenReturn(10L);
     when(mappingRepository.countByActiveTrue()).thenReturn(7L);
     when(mappingRepository.countByIsError(true)).thenReturn(2L);
-    when(mappingRepository.countByActiveTrueAndSpecialEvent_EventDateBetween(today, today.plusDays(30)))
+    when(mappingRepository.countByActiveTrueAndSpecialEvent_EventDateBetween(
+            today, today.plusDays(30)))
         .thenReturn(3L);
 
     FestivalWishMappingSummary summary = service.summary();
@@ -140,15 +146,17 @@ class FestivalWishMappingServiceImplTest {
 
   @Test
   void listPassesATrimmedSearchAndOnlyKnownStatuses() {
-    when(mappingRepository.findAllBySearchKey(any(), any(), eq(true), any(Pageable.class)))
+    when(mappingRepository.findAllByFilters(any(), any(), any(), any(), any(Pageable.class)))
         .thenReturn(Page.empty());
 
     service.list(0, 10, "  diwali ", "failed", "id", "desc");
     service.list(0, 10, "", "drop table", "id", "desc");
     service.list(0, 10, "", null, "id", "desc");
 
-    verify(mappingRepository).findAllBySearchKey(eq("diwali"), eq("FAILED"), eq(true), any(Pageable.class));
+    verify(mappingRepository)
+        .findAllByFilters(
+            eq("diwali"), eq(null), eq(null), eq(List.of("FAILED")), any(Pageable.class));
     verify(mappingRepository, org.mockito.Mockito.times(2))
-        .findAllBySearchKey(eq(""), eq("ALL"), eq(true), any(Pageable.class));
+        .findAllByFilters(eq(""), eq(null), eq(null), eq(null), any(Pageable.class));
   }
 }
