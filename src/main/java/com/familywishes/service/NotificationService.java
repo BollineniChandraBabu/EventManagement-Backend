@@ -19,6 +19,8 @@ public interface NotificationService {
 
   void delete(Long id);
 
+  void deleteByIds(java.util.List<Long> ids);
+
   NotificationResponse publish(Long id);
 
   NotificationResponse unpublish(Long id);

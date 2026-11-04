@@ -30,7 +30,8 @@ public class EventTypeSeedController {
 
   @GetMapping("/filter-values")
   public java.util.Map<String, Object> getFilterValues() {
-    java.util.List<String> codes = eventTypeSeedService.listActive().stream().map(EnumSeedResponse::code).toList();
+    java.util.List<String> codes =
+        eventTypeSeedService.listActive().stream().map(EnumSeedResponse::code).toList();
     java.util.List<Boolean> activeStatuses = java.util.List.of(true, false);
     return java.util.Map.of("codes", codes, "active", activeStatuses);
   }
@@ -56,5 +57,11 @@ public class EventTypeSeedController {
   @PreAuthorize("hasRole('ADMIN')")
   public void deleteById(@PathVariable Long id) {
     eventTypeSeedService.deleteById(id);
+  }
+
+  @DeleteMapping
+  @PreAuthorize("hasRole('ADMIN')")
+  public void deleteByIds(@RequestParam("ids") java.util.List<Long> ids) {
+    eventTypeSeedService.deleteByIds(ids);
   }
 }

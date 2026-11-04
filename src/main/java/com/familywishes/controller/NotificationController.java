@@ -53,6 +53,11 @@ public class NotificationController {
     notificationService.delete(id);
   }
 
+  @DeleteMapping
+  public void deleteByIds(@RequestParam("ids") java.util.List<Long> ids) {
+    notificationService.deleteByIds(ids);
+  }
+
   @PostMapping("/{id}/publish")
   public NotificationResponse publish(@PathVariable Long id) {
     return notificationService.publish(id);

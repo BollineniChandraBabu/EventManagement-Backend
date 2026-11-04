@@ -38,6 +38,10 @@ public class FestivalWishMapping extends ActivatableEntity {
   @Column(length = 500)
   private String imageObjectKey;
 
+  /** Optional link to a custom wishes page; added to the festival email when present. */
+  @Column(name = "wishes_url", length = 500)
+  private String wishesUrl;
+
   private LocalDate lastWishSentOn;
 
   @Column(nullable = false, columnDefinition = "SMALLINT")

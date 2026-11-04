@@ -13,7 +13,8 @@ public interface FestivalWishMappingService {
   FestivalWishMappingResponse upsert(FestivalWishMappingRequest request);
 
   FestivalWishMappingResponse upsertWithImage(
-      FestivalWishMappingRequest request, org.springframework.web.multipart.MultipartFile imageFile);
+      FestivalWishMappingRequest request,
+      org.springframework.web.multipart.MultipartFile imageFile);
 
   List<FestivalWishMappingResponse> list();
 
@@ -24,6 +25,8 @@ public interface FestivalWishMappingService {
       int page, int size, String searchKey, String sortBy, String sortDir);
 
   void delete(Long id);
+
+  void deleteByIds(List<Long> ids);
 
   /** Maps one festival to many users; users that are already mapped are updated. */
   FestivalWishMappingBulkResponse upsertBulk(FestivalWishMappingBulkRequest request);

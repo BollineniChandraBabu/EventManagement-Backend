@@ -45,7 +45,7 @@ public class NotificationServiceImpl implements NotificationService {
   @Override
   public NotificationResponse create(NotificationRequest request) {
     String actor = currentActor();
-    validateScheduleWindow(request.scheduledFrom(), request.scheduledTo());
+    validateFutureSchedule(request.scheduledFrom(), request.scheduledTo());
     Notification saved =
         notificationRepository.save(
             Notification.builder()
@@ -70,7 +70,7 @@ public class NotificationServiceImpl implements NotificationService {
     notification.setScheduledFrom(request.scheduledFrom());
     notification.setScheduledTo(request.scheduledTo());
     notification.setUpdatedBy(currentActor());
-    validateScheduleWindow(notification.getScheduledFrom(), notification.getScheduledTo());
+    validateFutureSchedule(notification.getScheduledFrom(), notification.getScheduledTo());
     return toResponse(notificationRepository.save(notification));
   }
 
@@ -112,6 +112,14 @@ public class NotificationServiceImpl implements NotificationService {
     Notification notification = getEntity(id);
     ensureNotPublished(notification, "Published notifications cannot be deleted");
     notificationRepository.delete(notification);
+  }
+
+  @Override
+  public void deleteByIds(java.util.List<Long> ids) {
+    if (ids == null || ids.isEmpty()) {
+      throw new BadRequestException("At least one notification id is required");
+    }
+    ids.stream().distinct().forEach(this::delete);
   }
 
   @Override
@@ -173,8 +181,8 @@ public class NotificationServiceImpl implements NotificationService {
             notification.setPublished(false);
             notificationRepository.save(notification);
             notificationRealtimePublisher.publishNotification(
-                    new NotificationResponse(
-                            null, null, null, null, null, null, null, null, null, null, null, null));
+                new NotificationResponse(
+                    null, null, null, null, null, null, null, null, null, null, null, null));
             System.out.println("Notification UnPublished: " + response.id());
           }
         };
@@ -277,12 +285,23 @@ public class NotificationServiceImpl implements NotificationService {
     }
   }
 
+  /** Create/update must schedule for the future; publishing an already-scheduled one may be due. */
+  private void validateFutureSchedule(LocalDateTime scheduledFrom, LocalDateTime scheduledTo) {
+    LocalDateTime now = LocalDateTime.now(ZoneId.of(schedulerTimeZone));
+    if (scheduledFrom != null && !scheduledFrom.isAfter(now)) {
+      throw new BadRequestException("Scheduled from time must be in the future");
+    }
+    if (scheduledTo != null && !scheduledTo.isAfter(now)) {
+      throw new BadRequestException("Scheduled to time must be in the future");
+    }
+    validateScheduleWindow(scheduledFrom, scheduledTo);
+  }
+
   private String escapeHtml(String value) {
     return value == null
         ? ""
         : value.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;");
   }
-
 
   private String resolveSortBy(String sortBy) {
     if (sortBy == null || sortBy.isBlank()) {
@@ -290,16 +309,17 @@ public class NotificationServiceImpl implements NotificationService {
     }
     return switch (sortBy.trim()) {
       case "id",
-          "title",
-          "published",
-          "canSendEmail",
-          "scheduledFrom",
-          "scheduledTo",
-          "publishedAt",
-          "createdBy",
-          "updatedBy",
-          "createdAt",
-          "updatedAt" -> sortBy.trim();
+              "title",
+              "published",
+              "canSendEmail",
+              "scheduledFrom",
+              "scheduledTo",
+              "publishedAt",
+              "createdBy",
+              "updatedBy",
+              "createdAt",
+              "updatedAt" ->
+          sortBy.trim();
       default -> "createdAt";
     };
   }

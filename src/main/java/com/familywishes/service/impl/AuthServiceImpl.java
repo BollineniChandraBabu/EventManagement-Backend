@@ -42,7 +42,6 @@ import org.springframework.util.CollectionUtils;
 public class AuthServiceImpl implements AuthService {
   private static final String USER_NOT_FOUND = "User not found";
   private static final SecureRandom SECURE_RANDOM = new SecureRandom();
-  private static final int OTP_TTL_MINUTES = 5;
 
   private final AuthenticationManager authManager;
   private final UserRepository userRepository;
@@ -62,6 +61,15 @@ public class AuthServiceImpl implements AuthService {
 
   @Value("${app.password-reset.ttl-minutes:30}")
   private int passwordResetTtlMinutes;
+
+  @Value("${app.password-reset.max-attempts:5}")
+  private int passwordResetMaxAttempts;
+
+  @Value("${app.otp.ttl-minutes:5}")
+  private int otpTtlMinutes;
+
+  @Value("${app.otp.max-resend-attempts:5}")
+  private int otpMaxResendAttempts;
 
   @Value("${app.login.failed-attempt-threshold:5}")
   private int failedLoginAttemptThreshold;
@@ -83,9 +91,9 @@ public class AuthServiceImpl implements AuthService {
   public AuthResponse login(LoginRequest request, HttpServletRequest httpRequest) {
     try {
       User user =
-              userRepository
-                      .findByEmailAndDeletedFalse(request.email())
-                      .orElseThrow(() -> new NotFoundException(USER_NOT_FOUND));
+          userRepository
+              .findByEmailAndDeletedFalse(request.email())
+              .orElseThrow(() -> new NotFoundException(USER_NOT_FOUND));
 
       if (user.getFailedLoginAttempts() >= failedLoginAttemptThreshold) {
         throw new BadRequestException(CONTACT_ADMIN_MESSAGE);
@@ -105,40 +113,48 @@ public class AuthServiceImpl implements AuthService {
       String access = jwtService.generateAccessToken(user, user.getEmail());
       String refresh = jwtService.generateRefreshToken(user, user.getEmail());
       refreshTokenRepository.save(
-              RefreshToken.builder()
-                      .token(refresh)
-                      .user(user)
-                      .expiresAt(LocalDateTime.now(ZoneId.of(schedulerTimeZone)).plusDays(7))
-                      .revoked(false)
-                      .build());
+          RefreshToken.builder()
+              .token(refresh)
+              .user(user)
+              .expiresAt(LocalDateTime.now(ZoneId.of(schedulerTimeZone)).plusDays(7))
+              .revoked(false)
+              .build());
       recordLoginLocation(
-              user,
-              request.loginLocation(),
-              request.ipAddress(),
-              request.latitude(),
-              request.longitude(),
-              httpRequest);
+          user,
+          request.loginLocation(),
+          request.ipAddress(),
+          request.latitude(),
+          request.longitude(),
+          httpRequest);
       return buildAuthResponse(user, access, refresh);
-    }catch (NotFoundException e){
+    } catch (NotFoundException e) {
       insertViolatedUserInfo(request, httpRequest);
-      List<ViolatedUser> violatedUserList=violatedUserRepository.findByEmail(request.email());
-      if (!CollectionUtils.isEmpty(violatedUserList) && violatedUserList.size() >= failedLoginAttemptThreshold) {
+      List<ViolatedUser> violatedUserList = violatedUserRepository.findByEmail(request.email());
+      if (!CollectionUtils.isEmpty(violatedUserList)
+          && violatedUserList.size() >= failedLoginAttemptThreshold) {
         emailService.sendEmailWithAttachments(
-                alertEmail,
-                "Account Security Alert",
-                buildUnknownUserLoginAttemptEmailBody(request.email(),request.ipAddress(),LocalDateTime.now(ZoneId.of(schedulerTimeZone)).format(
-                        DateTimeFormatter.ofPattern("dd-MMM-yyyy HH:mm:ss"))),
-                null,
-                null);
+            alertEmail,
+            "Account Security Alert",
+            buildUnknownUserLoginAttemptEmailBody(
+                request.email(),
+                request.ipAddress(),
+                LocalDateTime.now(ZoneId.of(schedulerTimeZone))
+                    .format(DateTimeFormatter.ofPattern("dd-MMM-yyyy HH:mm:ss"))),
+            null,
+            null);
       }
       throw new NotFoundException(e.getMessage());
     }
   }
 
+  /** Convenience overload for callers without an HTTP request (no location data to record). */
+  public AuthResponse login(LoginRequest request) {
+    return login(request, null);
+  }
+
   private void authenticateUser(User user, String email, String password) {
     try {
-      authManager.authenticate(
-              new UsernamePasswordAuthenticationToken(email, password));
+      authManager.authenticate(new UsernamePasswordAuthenticationToken(email, password));
     } catch (BadCredentialsException ex) {
       int failedAttempts = user.getFailedLoginAttempts() + 1;
       user.setFailedLoginAttempts(failedAttempts);
@@ -146,11 +162,11 @@ public class AuthServiceImpl implements AuthService {
 
       if (failedAttempts >= failedLoginAttemptThreshold) {
         emailService.sendEmailWithAttachments(
-                user.getEmail(),
-                "Account Security Alert",
-                buildFailedLoginThresholdEmailBody(),
-                null,
-                null);
+            user.getEmail(),
+            "Account Security Alert",
+            buildFailedLoginThresholdEmailBody(),
+            null,
+            null);
         throw new BadRequestException(CONTACT_ADMIN_MESSAGE);
       }
       throw new BadRequestException("Invalid email or password");
@@ -175,47 +191,48 @@ public class AuthServiceImpl implements AuthService {
 
   private String buildFailedLoginThresholdEmailBody() {
     return """
-            <div style='font-family:Arial,sans-serif;line-height:1.5;color:#111827'>
-              <h3 style='margin-bottom:8px'>Account Temporarily Locked</h3>
-              <p style='margin:0 0 12px 0'>We detected multiple unsuccessful login attempts on your account.</p>
-              <p style='margin:0 0 12px 0'><b>Your account sign-in has been restricted for security reasons.</b></p>
-              <p style='margin:0 0 12px 0'>Please contact the Administrator to restore access.</p>
-            </div>
-            """;
+<div style='font-family:Arial,sans-serif;line-height:1.5;color:#111827'>
+  <h3 style='margin-bottom:8px'>Account Temporarily Locked</h3>
+  <p style='margin:0 0 12px 0'>We detected multiple unsuccessful login attempts on your account.</p>
+  <p style='margin:0 0 12px 0'><b>Your account sign-in has been restricted for security reasons.</b></p>
+  <p style='margin:0 0 12px 0'>Please contact the Administrator to restore access.</p>
+</div>
+""";
   }
 
-    private String buildUnknownUserLoginAttemptEmailBody(
-            String email, String ipAddress, String loginTime) {
+  private String buildUnknownUserLoginAttemptEmailBody(
+      String email, String ipAddress, String loginTime) {
 
-        return """
-            <div style='font-family:Arial,sans-serif;line-height:1.5;color:#111827'>
-              <h3 style='margin-bottom:8px'>Unknown Login Attempt Detected</h3>
+    return """
+<div style='font-family:Arial,sans-serif;line-height:1.5;color:#111827'>
+  <h3 style='margin-bottom:8px'>Unknown Login Attempt Detected</h3>
 
-              <p style='margin:0 0 12px 0'>
-                An attempt was made to log in using an email address that is not registered in the application.
-              </p>
+  <p style='margin:0 0 12px 0'>
+    An attempt was made to log in using an email address that is not registered in the application.
+  </p>
 
-              <table style='border-collapse:collapse'>
-                <tr>
-                  <td style='padding:4px 12px 4px 0'><b>Email Address</b></td>
-                  <td>%s</td>
-                </tr>
-                <tr>
-                  <td style='padding:4px 12px 4px 0'><b>IP Address</b></td>
-                  <td>%s</td>
-                </tr>
-                <tr>
-                  <td style='padding:4px 12px 4px 0'><b>Time</b></td>
-                  <td>%s</td>
-                </tr>
-              </table>
+  <table style='border-collapse:collapse'>
+    <tr>
+      <td style='padding:4px 12px 4px 0'><b>Email Address</b></td>
+      <td>%s</td>
+    </tr>
+    <tr>
+      <td style='padding:4px 12px 4px 0'><b>IP Address</b></td>
+      <td>%s</td>
+    </tr>
+    <tr>
+      <td style='padding:4px 12px 4px 0'><b>Time</b></td>
+      <td>%s</td>
+    </tr>
+  </table>
 
-              <p style='margin-top:16px'>
-                Please review this activity to determine whether any further action is required.
-              </p>
-            </div>
-            """.formatted(email, ipAddress, loginTime);
-    }
+  <p style='margin-top:16px'>
+    Please review this activity to determine whether any further action is required.
+  </p>
+</div>
+"""
+        .formatted(email, ipAddress, loginTime);
+  }
 
   @Override
   @Transactional
@@ -319,6 +336,7 @@ public class AuthServiceImpl implements AuthService {
   }
 
   @Override
+  @Transactional
   public void sendOtp(OtpSendRequest request) {
     User user =
         userRepository
@@ -326,32 +344,46 @@ public class AuthServiceImpl implements AuthService {
             .filter(User::isActive)
             .orElseThrow(() -> new NotFoundException(USER_NOT_FOUND));
 
-    String otp = String.format("%06d", SECURE_RANDOM.nextInt(1_000_000));
-    otpCodeRepository.save(
-        OtpCode.builder()
-            .user(user)
-            .code(otp)
-            .expiresAt(LocalDateTime.now(ZoneId.of(schedulerTimeZone)).plusMinutes(OTP_TTL_MINUTES))
-            .used(false)
-            .build());
+    LocalDateTime now = LocalDateTime.now(ZoneId.of(schedulerTimeZone));
+    // Reuse the still-valid code so the user does not get a different code on every resend.
+    OtpCode otp =
+        otpCodeRepository
+            .findTopByUserIdAndUsedFalseAndExpiresAtAfterOrderByIdDesc(user.getId(), now)
+            .orElse(null);
+    if (otp == null) {
+      otp =
+          OtpCode.builder()
+              .user(user)
+              .code(String.format("%06d", SECURE_RANDOM.nextInt(1_000_000)))
+              .expiresAt(now.plusMinutes(otpTtlMinutes))
+              .used(false)
+              .build();
+    } else {
+      if (otp.getResendCount() >= otpMaxResendAttempts) {
+        throw new BadRequestException(
+            "OTP resend limit reached. Please try again after the current code expires.");
+      }
+      otp.setResendCount(otp.getResendCount() + 1);
+    }
+    otpCodeRepository.save(otp);
 
     emailService.sendEmailWithAttachments(
-        request.email(), "Your Golden Greetings OTP", buildOtpEmailBody(otp), null, null);
+        request.email(), "Your Golden Greetings OTP", buildOtpEmailBody(otp.getCode()), null, null);
   }
 
   private String buildOtpEmailBody(String otp) {
     return """
-            <div style='font-family:Arial,sans-serif;line-height:1.5;color:#111827'>
-              <h3 style='margin-bottom:8px'>Golden Greetings Verification Code</h3>
-              <p style='margin:0 0 12px 0'>Use the OTP below to complete your sign-in.</p>
-              <p style='margin:0 0 12px 0'>
-                <span style='display:inline-block;padding:10px 16px;border:1px solid #d1d5db;border-radius:8px;font-size:22px;font-weight:700;letter-spacing:4px'>%s</span>
-              </p>
-              <p style='margin:0 0 8px 0'>This OTP is valid for <b>%d minutes</b>.</p>
-              <p style='margin:0 0 12px 0;color:#6b7280'>If you did not request this code, please ignore this email.</p>
-            </div>
-            """
-        .formatted(otp, OTP_TTL_MINUTES);
+<div style='font-family:Arial,sans-serif;line-height:1.5;color:#111827'>
+  <h3 style='margin-bottom:8px'>Golden Greetings Verification Code</h3>
+  <p style='margin:0 0 12px 0'>Use the OTP below to complete your sign-in.</p>
+  <p style='margin:0 0 12px 0'>
+    <span style='display:inline-block;padding:10px 16px;border:1px solid #d1d5db;border-radius:8px;font-size:22px;font-weight:700;letter-spacing:4px'>%s</span>
+  </p>
+  <p style='margin:0 0 8px 0'>This OTP is valid for <b>%d minutes</b>.</p>
+  <p style='margin:0 0 12px 0;color:#6b7280'>If you did not request this code, please ignore this email.</p>
+</div>
+"""
+        .formatted(otp, otpTtlMinutes);
   }
 
   @Override
@@ -384,9 +416,9 @@ public class AuthServiceImpl implements AuthService {
     return buildAuthResponse(user, access, refresh);
   }
 
-
   @Override
-  public AuthResponse verifyLoginOtp(LoginOtpVerifyRequest request, HttpServletRequest httpRequest) {
+  public AuthResponse verifyLoginOtp(
+      LoginOtpVerifyRequest request, HttpServletRequest httpRequest) {
     User user =
         userRepository
             .findByEmailAndDeletedFalse(request.email())
@@ -464,6 +496,7 @@ public class AuthServiceImpl implements AuthService {
 
     return httpRequest.getRemoteAddr();
   }
+
   @Override
   @Transactional
   public void forgotPassword(ForgotPasswordRequest request) {
@@ -472,33 +505,47 @@ public class AuthServiceImpl implements AuthService {
             .findByEmailAndDeletedFalse(request.email())
             .filter(User::isActive)
             .orElseThrow(() -> new NotFoundException("User not found"));
-    String token = UUID.randomUUID().toString();
-    resetTokenRepository.invalidateAllByUserId(user.getId());
-    resetTokenRepository.save(
-        PasswordResetToken.builder()
-            .token(token)
-            .user(user)
-            .expiresAt(
-                LocalDateTime.now(ZoneId.of(schedulerTimeZone))
-                    .plusMinutes(passwordResetTtlMinutes))
-            .used(false)
-            .build());
 
-    String resetUrl = passwordResetUiUrl + "?token=" + token + "&email=" + user.getEmail();
+    LocalDateTime now = LocalDateTime.now(ZoneId.of(schedulerTimeZone));
+    // Reuse the still-valid token so repeated requests keep the same link until it is used or
+    // expires.
+    PasswordResetToken resetToken =
+        resetTokenRepository
+            .findTopByUserIdAndUsedFalseAndExpiresAtAfterOrderByIdDesc(user.getId(), now)
+            .orElse(null);
+    if (resetToken == null) {
+      resetToken =
+          PasswordResetToken.builder()
+              .token(UUID.randomUUID().toString())
+              .user(user)
+              .expiresAt(now.plusMinutes(passwordResetTtlMinutes))
+              .used(false)
+              .build();
+    } else {
+      if (resetToken.getResendCount() >= passwordResetMaxAttempts) {
+        throw new BadRequestException(
+            "Reset link request limit reached. Please try again after the current link expires.");
+      }
+      resetToken.setResendCount(resetToken.getResendCount() + 1);
+    }
+    resetTokenRepository.save(resetToken);
+
+    String resetUrl =
+        passwordResetUiUrl + "?token=" + resetToken.getToken() + "&email=" + user.getEmail();
     String body =
         """
-                <div style='font-family:Arial,sans-serif;line-height:1.5'>
-                  <h3>Password Reset Request</h3>
-                  <p>Hi %s,</p>
-                  <p>We received a request to reset your Golden Greetings password.</p>
-                  <p><a href='%s'>Click here to reset your password</a></p>
-                  <p>If the button doesn't work, use this token in the reset API:</p>
-                  <p><b>%s</b></p>
-                  <p>This link/token expires in %d minutes.</p>
-                  <p>If you did not request this, you can safely ignore this email.</p>
-                </div>
-                """
-            .formatted(user.getName(), resetUrl, token, passwordResetTtlMinutes);
+        <div style='font-family:Arial,sans-serif;line-height:1.5'>
+          <h3>Password Reset Request</h3>
+          <p>Hi %s,</p>
+          <p>We received a request to reset your Golden Greetings password.</p>
+          <p><a href='%s'>Click here to reset your password</a></p>
+          <p>If the button doesn't work, use this token in the reset API:</p>
+          <p><b>%s</b></p>
+          <p>This link/token expires in %d minutes.</p>
+          <p>If you did not request this, you can safely ignore this email.</p>
+        </div>
+        """
+            .formatted(user.getName(), resetUrl, resetToken.getToken(), passwordResetTtlMinutes);
 
     emailService.sendEmailWithAttachments(
         user.getEmail(), "Reset your Golden Greetings password", body, null, null);

@@ -113,4 +113,13 @@ public class EventTypeSeedServiceImpl implements EventTypeSeedService {
   public void deleteById(Long id) {
     eventTypeSeedRepository.deleteById(id);
   }
+
+  @Override
+  public void deleteByIds(java.util.List<Long> ids) {
+    if (ids == null || ids.isEmpty()) {
+      throw new com.familywishes.exception.BadRequestException(
+          "At least one event type id is required");
+    }
+    ids.stream().distinct().forEach(eventTypeSeedRepository::deleteById);
+  }
 }

@@ -95,17 +95,23 @@ class WishImageServiceImplTest {
                 null,
                 "Birthday",
                 true,
-                new MockMultipartFile("file", "x.svg", "image/svg+xml", "<svg onload=alert(1)/>".getBytes())));
+                new MockMultipartFile(
+                    "file", "x.svg", "image/svg+xml", "<svg onload=alert(1)/>".getBytes())));
     // an SVG renamed to PNG is caught by looking at the bytes
     assertThrows(
         BadRequestException.class,
         () ->
             service.create(
-                null, "Birthday", true, new MockMultipartFile("file", "x.png", "image/png", "<svg/>".getBytes())));
+                null,
+                "Birthday",
+                true,
+                new MockMultipartFile("file", "x.png", "image/png", "<svg/>".getBytes())));
     // a real PNG must not be stored under a script-capable content type
     assertThrows(
         BadRequestException.class,
-        () -> service.create(null, "Birthday", true, new MockMultipartFile("file", "x.png", "text/html", PNG)));
+        () ->
+            service.create(
+                null, "Birthday", true, new MockMultipartFile("file", "x.png", "text/html", PNG)));
   }
 
   @Test
@@ -115,11 +121,39 @@ class WishImageServiceImplTest {
 
     assertThrows(
         BadRequestException.class,
-        () -> service.create(null, "Birthday", true, new MockMultipartFile("file", "x.png", "image/png", huge)));
+        () ->
+            service.create(
+                null, "Birthday", true, new MockMultipartFile("file", "x.png", "image/png", huge)));
     assertThrows(
         BadRequestException.class,
         () ->
             service.create(
-                null, "x".repeat(151), true, new MockMultipartFile("file", "x.png", "image/png", PNG)));
+                null,
+                "x".repeat(151),
+                true,
+                new MockMultipartFile("file", "x.png", "image/png", PNG)));
+  }
+
+  @Test
+  void deleteByIdsRemovesEachImageAndItsStoredFile() {
+    WishImage first = image("Birthday", "a", null);
+    first.setId(1L);
+    WishImage second = image("Holi", "b", null);
+    second.setId(2L);
+    when(wishImageRepository.findById(1L)).thenReturn(java.util.Optional.of(first));
+    when(wishImageRepository.findById(2L)).thenReturn(java.util.Optional.of(second));
+
+    service.deleteByIds(List.of(1L, 2L, 1L));
+
+    verify(wishImageRepository).delete(first);
+    verify(wishImageRepository).delete(second);
+    verify(storageService).deleteObject("a");
+    verify(storageService).deleteObject("b");
+  }
+
+  @Test
+  void deleteByIdsRejectsAnEmptyList() {
+    assertThrows(BadRequestException.class, () -> service.deleteByIds(List.of()));
+    verify(wishImageRepository, never()).delete(any());
   }
 }

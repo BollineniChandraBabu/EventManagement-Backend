@@ -56,6 +56,8 @@ public interface ChatService {
 
   DeleteMessageResponse deleteMessageById(Long messageId);
 
+  java.util.List<DeleteMessageResponse> deleteMessagesByIds(java.util.List<Long> messageIds);
+
   MessageResponse editMessage(Long messageId, EditMessageRequest request);
 
   MessageReactionsResponse listReactions(Long messageId);

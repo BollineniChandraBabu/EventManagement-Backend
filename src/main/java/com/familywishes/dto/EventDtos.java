@@ -27,5 +27,6 @@ public class EventDtos {
       String userName,
       boolean active,
       Long userId,
-      String wishesUrl) {}
+      String wishesUrl,
+      String imageUrl) {}
 }

@@ -121,6 +121,16 @@ public class SpecialEventSeedServiceImpl implements SpecialEventSeedService {
     specialEventRepository.deleteById(id);
   }
 
+  @Override
+  @CacheEvict(cacheNames = CacheNames.FESTIVALS_BY_MONTH, allEntries = true)
+  public void deleteByIds(java.util.List<Long> ids) {
+    if (ids == null || ids.isEmpty()) {
+      throw new com.familywishes.exception.BadRequestException(
+          "At least one special event seed id is required");
+    }
+    ids.stream().distinct().forEach(this::delete);
+  }
+
   private SpecialEventSeedResponse toResponse(SpecialEvent event) {
     return new SpecialEventSeedResponse(
         event.getId(),

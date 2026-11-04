@@ -24,4 +24,6 @@ public interface RelationshipSeedService {
   EnumSeedResponse getById(Long id);
 
   void deleteById(Long id);
+
+  void deleteByIds(List<Long> ids);
 }

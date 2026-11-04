@@ -1,6 +1,5 @@
 package com.familywishes.service.impl;
 
-import com.familywishes.util.WishesUrls;
 import com.familywishes.dto.CommonDtos.PagedResponse;
 import com.familywishes.dto.EventDtos.*;
 import com.familywishes.entity.Event;
@@ -11,13 +10,16 @@ import com.familywishes.repository.EventRepository;
 import com.familywishes.repository.EventTypeSeedRepository;
 import com.familywishes.repository.UserRepository;
 import com.familywishes.service.EventService;
+import com.familywishes.util.ImageValidation;
+import com.familywishes.util.WishesUrls;
+import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
-
-import java.util.List;
+import org.springframework.util.StringUtils;
+import org.springframework.web.multipart.MultipartFile;
 
 @Service
 @RequiredArgsConstructor
@@ -25,9 +27,15 @@ public class EventServiceImpl implements EventService {
   private final EventRepository eventRepository;
   private final UserRepository userRepository;
   private final EventTypeSeedRepository eventTypeSeedRepository;
+  private final SupabaseStorageService storageService;
 
   @Override
   public EventResponse create(EventRequest request) {
+    return create(request, null);
+  }
+
+  @Override
+  public EventResponse create(EventRequest request, MultipartFile image) {
     var user =
         userRepository
             .findById(request.userId())
@@ -38,6 +46,7 @@ public class EventServiceImpl implements EventService {
             .eventDate(request.eventDate())
             .recurring(request.recurring())
             .wishesUrl(normalizeWishesUrl(request.wishesUrl()))
+            .imageObjectKey(uploadImage(image))
             .user(user)
             .active(true)
             .build();
@@ -47,6 +56,11 @@ public class EventServiceImpl implements EventService {
 
   @Override
   public EventResponse update(Long id, EventRequest request) {
+    return update(id, request, null);
+  }
+
+  @Override
+  public EventResponse update(Long id, EventRequest request, MultipartFile image) {
     Event event = findEvent(id);
     var user =
         userRepository
@@ -57,6 +71,11 @@ public class EventServiceImpl implements EventService {
     event.setRecurring(request.recurring());
     event.setWishesUrl(normalizeWishesUrl(request.wishesUrl())); // blank removes the link
     event.setUser(user);
+    if (image != null && !image.isEmpty()) {
+      String oldObjectKey = event.getImageObjectKey();
+      event.setImageObjectKey(uploadImage(image));
+      storageService.deleteObject(oldObjectKey);
+    }
     return toResponse(eventRepository.save(event));
   }
 
@@ -69,7 +88,8 @@ public class EventServiceImpl implements EventService {
   public EventResponse getById(Long id, boolean isAdmin, String requesterEmail) {
     Event event = findEvent(id);
     boolean isOwner =
-        event.getUser().getEmail() != null && event.getUser().getEmail().equalsIgnoreCase(requesterEmail);
+        event.getUser().getEmail() != null
+            && event.getUser().getEmail().equalsIgnoreCase(requesterEmail);
     if (!isAdmin && !isOwner) {
       throw new NotFoundException("Event not found"); // do not reveal that it exists
     }
@@ -78,7 +98,17 @@ public class EventServiceImpl implements EventService {
 
   @Override
   public void deleteById(Long id) {
+    Event event = findEvent(id);
     eventRepository.deleteById(id);
+    storageService.deleteObject(event.getImageObjectKey());
+  }
+
+  @Override
+  public void deleteByIds(List<Long> ids) {
+    if (ids == null || ids.isEmpty()) {
+      throw new BadRequestException("At least one event id is required");
+    }
+    ids.stream().distinct().forEach(this::deleteById);
   }
 
   @Override
@@ -129,33 +159,41 @@ public class EventServiceImpl implements EventService {
   }
 
   @Override
-  public List<EventResponse> listByMonth(Integer month){
-    return eventRepository.findByMonth(month).stream().map(event -> {
-      return new EventResponse(
-          event.getId(),
-          event.getEventType().getDisplayName(),
-          event.getEventDate(),
-          event.isRecurring(),
-          event.getUser().getName(),
-          event.isActive(),
-          event.getUser().getId(),
-          event.getWishesUrl());
-    }).toList();
+  public List<EventResponse> listByMonth(Integer month) {
+    return eventRepository.findByMonth(month).stream()
+        .map(
+            event -> {
+              return new EventResponse(
+                  event.getId(),
+                  event.getEventType().getDisplayName(),
+                  event.getEventDate(),
+                  event.isRecurring(),
+                  event.getUser().getName(),
+                  event.isActive(),
+                  event.getUser().getId(),
+                  event.getWishesUrl(),
+                  imageUrl(event));
+            })
+        .toList();
   }
 
   @Override
   public List<EventResponse> listByMonthAndUserEmail(Integer month, String userEmail) {
-    return eventRepository.findByMonthAndUserEmail(month, userEmail).stream().map(event -> {
-      return new EventResponse(
-          event.getId(),
-          event.getEventType().getDisplayName(),
-          event.getEventDate(),
-          event.isRecurring(),
-          event.getUser().getName(),
-          event.isActive(),
-          event.getUser().getId(),
-          event.getWishesUrl());
-    }).toList();
+    return eventRepository.findByMonthAndUserEmail(month, userEmail).stream()
+        .map(
+            event -> {
+              return new EventResponse(
+                  event.getId(),
+                  event.getEventType().getDisplayName(),
+                  event.getEventDate(),
+                  event.isRecurring(),
+                  event.getUser().getName(),
+                  event.isActive(),
+                  event.getUser().getId(),
+                  event.getWishesUrl(),
+                  imageUrl(event));
+            })
+        .toList();
   }
 
   private EventTypeSeed resolveEventType(String eventType) {
@@ -177,6 +215,25 @@ public class EventServiceImpl implements EventService {
     }
   }
 
+  /** A null or empty upload means the event keeps whatever image it already had. */
+  private String uploadImage(MultipartFile image) {
+    if (image == null || image.isEmpty()) {
+      return null;
+    }
+    ImageValidation.validate(image);
+    String objectKey = storageService.uploadWishImage(image);
+    if (!StringUtils.hasText(objectKey)) {
+      throw new BadRequestException("Unable to upload image to storage");
+    }
+    return objectKey;
+  }
+
+  private String imageUrl(Event event) {
+    return StringUtils.hasText(event.getImageObjectKey())
+        ? storageService.getSignedUrl(event.getImageObjectKey())
+        : null;
+  }
+
   private EventResponse toResponse(Event event) {
     return new EventResponse(
         event.getId(),
@@ -186,6 +243,7 @@ public class EventServiceImpl implements EventService {
         event.getUser().getName(),
         event.isActive(),
         event.getUser().getId(),
-        event.getWishesUrl());
+        event.getWishesUrl(),
+        imageUrl(event));
   }
 }

@@ -30,4 +30,9 @@ public class OtpCode extends AuditableEntity {
   @Column(nullable = false, columnDefinition = "SMALLINT")
   @Convert(converter = BooleanToZeroOneConverter.class)
   private boolean used;
+
+  /** How many times this code has been re-sent while it was still valid. */
+  @Column(name = "resend_count", nullable = false)
+  @Builder.Default
+  private int resendCount = 0;
 }
