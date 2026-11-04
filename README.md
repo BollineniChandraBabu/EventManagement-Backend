@@ -228,3 +228,26 @@ Event types are not case-sensitive, and codes such as `WEDDING_ANNIVERSARY` also
 - `PUT /api/events/{id}` updates an event (it did not exist before, so editing an event could not be saved). `GET /api/events/{id}` is limited to admins and the event's owner.
 - `GET /api/dashboard/violated-users` accepts `searchKey` (email or IP) and returns `uniqueIps`, `uniqueEmails`, `topIps` and `topEmails`. Map points are limited to the newest 300 and are no longer looked up one by one in ip-api.com.
 
+## Theme styles API
+Theme styles are seeded into the `theme_seeds` table at startup. Each row stores a technical name (`code`) and a user-friendly name (`display_name`):
+
+| Technical name | User-friendly name |
+| --- | --- |
+| skeuomorphism | Realistic Design |
+| neomorphism | Soft UI |
+| glassmorphism | Frosted Glass |
+| claymorphism | Soft 3D Design |
+| minimalism | Clean & Simple |
+| maximalism | Bold & Vibrant |
+| brutalism | Bold & Raw |
+| liquid-glass | Liquid Glass |
+| bento-grid | Modular Grid |
+| spatial-ui | 3D Spatial Design |
+| default | default |
+
+- `GET /api/themes` returns the active theme styles (`id`, `code`, `displayName`).
+- `GET /api/themes/me` returns the signed-in user's selected theme, or `default` when none is saved.
+- `PUT /api/themes/me` saves the signed-in user's selected theme by its technical name (`{ "theme": "liquid-glass" }`) and returns the stored value. Unknown themes are rejected with `400`.
+
+The user's choice is stored in `user_theme_preferences`, whose `theme` column defaults to `default`.
+
