@@ -32,6 +32,20 @@ public class UserController {
     return userService.getById(id);
   }
 
+  /**
+   * Public user directory for the circle search. Any signed-in user may call it; only a small,
+   * non-sensitive subset of the user record is returned.
+   */
+  @GetMapping("/directory")
+  public PagedResponse<DirectoryUserResponse> directory(
+      @RequestParam(defaultValue = "0") int page,
+      @RequestParam(defaultValue = "20") int size,
+      @RequestParam(defaultValue = "") String searchKey,
+      @RequestParam(defaultValue = "name") String sortBy,
+      @RequestParam(defaultValue = "asc") String sortDir) {
+    return userService.directory(page, size, searchKey, sortBy, sortDir);
+  }
+
   @GetMapping("/filter-values")
   @PreAuthorize("hasRole('ADMIN')")
   public java.util.Map<String, Object> getFilterValues() {

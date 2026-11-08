@@ -22,7 +22,7 @@ public class JwtService {
   private String secret;
 
   public String generateAccessToken(User user) {
-    return generate(user.getEmail(), user.getRole().name(), ACCESS_TOKEN_TTL_SECONDS, Map.of());
+    return generateAccessToken(user, Map.of());
   }
 
   public String generateAccessToken(User user, String impersonatedBy) {
@@ -30,7 +30,20 @@ public class JwtService {
     if (impersonatedBy != null && !impersonatedBy.isBlank()) {
       extraClaims.put("impersonatedBy", impersonatedBy);
     }
-    return generate(user.getEmail(), user.getRole().name(), ACCESS_TOKEN_TTL_SECONDS, extraClaims);
+    return generateAccessToken(user, extraClaims);
+  }
+
+  /**
+   * Adds the user's current session id as the {@code sid} claim, so a later request can tell
+   * whether the token still belongs to the active session. Reads it straight from the entity, so
+   * every sign-in path stamps the right session without each caller having to pass it in.
+   */
+  private String generateAccessToken(User user, Map<String, Object> extraClaims) {
+    Map<String, Object> claims = new HashMap<>(extraClaims);
+    if (user.getActiveSessionId() != null && !user.getActiveSessionId().isBlank()) {
+      claims.put("sid", user.getActiveSessionId());
+    }
+    return generate(user.getEmail(), user.getRole().name(), ACCESS_TOKEN_TTL_SECONDS, claims);
   }
 
   public String generateRefreshToken(User user) {
@@ -67,6 +80,13 @@ public class JwtService {
 
   public String extractImpersonatedBy(String token) {
     return parse(token).get("impersonatedBy", String.class);
+  }
+
+  /**
+   * The active-session id baked into an access token, or null for tokens issued before it existed.
+   */
+  public String extractSessionId(String token) {
+    return parse(token).get("sid", String.class);
   }
 
   public boolean isValid(String token) {

@@ -56,7 +56,7 @@ class CalendarServiceImplTest {
   }
 
   @Test
-  void festivalsOnlyCountOnTheirExactDate() {
+  void festivalsRecurEveryYearSoLaterYearsStillShowThem() {
     when(festivalService.listByMonth(NOVEMBER))
         .thenReturn(List.of(new FestivalResponse(5L, "Diwali", LocalDate.of(2026, 11, 8), true)));
     when(eventService.listByMonth(NOVEMBER)).thenReturn(List.of());
@@ -65,7 +65,7 @@ class CalendarServiceImplTest {
     CalendarResponse festival = calendarService.listByMonth(NOVEMBER, true, "admin@x.com").get(0);
 
     assertEquals("Festival", festival.eventType());
-    assertFalse(festival.recurring());
+    assertTrue(festival.recurring());
     assertNull(festival.ownerName());
   }
 

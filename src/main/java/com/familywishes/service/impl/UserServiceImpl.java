@@ -223,6 +223,48 @@ public class UserServiceImpl implements UserService {
   }
 
   @Override
+  public PagedResponse<DirectoryUserResponse> directory(
+      int page, int size, String searchKey, String sortBy, String sortDir) {
+    Page<User> userPage =
+        userRepository.findAllActiveUsers(
+            searchKey == null ? "" : searchKey.trim(),
+            PageRequest.of(page, size, resolveDirectorySort(sortBy, sortDir)));
+
+    return new PagedResponse<>(
+        userPage.getContent().stream().map(this::toDirectoryUserResponse).toList(),
+        userPage.getNumber(),
+        userPage.getSize(),
+        userPage.getTotalElements(),
+        userPage.getTotalPages(),
+        userPage.hasNext(),
+        userPage.hasPrevious());
+  }
+
+  private Sort resolveDirectorySort(String sortBy, String sortDir) {
+    String normalized =
+        switch (sortBy == null ? "" : sortBy.trim()) {
+          case "email", "online", "lastSeenAt", "id", "createdAt", "updatedAt", "name" ->
+              sortBy.trim();
+          case "userId" -> "id";
+          default -> "name";
+        };
+    return "desc".equalsIgnoreCase(sortDir)
+        ? Sort.by(normalized).descending()
+        : Sort.by(normalized).ascending();
+  }
+
+  private DirectoryUserResponse toDirectoryUserResponse(User user) {
+    return new DirectoryUserResponse(
+        user.getId(),
+        user.getName(),
+        user.getEmail(),
+        user.getRelationShip() == null ? null : user.getRelationShip().getCode(),
+        user.isOnline(),
+        user.getLastSeenAt(),
+        resolveProfilePictureUrl(user));
+  }
+
+  @Override
   public UserResponse getCurrentUser() {
     User user = findAuthenticatedUser();
     return toUserResponse(user);

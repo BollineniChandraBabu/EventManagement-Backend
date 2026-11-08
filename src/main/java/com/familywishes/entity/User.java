@@ -66,6 +66,16 @@ public class User extends ActivatableEntity {
   @Builder.Default
   private boolean concurrentLoginAllowed = true;
 
+  /**
+   * Identifies the user's current sign-in session. Rotated on every sign-in and carried in the
+   * access token as the {@code sid} claim. When {@link #concurrentLoginAllowed} is false, a request
+   * whose token {@code sid} no longer matches this value came from a superseded session and is
+   * rejected so the user can sign in again. Null until the first sign-in after this field existed,
+   * which keeps already-issued tokens valid.
+   */
+  @Column(name = "active_session_id", length = 64)
+  private String activeSessionId;
+
   @ManyToOne(fetch = FetchType.EAGER)
   @JoinColumn(name = "relationship_seed_id", nullable = false)
   private RelationshipSeed relationShip;

@@ -31,6 +31,16 @@ public class GlobalExceptionHandler {
     return build(HttpStatus.TOO_MANY_REQUESTS, ex.getMessage());
   }
 
+  /**
+   * A superseded single-session login. 401 so the client treats it as an authentication failure,
+   * but the message starts with {@code CONCURRENT_LOGIN} so the UI can show a dedicated notice and
+   * let the user sign in again.
+   */
+  @ExceptionHandler(ConcurrentLoginException.class)
+  public ResponseEntity<?> handleConcurrentLogin(ConcurrentLoginException ex) {
+    return build(HttpStatus.UNAUTHORIZED, "CONCURRENT_LOGIN: " + ex.getMessage());
+  }
+
   @ExceptionHandler(MethodArgumentNotValidException.class)
   public ResponseEntity<?> validation(MethodArgumentNotValidException ex) {
     return build(

@@ -434,6 +434,40 @@ class AuthServiceImplTest {
     authService.login(new LoginRequest("single@example.com", "correct"));
 
     verify(refreshTokenRepository).revokeAllByUserId(21L);
+    // A fresh session id is minted so tokens from the previous session carry a stale `sid`.
+    org.junit.jupiter.api.Assertions.assertNotNull(user.getActiveSessionId());
+  }
+
+  @Test
+  void refreshShouldSurfaceConcurrentLoginWhenTheTokenWasRevokedByASingleSessionLogin() {
+    User user =
+        User.builder()
+            .id(31L)
+            .email("single@example.com")
+            .role(Role.ROLE_USER)
+            .active(true)
+            .concurrentLoginAllowed(false)
+            .build();
+    RefreshToken revoked =
+        RefreshToken.builder().token("stale-refresh").user(user).revoked(true).build();
+    when(refreshTokenRepository.findByTokenAndRevokedFalse("stale-refresh"))
+        .thenReturn(Optional.empty());
+    when(refreshTokenRepository.findByToken("stale-refresh")).thenReturn(Optional.of(revoked));
+
+    assertThrows(
+        com.familywishes.exception.ConcurrentLoginException.class,
+        () ->
+            authService.refresh(new com.familywishes.dto.AuthDtos.RefreshRequest("stale-refresh")));
+  }
+
+  @Test
+  void refreshShouldRejectAnUnknownTokenAsABadRequest() {
+    when(refreshTokenRepository.findByTokenAndRevokedFalse("ghost")).thenReturn(Optional.empty());
+    when(refreshTokenRepository.findByToken("ghost")).thenReturn(Optional.empty());
+
+    assertThrows(
+        BadRequestException.class,
+        () -> authService.refresh(new com.familywishes.dto.AuthDtos.RefreshRequest("ghost")));
   }
 
   @Test

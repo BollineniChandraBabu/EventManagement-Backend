@@ -87,6 +87,19 @@ public class UserDtos {
 
   public record UserStatusUpdateRequest(@NotNull Boolean active) {}
 
+  /**
+   * A user as seen in the public directory used for circle search. Carries only what the picker
+   * needs, so non-admin callers never see roles, birthdays or settings.
+   */
+  public record DirectoryUserResponse(
+      Long id,
+      String name,
+      String email,
+      String relationShip,
+      boolean online,
+      LocalDateTime lastSeenAt,
+      String profilePictureUrl) {}
+
   public record WishPreviewResponse(
       boolean showMessage, String wishType, String subject, String htmlMessage, byte[] imageData) {}
 
