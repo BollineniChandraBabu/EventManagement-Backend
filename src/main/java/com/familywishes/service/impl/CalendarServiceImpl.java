@@ -44,7 +44,11 @@ public class CalendarServiceImpl implements CalendarService {
     return calendar;
   }
 
-  /** Festival dates move every year, so they only count on their exact date. */
+  /**
+   * Festivals are stored for the year the sync last ran, but a festival like Diwali is shown on its
+   * month/day in every year, so the calendar keeps showing it (and its wishes) when the user
+   * navigates to a later year. The sync refreshes the stored date each year.
+   */
   private CalendarResponse toCalendar(FestivalResponse festival) {
     return new CalendarResponse(
         festival.id(),
@@ -52,7 +56,7 @@ public class CalendarServiceImpl implements CalendarService {
         festival.eventName(),
         festival.eventDate(),
         festival.active(),
-        false,
+        true,
         null);
   }
 

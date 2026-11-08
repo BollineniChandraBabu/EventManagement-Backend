@@ -30,6 +30,17 @@ Notes:
 - `util/GzipUtil` gzips stored media. `SupabaseStorageService` compresses on write (labelling the
   object `Content-Encoding: gzip`) and expands on read. Toggle with `app.media.gzip.enabled`.
 
+## Festivals and the calendar
+
+- `FestivalServiceImpl.syncCalendarificFestivals` (run monthly by `FestivalSyncScheduler`) fetches
+  Calendarific holidays for `Year.now()` and upserts them by name. So the stored festival rows carry
+  the year the sync last ran, and January's run rolls them forward.
+- Festivals repeat every year on their month/day, so `CalendarServiceImpl.toCalendar(FestivalResponse)`
+  reports `recurring=true`. The UI then shows a festival (and its wishes) in any year the user
+  navigates to, instead of only the stored year.
+- Only a one-time anniversary is date-exact: `toCalendar(EventResponse)` passes through
+  `event.recurring()`.
+
 ## Circles and concurrent login
 
 - Circles live in `circles` (entity `Circle`, `CircleRepository`,
