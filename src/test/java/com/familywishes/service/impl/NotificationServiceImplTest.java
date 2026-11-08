@@ -93,6 +93,44 @@ class NotificationServiceImplTest {
   }
 
   @Test
+  void publishRejectsAScheduleThatHasAlreadyElapsed() {
+    Notification notification =
+        Notification.builder()
+            .id(7L)
+            .title("Title")
+            .message("Message")
+            .scheduledFrom(LocalDateTime.now().minusHours(2))
+            .scheduledTo(LocalDateTime.now().minusHours(1))
+            .build();
+    when(notificationRepository.findById(7L)).thenReturn(Optional.of(notification));
+
+    assertThrows(BadRequestException.class, () -> notificationService.publish(7L));
+    // A rejected publish must not touch the currently published notification.
+    verify(notificationRepository, never()).save(any(Notification.class));
+  }
+
+  @Test
+  void publishAcceptsAFutureSchedule() {
+    Notification notification =
+        Notification.builder()
+            .id(8L)
+            .title("Title")
+            .message("Message")
+            .scheduledFrom(LocalDateTime.now().plusHours(1))
+            .scheduledTo(LocalDateTime.now().plusHours(2))
+            .build();
+    when(notificationRepository.findById(8L)).thenReturn(Optional.of(notification));
+    when(notificationRepository.findFirstByPublishedTrueOrderByPublishedAtDesc())
+        .thenReturn(Optional.empty());
+    when(notificationRepository.save(any(Notification.class)))
+        .thenAnswer(call -> call.getArgument(0));
+
+    notificationService.publish(8L);
+
+    verify(notificationRepository).save(notification);
+  }
+
+  @Test
   void deleteByIdsRejectsAnEmptyList() {
     assertThrows(BadRequestException.class, () -> notificationService.deleteByIds(List.of()));
     verify(notificationRepository, never()).delete(any());

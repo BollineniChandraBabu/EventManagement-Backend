@@ -38,11 +38,15 @@ Notes:
 - A new circle request emails the addressee a one-click direct-login link (`EmailType.CIRCLE_REQUEST`,
   entity `LoginToken`). `CircleServiceImpl.notifyAddressee` issues the token and mails the link;
   `AuthServiceImpl.directLogin` (endpoint `POST /api/auth/direct-login`) consumes it and returns JWT
-  tokens. Link base is `app.circle.request.login-url` (default `${app.ui.base-url}/circles`); TTL is
+  tokens. Link base is `app.circle.request.login-url` (default `${app.ui.base-url}/direct-login`); TTL is
   `app.circle.request.login-ttl-minutes`.
 - Emailed deep links all derive from one property, `app.ui.base-url` (env `UI_BASE_URL`):
   `app.login.ui-url`, `app.password-reset.ui-url`, `app.circle.request.login-url`. Each can be
   overridden individually (e.g. `PASSWORD_RESET_UI_URL`).
 - `User.concurrentLoginAllowed` (default true) gates single-session sign-in. `AuthServiceImpl`
-  calls `enforceSingleSession`, which revokes earlier refresh tokens when the flag is false.
-  `UserServiceImpl.updateConcurrentLogin` allows an admin or the user themselves.
+  calls `enforceSingleSession`, which revokes earlier refresh tokens when the flag is false and
+  mints a fresh `User.activeSessionId`. That id rides in the access token as the `sid` claim, and
+  `JwtAuthFilter` rejects a request whose `sid` no longer matches the user's current session (401
+  with a `CONCURRENT_LOGIN:` message). `refresh()` surfaces the same signal when the refresh token
+  was revoked by a newer single-session sign-in. `UserServiceImpl.updateConcurrentLogin` allows an
+  admin or the user themselves.

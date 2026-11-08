@@ -126,6 +126,13 @@ public class NotificationServiceImpl implements NotificationService {
   @Transactional
   public NotificationResponse publish(Long id) {
     String actor = currentActor();
+    Notification notification = getEntity(id);
+    validateScheduleWindow(notification.getScheduledFrom(), notification.getScheduledTo());
+    // Publishing stamps `publishedAt` from `scheduledFrom`, so a window that has already passed
+    // would publish with a back-dated timestamp. Hold publish to the same future-only rule as
+    // create/update and tell the caller to reschedule. Validate before touching the currently
+    // published notification so a rejected publish has no side effects.
+    validateFutureSchedule(notification.getScheduledFrom(), notification.getScheduledTo());
     notificationRepository
         .findFirstByPublishedTrueOrderByPublishedAtDesc()
         .ifPresent(
@@ -137,8 +144,6 @@ public class NotificationServiceImpl implements NotificationService {
                 cancelNotification(previous.getId());
               }
             });
-    Notification notification = getEntity(id);
-    validateScheduleWindow(notification.getScheduledFrom(), notification.getScheduledTo());
     LocalDateTime now = LocalDateTime.now(ZoneId.of(schedulerTimeZone));
     LocalDateTime effectivePublishTime =
         notification.getScheduledFrom() != null ? notification.getScheduledFrom() : now;
@@ -285,7 +290,7 @@ public class NotificationServiceImpl implements NotificationService {
     }
   }
 
-  /** Create/update must schedule for the future; publishing an already-scheduled one may be due. */
+  /** A schedule must be in the future. Applies to create, update and publish alike. */
   private void validateFutureSchedule(LocalDateTime scheduledFrom, LocalDateTime scheduledTo) {
     LocalDateTime now = LocalDateTime.now(ZoneId.of(schedulerTimeZone));
     if (scheduledFrom != null && !scheduledFrom.isAfter(now)) {

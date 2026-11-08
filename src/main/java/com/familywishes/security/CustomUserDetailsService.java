@@ -17,13 +17,13 @@ public class CustomUserDetailsService implements UserDetailsService {
         userRepository
             .findByEmailAndDeletedFalse(username)
             .orElseThrow(() -> new UsernameNotFoundException("User not found"));
-    return new org.springframework.security.core.userdetails.User(
+    return new AppUserDetails(
+        user.getId(),
         user.getEmail(),
         user.getPassword(),
         user.isActive(),
-        true,
-        true,
-        true,
+        user.isConcurrentLoginAllowed(),
+        user.getActiveSessionId(),
         java.util.List.of(new SimpleGrantedAuthority(user.getRole().name())));
   }
 }

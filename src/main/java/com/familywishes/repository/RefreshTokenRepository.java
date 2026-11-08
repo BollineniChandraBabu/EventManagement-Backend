@@ -12,6 +12,8 @@ import org.springframework.transaction.annotation.Transactional;
 public interface RefreshTokenRepository extends JpaRepository<RefreshToken, Long> {
   Optional<RefreshToken> findByTokenAndRevokedFalse(String token);
 
+  Optional<RefreshToken> findByToken(String token);
+
   @Transactional
   long deleteByExpiresAtBefore(LocalDateTime expiresAt);
 

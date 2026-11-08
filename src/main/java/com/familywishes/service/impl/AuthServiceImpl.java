@@ -5,6 +5,7 @@ import com.familywishes.dto.AuthDtos.*;
 import com.familywishes.entity.*;
 import com.familywishes.entity.enums.Role;
 import com.familywishes.exception.BadRequestException;
+import com.familywishes.exception.ConcurrentLoginException;
 import com.familywishes.exception.NotFoundException;
 import com.familywishes.repository.*;
 import com.familywishes.security.JwtService;
@@ -328,7 +329,7 @@ public class AuthServiceImpl implements AuthService {
     RefreshToken rt =
         refreshTokenRepository
             .findByTokenAndRevokedFalse(request.refreshToken())
-            .orElseThrow(() -> new BadRequestException("Invalid refresh token"));
+            .orElseThrow(() -> refreshRejection(request.refreshToken()));
     if (rt.getExpiresAt().isBefore(LocalDateTime.now(ZoneId.of(schedulerTimeZone))))
       throw new BadRequestException("Refresh token expired");
     String access = jwtService.generateAccessToken(rt.getUser());
@@ -339,6 +340,23 @@ public class AuthServiceImpl implements AuthService {
         rt.getUser().getRole().name(),
         jwtService.getAccessTokenTtlSeconds(),
         chatMessageRepository.countUnreadMessagesForReceiver(rt.getUser().getId()));
+  }
+
+  /**
+   * A refresh token that is not usable is either expired/unknown (a normal rejection) or known but
+   * revoked, which is the signature of a single-session sign-in superseding this one. The latter is
+   * surfaced as a concurrent-login rejection so the UI can explain it.
+   */
+  private RuntimeException refreshRejection(String refreshToken) {
+    RefreshToken known = refreshTokenRepository.findByToken(refreshToken).orElse(null);
+    if (known != null
+        && known.isRevoked()
+        && known.getUser() != null
+        && !known.getUser().isConcurrentLoginAllowed()) {
+      return new ConcurrentLoginException(
+          "This session was signed out because single-session sign-in is enabled for your account.");
+    }
+    return new BadRequestException("Invalid refresh token");
   }
 
   @Override
@@ -700,11 +718,20 @@ public class AuthServiceImpl implements AuthService {
   }
 
   /**
-   * When the user has disallowed concurrent logins, revoke every earlier refresh token so only the
-   * session created by this sign-in survives. Access tokens are short lived and are not revoked.
+   * Keeps the user's session bookkeeping in step with a new sign-in.
+   *
+   * <p>A fresh session id is minted on every sign-in so access tokens from earlier sessions carry a
+   * stale {@code sid}. When the user has disallowed concurrent logins, every earlier refresh token
+   * is revoked too, so only the session created by this sign-in survives. Access tokens are short
+   * lived and are not revoked; the stale {@code sid} is what lets the filter reject them.
    */
   private void enforceSingleSession(User user) {
-    if (user != null && !user.isConcurrentLoginAllowed()) {
+    if (user == null) {
+      return;
+    }
+    user.setActiveSessionId(UUID.randomUUID().toString());
+    userRepository.save(user);
+    if (!user.isConcurrentLoginAllowed()) {
       refreshTokenRepository.revokeAllByUserId(user.getId());
     }
   }

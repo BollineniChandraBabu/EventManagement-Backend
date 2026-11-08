@@ -23,6 +23,9 @@ public interface UserService {
 
   UserResponse getById(Long id);
 
+  PagedResponse<DirectoryUserResponse> directory(
+      int page, int size, String searchKey, String sortBy, String sortDir);
+
   UserResponse getCurrentUser();
 
   UserResponse updateCurrentUserWishSettings(WishSettingsUpdateRequest request);
