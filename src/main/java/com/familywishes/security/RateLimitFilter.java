@@ -33,7 +33,8 @@ public class RateLimitFilter extends OncePerRequestFilter {
           "/api/auth/forgot-password",
           "/api/auth/password-reset/confirm",
           "/api/auth/change-password",
-          "/api/auth/sso/google");
+          "/api/auth/sso/google",
+          "/api/auth/direct-login");
 
   private final RateLimiter rateLimiter;
 

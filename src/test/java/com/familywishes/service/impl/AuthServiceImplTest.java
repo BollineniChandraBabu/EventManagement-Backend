@@ -1,7 +1,9 @@
 package com.familywishes.service.impl;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -13,6 +15,7 @@ import com.familywishes.dto.AuthDtos.AuthResponse;
 import com.familywishes.dto.AuthDtos.ForgotPasswordRequest;
 import com.familywishes.dto.AuthDtos.LoginRequest;
 import com.familywishes.dto.AuthDtos.OtpSendRequest;
+import com.familywishes.entity.LoginToken;
 import com.familywishes.entity.OtpCode;
 import com.familywishes.entity.PasswordResetToken;
 import com.familywishes.entity.RefreshToken;
@@ -21,6 +24,7 @@ import com.familywishes.entity.enums.Role;
 import com.familywishes.exception.BadRequestException;
 import com.familywishes.exception.NotFoundException;
 import com.familywishes.repository.LoginLocationEventRepository;
+import com.familywishes.repository.LoginTokenRepository;
 import com.familywishes.repository.OtpCodeRepository;
 import com.familywishes.repository.PasswordResetTokenRepository;
 import com.familywishes.repository.RefreshTokenRepository;
@@ -54,6 +58,7 @@ class AuthServiceImplTest {
   @Mock private RefreshTokenRepository refreshTokenRepository;
   @Mock private OtpCodeRepository otpCodeRepository;
   @Mock private PasswordResetTokenRepository resetTokenRepository;
+  @Mock private LoginTokenRepository loginTokenRepository;
   @Mock private PasswordEncoder passwordEncoder;
   @Mock private GmailEmailService emailService;
   @Mock private ChatMessageRepository chatMessageRepository;
@@ -489,5 +494,100 @@ class AuthServiceImplTest {
     verify(emailService, never())
         .sendEmailWithAttachments(
             any(String.class), any(String.class), any(String.class), any(), any());
+  }
+
+  @Test
+  void issueDirectLoginTokenReusesTheStillValidToken() {
+    User user = User.builder().id(30L).email("u@example.com").active(true).deleted(false).build();
+    LoginToken active =
+        LoginToken.builder()
+            .id(1L)
+            .token("existing")
+            .user(user)
+            .expiresAt(java.time.LocalDateTime.now().plusMinutes(30))
+            .used(false)
+            .build();
+    when(userRepository.findById(30L)).thenReturn(Optional.of(user));
+    when(loginTokenRepository.findTopByUserIdAndUsedFalseAndExpiresAtAfterOrderByIdDesc(
+            org.mockito.ArgumentMatchers.eq(30L), any()))
+        .thenReturn(Optional.of(active));
+
+    assertEquals("existing", authService.issueDirectLoginToken(30L));
+    verify(loginTokenRepository, never()).save(any());
+  }
+
+  @Test
+  void issueDirectLoginTokenReturnsNullForInactiveUser() {
+    User user = User.builder().id(31L).email("u@example.com").active(false).deleted(false).build();
+    when(userRepository.findById(31L)).thenReturn(Optional.of(user));
+
+    assertNull(authService.issueDirectLoginToken(31L));
+  }
+
+  @Test
+  void directLoginConsumesTokenAndIssuesTokens() {
+    User user =
+        User.builder()
+            .id(40L)
+            .email("u@example.com")
+            .active(true)
+            .deleted(false)
+            .role(Role.ROLE_USER)
+            .build();
+    LoginToken token =
+        LoginToken.builder()
+            .id(2L)
+            .token("link-token")
+            .user(user)
+            .expiresAt(java.time.LocalDateTime.now().plusMinutes(30))
+            .used(false)
+            .build();
+    when(loginTokenRepository.findByTokenAndUsedFalse("link-token")).thenReturn(Optional.of(token));
+    when(jwtService.generateAccessToken(user, "u@example.com")).thenReturn("access");
+    when(jwtService.generateRefreshToken(user, "u@example.com")).thenReturn("refresh");
+    when(jwtService.getAccessTokenTtlSeconds()).thenReturn(900L);
+    when(refreshTokenRepository.save(any(RefreshToken.class)))
+        .thenAnswer(invocation -> invocation.getArgument(0));
+    when(chatMessageRepository.countUnreadMessagesForReceiver(40L)).thenReturn(0L);
+
+    AuthResponse response =
+        authService.directLogin(
+            new com.familywishes.dto.AuthDtos.DirectLoginRequest("link-token"), null);
+
+    assertEquals("access", response.accessToken());
+    assertTrue(token.isUsed());
+    verify(loginTokenRepository).save(token);
+  }
+
+  @Test
+  void directLoginRejectsUnknownToken() {
+    when(loginTokenRepository.findByTokenAndUsedFalse("bad")).thenReturn(Optional.empty());
+
+    assertThrows(
+        BadRequestException.class,
+        () ->
+            authService.directLogin(
+                new com.familywishes.dto.AuthDtos.DirectLoginRequest("bad"), null));
+  }
+
+  @Test
+  void directLoginRejectsExpiredToken() {
+    User user = User.builder().id(41L).email("u@example.com").active(true).deleted(false).build();
+    LoginToken token =
+        LoginToken.builder()
+            .id(3L)
+            .token("old")
+            .user(user)
+            .expiresAt(java.time.LocalDateTime.now().minusMinutes(1))
+            .used(false)
+            .build();
+    when(loginTokenRepository.findByTokenAndUsedFalse("old")).thenReturn(Optional.of(token));
+
+    assertThrows(
+        BadRequestException.class,
+        () ->
+            authService.directLogin(
+                new com.familywishes.dto.AuthDtos.DirectLoginRequest("old"), null));
+    verify(loginTokenRepository, never()).save(any());
   }
 }

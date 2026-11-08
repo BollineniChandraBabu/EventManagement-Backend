@@ -62,6 +62,12 @@ gradle clean bootJar
 - `CALENDARIFIC_API_KEY`
 - `CALENDARIFIC_COUNTRY` (default `IN`)
 - `CALENDARIFIC_API_URL` (default `https://calendarific.com/api/v2/holidays`)
+- `UI_BASE_URL` (default `https://chandu-goldengreetings.web.app`) — one base for every emailed deep link
+- `PASSWORD_RESET_UI_URL` (optional override; defaults to `${UI_BASE_URL}/reset-password`)
+- `CIRCLE_REQUEST_LOGIN_URL` (optional override; defaults to `${UI_BASE_URL}/circles`)
+- `CIRCLE_REQUEST_LOGIN_TTL_MINUTES` (default `60`)
+- `APP_CHAT_CIRCLES_ONLY` (default `false`)
+- `APP_MEDIA_GZIP_ENABLED` (default `true`)
 
 ## Database reference
 - Primary PostgreSQL database is hosted on Neon.
@@ -246,6 +252,12 @@ Circles are stored in the `circles` table (one row per pair, with a direction un
 - `POST /api/circles/requests/accept` and `POST /api/circles/requests/reject` act on `{"circleId": 5}`. Only the addressee can respond.
 - `DELETE /api/circles` removes a circle (`{"circleId": 5}`).
 - `GET /api/circles/status/{userId}` reports whether a user is in your circle.
+
+When a **new** request is created (`POST /api/circles/requests`), the addressee gets a notification email with a one-click sign-in link. The link opens the circles page and signs the user in directly, with no password. It is a single-use `login_tokens` row that expires after `app.circle.request.login-ttl-minutes` (env `CIRCLE_REQUEST_LOGIN_TTL_MINUTES`, default 60). Repeated emails reuse the same still-valid link.
+
+- The link target is `app.circle.request.login-url` (env `CIRCLE_REQUEST_LOGIN_URL`, default `${UI_BASE_URL}/circles`).
+- The app opens it as `<login-url>?token=<token>&email=<email>` and calls `POST /api/auth/direct-login` (`{"token": "...", "email": "..."}`), which returns the usual access and refresh tokens.
+- The email is sent asynchronously; a mail failure never blocks the circle request.
 
 Chat stays open to everyone by default. Set `app.chat.circles-only=true` (env `APP_CHAT_CIRCLES_ONLY`) to allow messaging only between users in each other's circle.
 

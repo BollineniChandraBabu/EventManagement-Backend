@@ -35,6 +35,14 @@ Notes:
 - Circles live in `circles` (entity `Circle`, `CircleRepository`,
   `CircleServiceImpl`, `CircleController` under `/api/circles`). Chat allows only
   accepted circles when `app.chat.circles-only=true`.
+- A new circle request emails the addressee a one-click direct-login link (`EmailType.CIRCLE_REQUEST`,
+  entity `LoginToken`). `CircleServiceImpl.notifyAddressee` issues the token and mails the link;
+  `AuthServiceImpl.directLogin` (endpoint `POST /api/auth/direct-login`) consumes it and returns JWT
+  tokens. Link base is `app.circle.request.login-url` (default `${app.ui.base-url}/circles`); TTL is
+  `app.circle.request.login-ttl-minutes`.
+- Emailed deep links all derive from one property, `app.ui.base-url` (env `UI_BASE_URL`):
+  `app.login.ui-url`, `app.password-reset.ui-url`, `app.circle.request.login-url`. Each can be
+  overridden individually (e.g. `PASSWORD_RESET_UI_URL`).
 - `User.concurrentLoginAllowed` (default true) gates single-session sign-in. `AuthServiceImpl`
   calls `enforceSingleSession`, which revokes earlier refresh tokens when the flag is false.
   `UserServiceImpl.updateConcurrentLogin` allows an admin or the user themselves.
