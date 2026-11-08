@@ -7,7 +7,10 @@ import com.familywishes.entity.User;
 import com.familywishes.exception.BadRequestException;
 import com.familywishes.exception.NotFoundException;
 import com.familywishes.repository.UserRepository;
+import com.familywishes.service.CircleService;
 import com.familywishes.service.impl.SupabaseStorageService;
+import com.familywishes.util.MediaContentTypes;
+import com.familywishes.util.MediaValidation;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.List;
@@ -29,9 +32,14 @@ public class ChatServiceImpl implements ChatService {
   private final UserRepository userRepository;
   private final SupabaseStorageService storageService;
   private final ChatRealtimePublisher realtimePublisher;
+  private final CircleService circleService;
 
   @Value("${scheduler.time-zone:Asia/Kolkata}")
   private String schedulerTimeZone;
+
+  /** When true, users may only message people in their circle. Off by default. */
+  @Value("${app.chat.circles-only:false}")
+  private boolean circlesOnlyChat;
 
   @Override
   public List<ChatUserResponse> listAvailableUsers() {
@@ -154,6 +162,8 @@ public class ChatServiceImpl implements ChatService {
             .filter(u -> !u.isDeleted() && u.isActive())
             .orElseThrow(() -> new NotFoundException("Receiver not found"));
 
+    ensureCanMessage(me.getId(), receiver.getId());
+
     String text = request.messageText() == null ? "" : request.messageText().trim();
     String encryptedMessage =
         request.encryptedMessage() == null ? null : request.encryptedMessage().trim();
@@ -174,9 +184,9 @@ public class ChatServiceImpl implements ChatService {
     String contentType = null;
 
     if (attachment != null && !attachment.isEmpty()) {
+      contentType = MediaValidation.validateAttachmentAndDetect(attachment);
       attachmentKey = storageService.uploadChatAttachment(attachment);
       fileName = attachment.getOriginalFilename();
-      contentType = attachment.getContentType();
     }
 
     LocalDateTime now = nowIst();
@@ -244,6 +254,8 @@ public class ChatServiceImpl implements ChatService {
             .findById(receiverId)
             .filter(u -> !u.isDeleted() && u.isActive())
             .orElseThrow(() -> new NotFoundException("Receiver not found"));
+
+    ensureCanMessage(sender.getId(), receiver.getId());
 
     String text = messageText == null ? "" : messageText.trim();
     String normalizedEncryptedMessage = normalizeNullable(encryptedMessage);
@@ -528,17 +540,27 @@ public class ChatServiceImpl implements ChatService {
 
   @Override
   public byte[] downloadAttachment(Long messageId) {
+    return downloadAttachmentWithMeta(messageId).data();
+  }
+
+  @Override
+  public ChatAttachment downloadAttachmentWithMeta(Long messageId) {
     User me = currentUser();
-    String key = chatMessageRepository.findAttachmentKeyByMessageIdForUser(messageId, me.getId());
-    if (key == null || key.isBlank()) {
+    ChatMessageRepository.AttachmentMeta meta =
+        chatMessageRepository.findAttachmentByMessageIdForUser(messageId, me.getId());
+    if (meta == null || meta.objectKey() == null || meta.objectKey().isBlank()) {
       throw new NotFoundException("Attachment not found");
     }
 
-    byte[] data = storageService.downloadImage(key);
+    byte[] data = storageService.downloadImage(meta.objectKey());
     if (data == null || data.length == 0) {
       throw new NotFoundException("Attachment not found");
     }
-    return data;
+    String contentType =
+        meta.contentType() != null && !meta.contentType().isBlank()
+            ? meta.contentType()
+            : MediaContentTypes.detect(data);
+    return new ChatAttachment(data, contentType, meta.fileName());
   }
 
   @Override
@@ -745,6 +767,12 @@ public class ChatServiceImpl implements ChatService {
     user.setLastSeenAt(nowIst());
     userRepository.save(user);
     realtimePublisher.publishPresence(user.getId(), online, String.valueOf(user.getLastSeenAt()));
+  }
+
+  private void ensureCanMessage(Long senderId, Long receiverId) {
+    if (circlesOnlyChat && !circleService.areInCircle(senderId, receiverId)) {
+      throw new BadRequestException("You can only message users in your circle");
+    }
   }
 
   private User currentUser() {

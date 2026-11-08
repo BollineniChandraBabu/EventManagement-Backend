@@ -21,9 +21,10 @@ public class UserDtos {
       boolean isGoodNightEnabled,
       boolean isBirthdayEnabled,
       @Size(max = 500) String birthdayWishesUrl,
-      boolean mfaEnabled) {
+      boolean mfaEnabled,
+      boolean concurrentLoginAllowed) {
 
-    /** Without a wishes link or MFA choice (both default to off). */
+    /** Without a wishes link or MFA/concurrent-login choice (both default to off/on). */
     public UserRequest(
         String name,
         String email,
@@ -45,10 +46,11 @@ public class UserDtos {
           isGoodNightEnabled,
           isBirthdayEnabled,
           null,
-          false);
+          false,
+          true);
     }
 
-    /** Without an MFA choice (defaults to off). */
+    /** Without an MFA or concurrent-login choice (MFA off, concurrent logins allowed). */
     public UserRequest(
         String name,
         String email,
@@ -71,7 +73,8 @@ public class UserDtos {
           isGoodNightEnabled,
           isBirthdayEnabled,
           birthdayWishesUrl,
-          false);
+          false,
+          true);
     }
   }
 
@@ -79,6 +82,8 @@ public class UserDtos {
       Boolean isGoodMorningEnabled, Boolean isGoodNightEnabled, Boolean isBirthdayEnabled) {}
 
   public record MfaUpdateRequest(@NotNull Boolean mfaEnabled) {}
+
+  public record ConcurrentLoginUpdateRequest(@NotNull Boolean concurrentLoginAllowed) {}
 
   public record UserStatusUpdateRequest(@NotNull Boolean active) {}
 
@@ -106,5 +111,6 @@ public class UserDtos {
       LocalDateTime lastSeenAt,
       String profilePictureUrl,
       String birthdayWishesUrl,
-      boolean mfaEnabled) {}
+      boolean mfaEnabled,
+      boolean concurrentLoginAllowed) {}
 }

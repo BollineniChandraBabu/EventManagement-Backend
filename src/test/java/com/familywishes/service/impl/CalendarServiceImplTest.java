@@ -51,7 +51,8 @@ class CalendarServiceImplTest {
         null,
         null,
         null,
-        false);
+        false,
+        true);
   }
 
   @Test

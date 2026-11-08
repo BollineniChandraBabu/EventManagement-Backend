@@ -2,7 +2,7 @@ package com.familywishes.service.impl;
 
 import com.familywishes.config.CacheNames;
 import com.familywishes.dto.EmailImage;
-import com.familywishes.util.ImageContentTypes;
+import com.familywishes.util.MediaContentTypes;
 import lombok.RequiredArgsConstructor;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
@@ -13,8 +13,8 @@ import org.springframework.stereotype.Service;
  * same preview twice does not download it twice.
  *
  * <p>This is a separate bean (not a method of the email service) because Spring applies caching
- * through a proxy, which a call from inside the same class would bypass. It does no access
- * checks: callers must verify the user may see the email before calling {@link #load}.
+ * through a proxy, which a call from inside the same class would bypass. It does no access checks:
+ * callers must verify the user may see the email before calling {@link #load}.
  */
 @Service
 @RequiredArgsConstructor
@@ -29,7 +29,7 @@ public class EmailImageService {
     if (data == null || data.length == 0) {
       return null;
     }
-    return new EmailImage(data, ImageContentTypes.detect(data));
+    return new EmailImage(data, MediaContentTypes.detect(data));
   }
 
   @CacheEvict(cacheNames = CacheNames.EMAIL_IMAGES, key = "#emailLogId")

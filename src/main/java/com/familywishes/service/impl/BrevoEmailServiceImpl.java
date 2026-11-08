@@ -8,6 +8,7 @@ import com.familywishes.repository.EmailLogRepository;
 import com.familywishes.repository.UserRepository;
 import com.familywishes.service.BrevoEmailService;
 import com.familywishes.util.EmailTemplateBuilder;
+import com.familywishes.util.MediaContentTypes;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.*;
@@ -86,12 +87,21 @@ public class BrevoEmailServiceImpl implements BrevoEmailService {
       // Recipient
       body.put("to", List.of(Map.of("email", to)));
       body.put("subject", subject);
-      // ========================
-      // INLINE IMAGE SUPPORT
-      // ========================
+      // Inline images are shown in the email body; other media types are sent as attachments.
       Map<String, String> inlineImages = new HashMap<>();
+      List<Map<String, String>> attachments = new ArrayList<>();
       if (image != null) {
-        inlineImages.put("birthdayImage", Base64.getEncoder().encodeToString(image));
+        String mediaType = MediaContentTypes.detect(image);
+        if (MediaContentTypes.isImage(mediaType)) {
+          inlineImages.put("birthdayImage", Base64.getEncoder().encodeToString(image));
+        } else {
+          attachments.add(
+              Map.of(
+                  "content",
+                  Base64.getEncoder().encodeToString(image),
+                  "name",
+                  "wish-media" + MediaContentTypes.fileExtension(mediaType)));
+        }
       }
       if (signatureImage != null && signatureImage.length > 0) {
         inlineImages.put("emailSignature", Base64.getEncoder().encodeToString(signatureImage));
@@ -99,6 +109,9 @@ public class BrevoEmailServiceImpl implements BrevoEmailService {
       body.put("htmlContent", finalHtml);
       if (!inlineImages.isEmpty()) {
         body.put("inlineImage", inlineImages);
+      }
+      if (!attachments.isEmpty()) {
+        body.put("attachment", attachments);
       }
       HttpEntity<Map<String, Object>> request = new HttpEntity<>(body, headers);
       ResponseEntity<String> response = restTemplate.postForEntity(brevoUrl, request, String.class);

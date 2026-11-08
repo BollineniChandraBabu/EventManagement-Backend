@@ -110,6 +110,8 @@ public class AuthServiceImpl implements AuthService {
         throw new BadRequestException("MFA_OTP_REQUIRED");
       }
 
+      enforceSingleSession(user);
+
       String access = jwtService.generateAccessToken(user, user.getEmail());
       String refresh = jwtService.generateRefreshToken(user, user.getEmail());
       refreshTokenRepository.save(
@@ -404,6 +406,7 @@ public class AuthServiceImpl implements AuthService {
     }
     otp.setUsed(true);
     otpCodeRepository.save(otp);
+    enforceSingleSession(user);
     String access = jwtService.generateAccessToken(user);
     String refresh = jwtService.generateRefreshToken(user);
     refreshTokenRepository.save(
@@ -435,6 +438,7 @@ public class AuthServiceImpl implements AuthService {
     }
     otp.setUsed(true);
     otpCodeRepository.save(otp);
+    enforceSingleSession(user);
     String access = jwtService.generateAccessToken(user);
     String refresh = jwtService.generateRefreshToken(user);
     refreshTokenRepository.save(
@@ -636,6 +640,8 @@ public class AuthServiceImpl implements AuthService {
       throw new BadRequestException("MFA_OTP_REQUIRED");
     }
 
+    enforceSingleSession(user);
+
     String access = jwtService.generateAccessToken(user, user.getEmail());
     String refresh = jwtService.generateRefreshToken(user, user.getEmail());
     refreshTokenRepository.save(
@@ -687,6 +693,16 @@ public class AuthServiceImpl implements AuthService {
         user.getRole().name(),
         jwtService.getAccessTokenTtlSeconds(),
         chatMessageRepository.countUnreadMessagesForReceiver(user.getId()));
+  }
+
+  /**
+   * When the user has disallowed concurrent logins, revoke every earlier refresh token so only the
+   * session created by this sign-in survives. Access tokens are short lived and are not revoked.
+   */
+  private void enforceSingleSession(User user) {
+    if (user != null && !user.isConcurrentLoginAllowed()) {
+      refreshTokenRepository.revokeAllByUserId(user.getId());
+    }
   }
 
   public AuthSSOClientResponse getSSOAuthToken() {

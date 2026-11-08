@@ -50,6 +50,9 @@ public class ChatDtos {
 
   public record MessageReactionRequest(@NotBlank String emoji) {}
 
+  /** A chat attachment with its media type and original name, used when downloading it. */
+  public record ChatAttachment(byte[] data, String contentType, String fileName) {}
+
   public record MessageReactionResponse(String emoji, long count, boolean mine) {}
 
   public record MessageReactionsResponse(Long messageId, List<MessageReactionResponse> reactions) {}

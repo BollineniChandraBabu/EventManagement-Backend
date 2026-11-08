@@ -5,7 +5,10 @@ import com.familywishes.chat.ChatService;
 import com.familywishes.dto.CommonDtos.PagedResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.ContentDisposition;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -60,11 +63,23 @@ public class ChatController {
     return chatService.getConversationMessages(otherUserId, page, size, markSeen);
   }
 
-  @GetMapping(
-      value = "/messages/{messageId}/attachment",
-      produces = MediaType.APPLICATION_OCTET_STREAM_VALUE)
-  public byte[] downloadAttachment(@PathVariable Long messageId) {
-    return chatService.downloadAttachment(messageId);
+  @GetMapping(value = "/messages/{messageId}/attachment")
+  public ResponseEntity<byte[]> downloadAttachment(@PathVariable Long messageId) {
+    ChatDtos.ChatAttachment attachment = chatService.downloadAttachmentWithMeta(messageId);
+    MediaType mediaType;
+    try {
+      mediaType = MediaType.parseMediaType(attachment.contentType());
+    } catch (Exception ex) {
+      mediaType = MediaType.APPLICATION_OCTET_STREAM;
+    }
+    ContentDisposition disposition =
+        ContentDisposition.inline()
+            .filename(attachment.fileName() == null ? "attachment" : attachment.fileName())
+            .build();
+    return ResponseEntity.ok()
+        .contentType(mediaType)
+        .header(HttpHeaders.CONTENT_DISPOSITION, disposition.toString())
+        .body(attachment.data());
   }
 
   @DeleteMapping("/messages/last/{otherUserId}")

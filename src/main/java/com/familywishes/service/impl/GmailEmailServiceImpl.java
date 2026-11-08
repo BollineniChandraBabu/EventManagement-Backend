@@ -13,6 +13,7 @@ import com.familywishes.repository.EventTypeSeedRepository;
 import com.familywishes.repository.UserRepository;
 import com.familywishes.service.GmailEmailService;
 import com.familywishes.util.EmailTemplateBuilder;
+import com.familywishes.util.MediaContentTypes;
 import com.google.api.services.gmail.Gmail;
 import com.google.api.services.gmail.model.Message;
 import jakarta.mail.Session;
@@ -174,18 +175,26 @@ public class GmailEmailServiceImpl implements GmailEmailService {
 
     multipart.addBodyPart(htmlPart);
 
-    // INLINE IMAGE SUPPORT
-
+    // Uploaded media: images are shown inline, other types (video, PDF, ...) are attached.
     if (image != null) {
 
-      MimeBodyPart imagePart = new MimeBodyPart();
+      String mediaType = MediaContentTypes.detect(image);
 
-      imagePart.setDataHandler(
-          new jakarta.activation.DataHandler(new ByteArrayDataSource(image, "image/png")));
+      MimeBodyPart mediaPart = new MimeBodyPart();
 
-      imagePart.setHeader("Content-ID", "<birthdayImage>");
+      mediaPart.setDataHandler(
+          new jakarta.activation.DataHandler(new ByteArrayDataSource(image, mediaType)));
 
-      multipart.addBodyPart(imagePart);
+      if (MediaContentTypes.isImage(mediaType)) {
+
+        mediaPart.setHeader("Content-ID", "<birthdayImage>");
+
+      } else {
+
+        mediaPart.setFileName("wish-media" + MediaContentTypes.fileExtension(mediaType));
+      }
+
+      multipart.addBodyPart(mediaPart);
     }
 
     if (signatureImage != null && signatureImage.length > 0) {

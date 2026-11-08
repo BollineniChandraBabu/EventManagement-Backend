@@ -52,6 +52,8 @@ public interface ChatService {
 
   byte[] downloadAttachment(Long messageId);
 
+  ChatAttachment downloadAttachmentWithMeta(Long messageId);
+
   DeleteMessageResponse deleteLastSentMessage(Long otherUserId);
 
   DeleteMessageResponse deleteMessageById(Long messageId);
