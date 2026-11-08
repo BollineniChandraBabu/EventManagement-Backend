@@ -2,6 +2,8 @@ package com.familywishes.service.impl;
 
 import com.familywishes.entity.enums.EmailType;
 import com.familywishes.entity.enums.Gender;
+import com.familywishes.util.GzipUtil;
+import com.familywishes.util.MediaContentTypes;
 import java.net.URI;
 import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
@@ -39,6 +41,10 @@ public class SupabaseStorageService {
   private final String otherDefaultImagePath;
   private final String emailSignaturePath;
   private final S3Presigner presigner;
+
+  /** When true, stored media is gzipped and expanded again on download. */
+  @Value("${app.media.gzip.enabled:true}")
+  private boolean gzipEnabled;
 
   public SupabaseStorageService(
       @Value("${app.supabase.storage.endpoint}") String endpoint,
@@ -87,12 +93,16 @@ public class SupabaseStorageService {
 
     String folder = resolveFolder(emailType);
     String datePrefix = LocalDate.now().format(DateTimeFormatter.ISO_DATE);
-    String objectKey = folder + "/" + datePrefix + "/" + UUID.randomUUID() + ".png";
+    String contentType = MediaContentTypes.detect(imageData);
+    String objectKey =
+        folder
+            + "/"
+            + datePrefix
+            + "/"
+            + UUID.randomUUID()
+            + MediaContentTypes.fileExtension(contentType);
 
-    PutObjectRequest request =
-        PutObjectRequest.builder().bucket(bucket).key(objectKey).contentType("image/png").build();
-
-    s3Client.putObject(request, RequestBody.fromBytes(imageData));
+    putObject(objectKey, imageData, contentType);
     return objectKey;
   }
 
@@ -101,22 +111,14 @@ public class SupabaseStorageService {
       return null;
     }
     try {
-      String original = file.getOriginalFilename() == null ? "wish.png" : file.getOriginalFilename();
-      String safeName = original.replaceAll("[^a-zA-Z0-9._-]", "_");
+      String contentType = resolveContentType(file);
       String objectKey =
           "Wish Images/"
               + LocalDate.now().format(DateTimeFormatter.ISO_DATE)
               + "/"
               + UUID.randomUUID()
-              + "-"
-              + safeName;
-      PutObjectRequest request =
-          PutObjectRequest.builder()
-              .bucket(bucket)
-              .key(objectKey)
-              .contentType(file.getContentType())
-              .build();
-      s3Client.putObject(request, RequestBody.fromBytes(file.getBytes()));
+              + safeMediaName(file.getOriginalFilename(), contentType, "wish");
+      putObject(objectKey, file.getBytes(), contentType);
       return objectKey;
     } catch (Exception ex) {
       log.error("Failed to upload wish image", ex);
@@ -134,20 +136,16 @@ public class SupabaseStorageService {
     }
 
     try {
-      String original =
-          file.getOriginalFilename() == null ? "attachment" : file.getOriginalFilename();
-      String safeName = original.replaceAll("[^a-zA-Z0-9._-]", "_");
+      String contentType = resolveContentType(file);
       String datePrefix = LocalDate.now().format(DateTimeFormatter.ISO_DATE);
-      String objectKey = "Chat/" + datePrefix + "/" + UUID.randomUUID() + "-" + safeName;
+      String objectKey =
+          "Chat/"
+              + datePrefix
+              + "/"
+              + UUID.randomUUID()
+              + safeMediaName(file.getOriginalFilename(), contentType, "attachment");
 
-      PutObjectRequest request =
-          PutObjectRequest.builder()
-              .bucket(bucket)
-              .key(objectKey)
-              .contentType(file.getContentType())
-              .build();
-
-      s3Client.putObject(request, RequestBody.fromBytes(file.getBytes()));
+      putObject(objectKey, file.getBytes(), contentType);
       return objectKey;
     } catch (Exception ex) {
       log.error("Failed to upload chat attachment", ex);
@@ -160,9 +158,7 @@ public class SupabaseStorageService {
       return null;
     }
     try {
-      String original =
-          file.getOriginalFilename() == null ? "profile.png" : file.getOriginalFilename();
-      String safeName = original.replaceAll("[^a-zA-Z0-9._-]", "_");
+      String contentType = resolveContentType(file);
       String datePrefix = LocalDate.now().format(DateTimeFormatter.ISO_DATE);
       String objectKey =
           "Profile Pictures/"
@@ -171,15 +167,8 @@ public class SupabaseStorageService {
               + datePrefix
               + "/"
               + UUID.randomUUID()
-              + "-"
-              + safeName;
-      PutObjectRequest request =
-          PutObjectRequest.builder()
-              .bucket(bucket)
-              .key(objectKey)
-              .contentType(file.getContentType() == null ? "image/png" : file.getContentType())
-              .build();
-      s3Client.putObject(request, RequestBody.fromBytes(file.getBytes()));
+              + safeMediaName(file.getOriginalFilename(), contentType, "profile");
+      putObject(objectKey, file.getBytes(), contentType);
       return objectKey;
     } catch (Exception ex) {
       log.error("Failed to upload profile picture", ex);
@@ -195,7 +184,7 @@ public class SupabaseStorageService {
     String objectKey =
         "Profile Pictures/" + userId + "/" + datePrefix + "/" + UUID.randomUUID() + "-" + safeName;
     String uploadContentType =
-        contentType == null || contentType.isBlank() ? "image/png" : contentType;
+        contentType == null || contentType.isBlank() ? MediaContentTypes.PNG : contentType;
 
     PutObjectRequest putObjectRequest =
         PutObjectRequest.builder()
@@ -300,7 +289,8 @@ public class SupabaseStorageService {
 
     try {
       GetObjectRequest request = GetObjectRequest.builder().bucket(bucket).key(objectKey).build();
-      return s3Client.getObjectAsBytes(request).asByteArray();
+      byte[] data = s3Client.getObjectAsBytes(request).asByteArray();
+      return gzipEnabled ? GzipUtil.decompress(data) : data;
     } catch (Exception ex) {
       log.warn("Failed to download image from Supabase storage for key={}", objectKey, ex);
       return null;
@@ -321,6 +311,44 @@ public class SupabaseStorageService {
       log.warn("Failed to delete object from Supabase storage for key={}", objectKey, ex);
       return false;
     }
+  }
+
+  /**
+   * Gzips the media (unless disabled) and stores it, labelling the object so readers can decode.
+   */
+  private void putObject(String objectKey, byte[] data, String contentType) {
+    byte[] payload = gzipEnabled ? GzipUtil.compress(data) : data;
+    PutObjectRequest.Builder request =
+        PutObjectRequest.builder().bucket(bucket).key(objectKey).contentType(contentType);
+    if (gzipEnabled && GzipUtil.isGzipped(payload)) {
+      // Content-Encoding lets a browser decode a presigned/public URL transparently.
+      request.contentEncoding("gzip");
+    }
+    s3Client.putObject(request.build(), RequestBody.fromBytes(payload));
+  }
+
+  /** Uses the media type worked out from the bytes so the stored object type is always honest. */
+  private String resolveContentType(MultipartFile file) {
+    try {
+      return MediaContentTypes.detect(file.getBytes());
+    } catch (Exception ex) {
+      String declared = file.getContentType();
+      return declared == null || declared.isBlank() ? MediaContentTypes.DEFAULT : declared;
+    }
+  }
+
+  /** Keeps the original name where it is safe, and gives the file a matching extension. */
+  private String safeMediaName(String originalFilename, String contentType, String fallback) {
+    String original =
+        originalFilename == null || originalFilename.isBlank() ? fallback : originalFilename;
+    String safeName = original.replaceAll("[^a-zA-Z0-9._-]", "_");
+    String extension = MediaContentTypes.fileExtension(contentType);
+    int dot = safeName.lastIndexOf('.');
+    String base = dot > 0 ? safeName.substring(0, dot) : safeName;
+    if (base.isBlank()) {
+      base = fallback;
+    }
+    return base + extension;
   }
 
   private String resolveFolder(EmailType emailType) {

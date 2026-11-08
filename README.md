@@ -6,6 +6,9 @@ Production-ready Spring Boot 3.x (Java 17) backend for family wish automation.
 - JWT auth + refresh tokens
 - OTP login and forgot/reset password
 - Role-based user management
+- Circles and circle requests
+- Concurrent login control (single-session option per user)
+- Media uploads (image, video, audio, PDF) with gzip at rest and gzip responses
 - Event management + admin-managed festival seed table for scheduler templates
 - Calendarific festival sync (monthly)
 - Festival-to-user mapping with auto-send scheduler
@@ -216,7 +219,44 @@ Uploaded images (`/wish-images`) are chosen first, otherwise an image is generat
 3. for festivals, the same two steps for the general `Festival` type,
 4. otherwise a generated image.
 
-Event types are not case-sensitive, and codes such as `WEDDING_ANNIVERSARY` also match images named `Wedding Anniversary`. Uploads must be real PNG, JPEG, GIF or WebP files up to 5 MB (SVG is rejected, and the file's bytes are checked, not only its content type). Anniversary and other event emails now get an image too (they used to be sent without one).
+Event types are not case-sensitive, and codes such as `WEDDING_ANNIVERSARY` also match images named `Wedding Anniversary`. Anniversary and other event emails now get an image too (they used to be sent without one).
+
+## Uploaded media types
+Uploads for wishes (`/wish-images`, `/api/events/with-image`, `/api/festival-wish-mappings/with-image`) and chat attachments accept any supported media, not only images:
+
+| Kind | Formats | Size limit |
+|---|---|---|
+| Image | PNG, JPEG, GIF, WebP, BMP | 5 MB |
+| Video | MP4, WebM, MOV, AVI, MKV, MPEG, 3GP | 50 MB |
+| Audio | MP3, WAV, OGG, M4A, FLAC | 10 MB |
+| Document | PDF | 20 MB |
+
+Validation lives in `MediaValidation` and detection in `MediaContentTypes`. The file's first bytes decide the real type, so a renamed file (for example an SVG called `.png`) is rejected; the declared content type is only accepted when it agrees with the bytes. The stored object keeps the detected content type and a matching extension.
+
+Profile pictures stay image-only. When an email carries an uploaded image it is shown inline (`cid:birthdayImage`); other media types are sent as attachments instead. Chat attachments are served back with their real content type and file name. The multipart request limit is 50 MB (`spring.servlet.multipart.max-file-size`).
+
+### gzip compression
+Uploaded media is gzipped before it is stored and expanded again on download. The stored object is labelled `Content-Encoding: gzip`, so a presigned or public URL still renders in a browser. This is on by default and controlled by `app.media.gzip.enabled` (env `APP_MEDIA_GZIP_ENABLED`). JSON and other text responses are compressed by Spring Boot as well (`server.compression.enabled=true`).
+
+## Circles and circle requests
+Circles are stored in the `circles` table (one row per pair, with a direction until accepted).
+
+- `GET /api/circles` returns `circles`, `incomingRequests` and `outgoingRequests`.
+- `POST /api/circles/requests` sends a request (`{"userId": 2}`). Sending to someone who already asked you accepts it instead.
+- `POST /api/circles/requests/accept` and `POST /api/circles/requests/reject` act on `{"circleId": 5}`. Only the addressee can respond.
+- `DELETE /api/circles` removes a circle (`{"circleId": 5}`).
+- `GET /api/circles/status/{userId}` reports whether a user is in your circle.
+
+Chat stays open to everyone by default. Set `app.chat.circles-only=true` (env `APP_CHAT_CIRCLES_ONLY`) to allow messaging only between users in each other's circle.
+
+## Concurrent login control
+Each user has a `concurrentLoginAllowed` flag that defaults to **true** (concurrent logins allowed).
+
+- Admin create/update (`POST /api/users`, `PUT /api/users`) set the flag from the request body.
+- `PATCH /api/users/me/concurrent-login` lets a signed-in user change their own flag (`{"concurrentLoginAllowed": false}`).
+- `PATCH /api/users/{id}/concurrent-login` is allowed for an admin, or for the user themselves.
+
+When the flag is `false`, a successful sign-in revokes that user's earlier refresh tokens, so only the newest session survives. Access tokens are short lived and are not revoked.
 
 ## Festival wishes API
 - `POST /api/festival-wish-mappings/bulk` maps one festival to many users (existing mappings are updated).
@@ -250,4 +290,3 @@ Theme styles are seeded into the `theme_seeds` table at startup. Each row stores
 - `PUT /api/themes/me` saves the signed-in user's selected theme by its technical name (`{ "theme": "liquid-glass" }`) and returns the stored value. Unknown themes are rejected with `400`.
 
 The user's choice is stored in `user_theme_preferences`, whose `theme` column defaults to `default`.
-

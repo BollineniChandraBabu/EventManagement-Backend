@@ -9,13 +9,10 @@ import com.familywishes.exception.NotFoundException;
 import com.familywishes.repository.UserRepository;
 import com.familywishes.repository.WishImageRepository;
 import com.familywishes.service.WishImageService;
-import com.familywishes.util.ImageContentTypes;
-import java.io.IOException;
+import com.familywishes.util.MediaValidation;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import java.util.Locale;
-import java.util.Set;
 import java.util.concurrent.ThreadLocalRandom;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -33,9 +30,6 @@ public class WishImageServiceImpl implements WishImageService {
   private final WishImageRepository wishImageRepository;
   private final UserRepository userRepository;
   private static final int MAX_EVENT_TYPE_LENGTH = 150; // size of the event_type column
-  private static final long MAX_IMAGE_BYTES = 5L * 1024 * 1024;
-  private static final Set<String> ALLOWED_IMAGE_TYPES =
-      Set.of("image/png", "image/jpeg", "image/gif", "image/webp");
 
   private final SupabaseStorageService storageService;
 
@@ -234,29 +228,9 @@ public class WishImageServiceImpl implements WishImageService {
     return eventType;
   }
 
-  /** Only real PNG, JPEG, GIF and WebP images up to 5 MB (no SVG, which can carry scripts). */
+  /** A real image, video, audio clip or PDF within the size limit for its type. */
   private void validateImage(MultipartFile file) {
-    if (file == null || file.isEmpty()) {
-      throw new BadRequestException("A non-empty image file is required");
-    }
-    if (file.getSize() > MAX_IMAGE_BYTES) {
-      throw new BadRequestException("The image must be 5 MB or smaller");
-    }
-    String declaredType =
-        file.getContentType() == null ? "" : file.getContentType().toLowerCase(Locale.ROOT);
-    if (!ALLOWED_IMAGE_TYPES.contains(declaredType)
-        || !ALLOWED_IMAGE_TYPES.contains(detectType(file))) {
-      throw new BadRequestException("Only PNG, JPEG, GIF or WebP images are allowed");
-    }
-  }
-
-  /** Looks at the file's first bytes, so a renamed file cannot pass as an image. */
-  private String detectType(MultipartFile file) {
-    try {
-      return ImageContentTypes.detect(file.getBytes());
-    } catch (IOException e) {
-      throw new BadRequestException("The image could not be read");
-    }
+    MediaValidation.validate(file);
   }
 
   private String upload(MultipartFile file) {

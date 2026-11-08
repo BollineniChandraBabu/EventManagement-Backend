@@ -53,6 +53,19 @@ public class User extends ActivatableEntity {
   @Builder.Default
   private boolean mfaEnabled = false;
 
+  /**
+   * When false, a new sign-in revokes the user's earlier sessions so only one stays active.
+   * Defaults to true (concurrent logins allowed). The DB default keeps existing rows valid on
+   * migration.
+   */
+  @Column(
+      name = "concurrent_login_allowed",
+      nullable = false,
+      columnDefinition = "SMALLINT DEFAULT 1")
+  @Convert(converter = BooleanToZeroOneConverter.class)
+  @Builder.Default
+  private boolean concurrentLoginAllowed = true;
+
   @ManyToOne(fetch = FetchType.EAGER)
   @JoinColumn(name = "relationship_seed_id", nullable = false)
   private RelationshipSeed relationShip;

@@ -404,6 +404,62 @@ class AuthServiceImplTest {
   }
 
   @Test
+  void loginShouldRevokeEarlierSessionsWhenConcurrentLoginIsDisallowed() {
+    User user =
+        User.builder()
+            .id(21L)
+            .email("single@example.com")
+            .password("encoded")
+            .role(Role.ROLE_USER)
+            .active(true)
+            .concurrentLoginAllowed(false)
+            .build();
+
+    when(userRepository.findByEmailAndDeletedFalse("single@example.com"))
+        .thenReturn(Optional.of(user));
+    when(authManager.authenticate(any(UsernamePasswordAuthenticationToken.class)))
+        .thenReturn(new UsernamePasswordAuthenticationToken("single@example.com", "correct"));
+    when(jwtService.generateAccessToken(user, "single@example.com")).thenReturn("access-token");
+    when(jwtService.generateRefreshToken(user, "single@example.com")).thenReturn("refresh-token");
+    when(jwtService.getAccessTokenTtlSeconds()).thenReturn(900L);
+    when(refreshTokenRepository.save(any(RefreshToken.class)))
+        .thenAnswer(invocation -> invocation.getArgument(0));
+    when(chatMessageRepository.countUnreadMessagesForReceiver(21L)).thenReturn(0L);
+
+    authService.login(new LoginRequest("single@example.com", "correct"));
+
+    verify(refreshTokenRepository).revokeAllByUserId(21L);
+  }
+
+  @Test
+  void loginShouldKeepEarlierSessionsWhenConcurrentLoginIsAllowed() {
+    User user =
+        User.builder()
+            .id(22L)
+            .email("multi@example.com")
+            .password("encoded")
+            .role(Role.ROLE_USER)
+            .active(true)
+            .concurrentLoginAllowed(true)
+            .build();
+
+    when(userRepository.findByEmailAndDeletedFalse("multi@example.com"))
+        .thenReturn(Optional.of(user));
+    when(authManager.authenticate(any(UsernamePasswordAuthenticationToken.class)))
+        .thenReturn(new UsernamePasswordAuthenticationToken("multi@example.com", "correct"));
+    when(jwtService.generateAccessToken(user, "multi@example.com")).thenReturn("access-token");
+    when(jwtService.generateRefreshToken(user, "multi@example.com")).thenReturn("refresh-token");
+    when(jwtService.getAccessTokenTtlSeconds()).thenReturn(900L);
+    when(refreshTokenRepository.save(any(RefreshToken.class)))
+        .thenAnswer(invocation -> invocation.getArgument(0));
+    when(chatMessageRepository.countUnreadMessagesForReceiver(22L)).thenReturn(0L);
+
+    authService.login(new LoginRequest("multi@example.com", "correct"));
+
+    verify(refreshTokenRepository, never()).revokeAllByUserId(any());
+  }
+
+  @Test
   void forgotPasswordShouldFailWhenUserIsInactive() {
     User inactiveUser =
         User.builder().id(8L).email("inactive@example.com").active(false).deleted(false).build();

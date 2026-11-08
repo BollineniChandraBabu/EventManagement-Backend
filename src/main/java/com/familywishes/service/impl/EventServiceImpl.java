@@ -10,7 +10,7 @@ import com.familywishes.repository.EventRepository;
 import com.familywishes.repository.EventTypeSeedRepository;
 import com.familywishes.repository.UserRepository;
 import com.familywishes.service.EventService;
-import com.familywishes.util.ImageValidation;
+import com.familywishes.util.MediaValidation;
 import com.familywishes.util.WishesUrls;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
@@ -220,7 +220,7 @@ public class EventServiceImpl implements EventService {
     if (image == null || image.isEmpty()) {
       return null;
     }
-    ImageValidation.validate(image);
+    MediaValidation.validate(image);
     String objectKey = storageService.uploadWishImage(image);
     if (!StringUtils.hasText(objectKey)) {
       throw new BadRequestException("Unable to upload image to storage");

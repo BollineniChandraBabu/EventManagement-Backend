@@ -15,6 +15,7 @@ import com.familywishes.repository.RelationshipSeedRepository;
 import com.familywishes.repository.UserRepository;
 import com.familywishes.service.AiService;
 import com.familywishes.service.UserService;
+import com.familywishes.util.MediaValidation;
 import com.familywishes.util.WishEmailExtras;
 import com.familywishes.util.WishesUrls;
 import java.time.LocalDate;
@@ -62,6 +63,7 @@ public class UserServiceImpl implements UserService {
             .relationShip(resolveRelationship(request.relationShip()))
             .birthdayWishesUrl(normalizeWishesUrl(request.birthdayWishesUrl()))
             .mfaEnabled(request.mfaEnabled())
+            .concurrentLoginAllowed(request.concurrentLoginAllowed())
             .active(true)
             .deleted(false)
             .build();
@@ -105,7 +107,8 @@ public class UserServiceImpl implements UserService {
           user.getLastSeenAt(),
           resolveProfilePictureUrl(user),
           user.getBirthdayWishesUrl(),
-          user.isMfaEnabled());
+          user.isMfaEnabled(),
+          user.isConcurrentLoginAllowed());
     } else {
       return new UserResponse(
           user.getId(),
@@ -123,7 +126,8 @@ public class UserServiceImpl implements UserService {
           user.getLastSeenAt(),
           resolveProfilePictureUrl(user),
           user.getBirthdayWishesUrl(),
-          user.isMfaEnabled());
+          user.isMfaEnabled(),
+          user.isConcurrentLoginAllowed());
     }
   }
 
@@ -143,6 +147,7 @@ public class UserServiceImpl implements UserService {
     user.setRelationShip(resolveRelationship(request.relationShip()));
     user.setBirthdayWishesUrl(normalizeWishesUrl(request.birthdayWishesUrl())); // blank removes it
     user.setMfaEnabled(request.mfaEnabled());
+    user.setConcurrentLoginAllowed(request.concurrentLoginAllowed());
 
     UserWishSettings userWishSettings =
         user.getWishSettings() == null
@@ -253,6 +258,35 @@ public class UserServiceImpl implements UserService {
   }
 
   @Override
+  public UserResponse updateCurrentUserConcurrentLogin(ConcurrentLoginUpdateRequest request) {
+    User user = findAuthenticatedUser();
+    user.setConcurrentLoginAllowed(Boolean.TRUE.equals(request.concurrentLoginAllowed()));
+    user = userRepository.save(user);
+    return toUserResponse(user);
+  }
+
+  @Override
+  public UserResponse updateConcurrentLogin(Long id, ConcurrentLoginUpdateRequest request) {
+    User target =
+        userRepository.findById(id).orElseThrow(() -> new NotFoundException("User not found"));
+    if (!isAdminAuthenticated() && !isSelf(target)) {
+      throw new BadRequestException(
+          "Only admin can update another user's concurrent login setting");
+    }
+    target.setConcurrentLoginAllowed(Boolean.TRUE.equals(request.concurrentLoginAllowed()));
+    target = userRepository.save(target);
+    return toUserResponse(target);
+  }
+
+  private boolean isSelf(User target) {
+    Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+    return authentication != null
+        && authentication.isAuthenticated()
+        && target.getEmail() != null
+        && target.getEmail().equalsIgnoreCase(authentication.getName());
+  }
+
+  @Override
   public WishPreviewResponse getCurrentUserWishPreview() {
     User user = findAuthenticatedUser();
 
@@ -346,6 +380,7 @@ public class UserServiceImpl implements UserService {
     if (file == null || file.isEmpty()) {
       throw new BadRequestException("Profile picture file is required");
     }
+    MediaValidation.validateImage(file);
     User user = findAuthenticatedUser();
     if (user.getProfilePictureUrl() != null && !user.getProfilePictureUrl().isBlank()) {
       supabaseStorageService.deleteByPublicUrl(user.getProfilePictureUrl());

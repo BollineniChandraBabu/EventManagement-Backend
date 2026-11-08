@@ -15,6 +15,7 @@ import com.familywishes.repository.FestivalWishMappingRepository;
 import com.familywishes.repository.SpecialEventRepository;
 import com.familywishes.repository.UserRepository;
 import com.familywishes.service.FestivalWishMappingService;
+import com.familywishes.util.MediaValidation;
 import com.familywishes.util.WishesUrls;
 import java.time.LocalDate;
 import java.time.ZoneId;
@@ -78,6 +79,7 @@ public class FestivalWishMappingServiceImpl implements FestivalWishMappingServic
     mapping.setWishesUrl(normalizeWishesUrl(request.wishesUrl()));
 
     if (imageFile != null && !imageFile.isEmpty()) {
+      MediaValidation.validate(imageFile);
       if (mapping.getImageObjectKey() != null && !mapping.getImageObjectKey().isBlank()) {
         storageService.deleteObject(mapping.getImageObjectKey());
       }

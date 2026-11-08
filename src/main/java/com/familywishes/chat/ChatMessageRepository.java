@@ -488,6 +488,37 @@ public class ChatMessageRepository {
     return key == null ? null : String.valueOf(key);
   }
 
+  public AttachmentMeta findAttachmentByMessageIdForUser(Long messageId, Long userId) {
+    List<Map<String, Object>> rows =
+        chatJdbc.queryForList(
+            """
+            SELECT attachment_key, attachment_file_name, attachment_content_type
+              FROM chat_messages
+             WHERE id = :messageId
+               AND (sender_id = :userId OR receiver_id = :userId)
+            """,
+            Map.of("messageId", messageId, "userId", userId));
+
+    if (rows.isEmpty()) {
+      return null;
+    }
+    Map<String, Object> row = rows.get(0);
+    Object key = row.get("attachment_key");
+    if (key == null) {
+      return null;
+    }
+    return new AttachmentMeta(
+        String.valueOf(key),
+        asString(row.get("attachment_file_name")),
+        asString(row.get("attachment_content_type")));
+  }
+
+  private static String asString(Object value) {
+    return value == null ? null : String.valueOf(value);
+  }
+
+  public record AttachmentMeta(String objectKey, String fileName, String contentType) {}
+
   public List<Map<String, Object>> findUnreadCountsByReceiver() {
     return chatJdbc.queryForList(
         """

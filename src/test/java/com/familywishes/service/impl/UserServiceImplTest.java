@@ -1,11 +1,12 @@
 package com.familywishes.service.impl;
 
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.never;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.familywishes.dto.UserDtos.ConcurrentLoginUpdateRequest;
 import com.familywishes.dto.UserDtos.UserRequest;
 import com.familywishes.dto.UserDtos.UserResponse;
 import com.familywishes.dto.UserDtos.WishSettingsUpdateRequest;
@@ -179,8 +180,7 @@ class UserServiceImplTest {
 
   private void givenCreatableUser() {
     when(relationshipSeedRepository.findByCodeAndActiveTrue("BROTHER"))
-        .thenReturn(
-            Optional.of(RelationshipSeed.builder().code("BROTHER").active(true).build()));
+        .thenReturn(Optional.of(RelationshipSeed.builder().code("BROTHER").active(true).build()));
     when(passwordEncoder.encode("Test")).thenReturn("encoded-password");
     when(supabaseStorageService.getDefaultProfilePictureUrl(any())).thenReturn("default.png");
     when(userRepository.save(any(User.class)))
@@ -212,13 +212,130 @@ class UserServiceImplTest {
   @Test
   void createShouldRejectALinkThatIsNotAWebAddress() {
     when(relationshipSeedRepository.findByCodeAndActiveTrue("BROTHER"))
-        .thenReturn(
-            Optional.of(RelationshipSeed.builder().code("BROTHER").active(true).build()));
+        .thenReturn(Optional.of(RelationshipSeed.builder().code("BROTHER").active(true).build()));
     when(passwordEncoder.encode("Test")).thenReturn("encoded-password");
 
     assertThrows(
         BadRequestException.class,
         () -> userService.create(requestWithWishesUrl("javascript:alert(1)")));
     verify(userRepository, never()).save(any());
+  }
+
+  @Test
+  void createShouldDefaultConcurrentLoginToAllowedWhenNotGiven() {
+    givenCreatableUser();
+
+    UserResponse response = userService.create(requestWithWishesUrl(null));
+
+    assertTrue(response.concurrentLoginAllowed());
+  }
+
+  @Test
+  void createShouldHonourConcurrentLoginChoice() {
+    givenCreatableUser();
+
+    UserRequest request =
+        new UserRequest(
+            "Aman",
+            "aman@example.com",
+            Role.ROLE_USER,
+            Gender.MALE,
+            LocalDate.of(1995, 5, 4),
+            "BROTHER",
+            true,
+            false,
+            true,
+            null,
+            false,
+            false);
+
+    assertFalse(userService.create(request).concurrentLoginAllowed());
+  }
+
+  @Test
+  void updateConcurrentLoginShouldLetAUserChangeTheirOwnFlag() {
+    User user =
+        User.builder()
+            .id(10L)
+            .name("Ravi")
+            .email("ravi@example.com")
+            .role(Role.ROLE_USER)
+            .gender(Gender.MALE)
+            .birthday(LocalDate.of(1997, 6, 15))
+            .relationShip(RelationshipSeed.builder().code("SON").active(true).build())
+            .active(true)
+            .deleted(false)
+            .build();
+
+    SecurityContextHolder.getContext()
+        .setAuthentication(
+            new UsernamePasswordAuthenticationToken(
+                "ravi@example.com", "password", List.of(new SimpleGrantedAuthority("ROLE_USER"))));
+
+    when(userRepository.findById(10L)).thenReturn(Optional.of(user));
+    when(userRepository.save(any(User.class))).thenAnswer(invocation -> invocation.getArgument(0));
+    when(supabaseStorageService.getDefaultProfilePictureUrl(any())).thenReturn("default.png");
+
+    UserResponse response =
+        userService.updateConcurrentLogin(10L, new ConcurrentLoginUpdateRequest(false));
+
+    assertFalse(response.concurrentLoginAllowed());
+    assertFalse(user.isConcurrentLoginAllowed());
+  }
+
+  @Test
+  void updateConcurrentLoginShouldRejectANonAdminChangingAnotherUser() {
+    User target =
+        User.builder()
+            .id(11L)
+            .email("other@example.com")
+            .role(Role.ROLE_USER)
+            .gender(Gender.MALE)
+            .relationShip(RelationshipSeed.builder().code("SON").active(true).build())
+            .active(true)
+            .deleted(false)
+            .build();
+
+    SecurityContextHolder.getContext()
+        .setAuthentication(
+            new UsernamePasswordAuthenticationToken(
+                "ravi@example.com", "password", List.of(new SimpleGrantedAuthority("ROLE_USER"))));
+
+    when(userRepository.findById(11L)).thenReturn(Optional.of(target));
+
+    assertThrows(
+        BadRequestException.class,
+        () -> userService.updateConcurrentLogin(11L, new ConcurrentLoginUpdateRequest(false)));
+    verify(userRepository, never()).save(any());
+  }
+
+  @Test
+  void updateConcurrentLoginShouldLetAnAdminChangeAnotherUser() {
+    User target =
+        User.builder()
+            .id(11L)
+            .email("other@example.com")
+            .role(Role.ROLE_USER)
+            .gender(Gender.MALE)
+            .relationShip(RelationshipSeed.builder().code("SON").active(true).build())
+            .active(true)
+            .deleted(false)
+            .build();
+
+    SecurityContextHolder.getContext()
+        .setAuthentication(
+            new UsernamePasswordAuthenticationToken(
+                "admin@example.com",
+                "password",
+                List.of(new SimpleGrantedAuthority("ROLE_ADMIN"))));
+
+    when(userRepository.findById(11L)).thenReturn(Optional.of(target));
+    when(userRepository.save(any(User.class))).thenAnswer(invocation -> invocation.getArgument(0));
+    when(supabaseStorageService.getDefaultProfilePictureUrl(any())).thenReturn("default.png");
+
+    UserResponse response =
+        userService.updateConcurrentLogin(11L, new ConcurrentLoginUpdateRequest(false));
+
+    assertFalse(response.concurrentLoginAllowed());
   }
 }

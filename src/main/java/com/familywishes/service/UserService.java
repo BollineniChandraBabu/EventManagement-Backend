@@ -29,6 +29,10 @@ public interface UserService {
 
   UserResponse updateCurrentUserMfa(MfaUpdateRequest request);
 
+  UserResponse updateCurrentUserConcurrentLogin(ConcurrentLoginUpdateRequest request);
+
+  UserResponse updateConcurrentLogin(Long id, ConcurrentLoginUpdateRequest request);
+
   WishPreviewResponse getCurrentUserWishPreview();
 
   ProfilePictureUploadUrlResponse getCurrentUserProfilePictureUploadUrl(

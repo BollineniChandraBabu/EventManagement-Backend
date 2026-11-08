@@ -6,6 +6,7 @@ import com.familywishes.repository.EmailLogRepository;
 import com.familywishes.repository.UserRepository;
 import com.familywishes.service.EmailService;
 import com.familywishes.util.EmailTemplateBuilder;
+import com.familywishes.util.MediaContentTypes;
 import jakarta.mail.internet.MimeMessage;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
@@ -60,7 +61,15 @@ public class EmailServiceImpl implements EmailService {
       helper.setSubject(subject);
       helper.setText(finalHtml, true);
       if (Objects.nonNull(image)) {
-        helper.addInline("birthdayImage", new ByteArrayResource(image), "image/png");
+        String mediaType = MediaContentTypes.detect(image);
+        if (MediaContentTypes.isImage(mediaType)) {
+          helper.addInline("birthdayImage", new ByteArrayResource(image), mediaType);
+        } else {
+          helper.addAttachment(
+              "wish-media" + MediaContentTypes.fileExtension(mediaType),
+              new ByteArrayResource(image),
+              mediaType);
+        }
       }
       if (Objects.nonNull(signatureImage) && signatureImage.length > 0) {
         helper.addInline("emailSignature", new ByteArrayResource(signatureImage), "image/png");

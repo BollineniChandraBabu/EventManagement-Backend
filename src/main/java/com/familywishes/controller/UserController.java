@@ -78,6 +78,18 @@ public class UserController {
     return userService.updateCurrentUserMfa(request);
   }
 
+  @PatchMapping("/me/concurrent-login")
+  public UserResponse updateMyConcurrentLogin(
+      @Valid @RequestBody ConcurrentLoginUpdateRequest request) {
+    return userService.updateCurrentUserConcurrentLogin(request);
+  }
+
+  @PatchMapping("/{id}/concurrent-login")
+  public UserResponse updateConcurrentLogin(
+      @PathVariable Long id, @Valid @RequestBody ConcurrentLoginUpdateRequest request) {
+    return userService.updateConcurrentLogin(id, request);
+  }
+
   @GetMapping("/me/wish-preview")
   public WishPreviewResponse myWishPreview() {
     return userService.getCurrentUserWishPreview();
