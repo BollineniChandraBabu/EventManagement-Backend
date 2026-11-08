@@ -55,4 +55,18 @@ public class AuthDtos {
       @NotBlank String currentPassword, @NotBlank String newPassword) {}
 
   public record GoogleSsoLoginRequest(@NotBlank String idToken) {}
+
+  public record DirectLoginRequest(
+      @NotBlank String token,
+      @Email String email,
+      String loginLocation,
+      String ipAddress,
+      Double latitude,
+      Double longitude) {
+
+    /** Token only; the optional email and location fields default to empty. */
+    public DirectLoginRequest(String token) {
+      this(token, null, null, null, null, null);
+    }
+  }
 }

@@ -29,4 +29,13 @@ public interface AuthService {
   AuthResponse googleSsoLogin(GoogleSsoLoginRequest request);
 
   AuthSSOClientResponse getSSOAuthToken();
+
+  /**
+   * Creates (or reuses a still-valid) single-use token that lets the user sign in from an emailed
+   * link. Returns the raw token to embed in the link; {@code null} for an unknown user.
+   */
+  String issueDirectLoginToken(Long userId);
+
+  /** Signs a user in from a single-use emailed link token, consuming it. */
+  AuthResponse directLogin(DirectLoginRequest request, HttpServletRequest httpRequest);
 }

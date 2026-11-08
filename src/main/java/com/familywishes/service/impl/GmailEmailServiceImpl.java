@@ -55,7 +55,7 @@ public class GmailEmailServiceImpl implements GmailEmailService {
   private String schedulerTimeZone;
 
   private static final List<EmailType> SENSITIVE_TYPES =
-      List.of(EmailType.OTP, EmailType.FORGOT_PASSWORD);
+      List.of(EmailType.OTP, EmailType.FORGOT_PASSWORD, EmailType.CIRCLE_REQUEST);
 
   private static final List<EmailType> NON_SENSITIVE_TYPES =
       List.of(EmailType.GOOD_MORNING, EmailType.GOOD_NIGHT, EmailType.BIRTHDAY, EmailType.EVENT);
@@ -569,6 +569,9 @@ public class GmailEmailServiceImpl implements GmailEmailService {
     }
     if (content.contains("unread") && content.contains("chat")) {
       return EmailType.UNREAD_CHAT_MESSAGE;
+    }
+    if (content.contains("circle")) {
+      return EmailType.CIRCLE_REQUEST;
     }
 
     return EmailType.EVENT;

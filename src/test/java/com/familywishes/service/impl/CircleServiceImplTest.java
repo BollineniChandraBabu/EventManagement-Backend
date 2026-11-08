@@ -2,6 +2,8 @@ package com.familywishes.service.impl;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.*;
 
 import com.familywishes.dto.CircleDtos.*;
@@ -14,6 +16,8 @@ import com.familywishes.exception.BadRequestException;
 import com.familywishes.exception.NotFoundException;
 import com.familywishes.repository.CircleRepository;
 import com.familywishes.repository.UserRepository;
+import com.familywishes.service.AuthService;
+import com.familywishes.service.GmailEmailService;
 import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.AfterEach;
@@ -33,12 +37,16 @@ class CircleServiceImplTest {
   @Mock private CircleRepository circleRepository;
   @Mock private UserRepository userRepository;
   @Mock private SupabaseStorageService storageService;
+  @Mock private AuthService authService;
+  @Mock private GmailEmailService emailService;
 
   @InjectMocks private CircleServiceImpl circleService;
 
   @BeforeEach
   void setUp() {
     ReflectionTestUtils.setField(circleService, "schedulerTimeZone", "UTC");
+    ReflectionTestUtils.setField(
+        circleService, "circleLoginUrl", "https://chandu-goldengreetings.web.app/circles");
     SecurityContextHolder.getContext()
         .setAuthentication(
             new UsernamePasswordAuthenticationToken("me@example.com", "pwd", List.of()));
@@ -74,11 +82,36 @@ class CircleServiceImplTest {
     when(circleRepository.findBetween(1L, 2L)).thenReturn(Optional.empty());
     when(circleRepository.save(any(Circle.class)))
         .thenAnswer(invocation -> invocation.getArgument(0));
+    when(authService.issueDirectLoginToken(2L)).thenReturn("tok-123");
 
     CircleRequestResponse response = circleService.sendRequest(new SendCircleRequest(2L));
 
     assertEquals(2L, response.userId());
     assertFalse(response.incoming());
+    assertEquals(CircleStatus.PENDING, response.status());
+    verify(emailService)
+        .sendEmailWithAttachments(
+            eq("circle@example.com"),
+            any(String.class),
+            org.mockito.ArgumentMatchers.contains("tok-123"),
+            isNull(),
+            isNull(),
+            eq(com.familywishes.entity.enums.EmailType.CIRCLE_REQUEST));
+  }
+
+  @Test
+  void sendRequestStillSucceedsWhenNotificationEmailFails() {
+    User me = user(1L, "me@example.com");
+    User target = user(2L, "circle@example.com");
+    givenCurrentUser(me);
+    when(userRepository.findById(2L)).thenReturn(Optional.of(target));
+    when(circleRepository.findBetween(1L, 2L)).thenReturn(Optional.empty());
+    when(circleRepository.save(any(Circle.class)))
+        .thenAnswer(invocation -> invocation.getArgument(0));
+    when(authService.issueDirectLoginToken(2L)).thenThrow(new RuntimeException("mail down"));
+
+    CircleRequestResponse response = circleService.sendRequest(new SendCircleRequest(2L));
+
     assertEquals(CircleStatus.PENDING, response.status());
   }
 

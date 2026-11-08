@@ -50,6 +50,7 @@ public class AuthServiceImpl implements AuthService {
   private final RefreshTokenRepository refreshTokenRepository;
   private final OtpCodeRepository otpCodeRepository;
   private final PasswordResetTokenRepository resetTokenRepository;
+  private final LoginTokenRepository loginTokenRepository;
   private final PasswordEncoder passwordEncoder;
   private final GmailEmailService emailService;
   private final ChatMessageRepository chatMessageRepository;
@@ -64,6 +65,9 @@ public class AuthServiceImpl implements AuthService {
 
   @Value("${app.password-reset.max-attempts:5}")
   private int passwordResetMaxAttempts;
+
+  @Value("${app.circle.request.login-ttl-minutes:60}")
+  private int directLoginTtlMinutes;
 
   @Value("${app.otp.ttl-minutes:5}")
   private int otpTtlMinutes;
@@ -707,5 +711,76 @@ public class AuthServiceImpl implements AuthService {
 
   public AuthSSOClientResponse getSSOAuthToken() {
     return new AuthSSOClientResponse(googleSsoClientId);
+  }
+
+  @Override
+  @Transactional
+  public String issueDirectLoginToken(Long userId) {
+    User user = userRepository.findById(userId).orElse(null);
+    if (user == null || user.isDeleted() || !user.isActive()) {
+      return null;
+    }
+
+    LocalDateTime now = LocalDateTime.now(ZoneId.of(schedulerTimeZone));
+    // Reuse the still-valid token so repeated emails keep the same link until it is used or
+    // expires.
+    LoginToken token =
+        loginTokenRepository
+            .findTopByUserIdAndUsedFalseAndExpiresAtAfterOrderByIdDesc(userId, now)
+            .orElseGet(
+                () ->
+                    loginTokenRepository.save(
+                        LoginToken.builder()
+                            .token(UUID.randomUUID().toString())
+                            .user(user)
+                            .expiresAt(now.plusMinutes(directLoginTtlMinutes))
+                            .used(false)
+                            .build()));
+    return token.getToken();
+  }
+
+  @Override
+  @Transactional
+  public AuthResponse directLogin(DirectLoginRequest request, HttpServletRequest httpRequest) {
+    LoginToken token =
+        loginTokenRepository
+            .findByTokenAndUsedFalse(request.token())
+            .orElseThrow(() -> new BadRequestException("Invalid or expired login link"));
+
+    LocalDateTime now = LocalDateTime.now(ZoneId.of(schedulerTimeZone));
+    if (token.getExpiresAt().isBefore(now)) {
+      throw new BadRequestException("Invalid or expired login link");
+    }
+    User user = token.getUser();
+    if (user.isDeleted() || !user.isActive()) {
+      throw new BadRequestException("User account is inactive");
+    }
+    if (request.email() != null
+        && !request.email().isBlank()
+        && !user.getEmail().equalsIgnoreCase(request.email().trim())) {
+      throw new BadRequestException("Invalid or expired login link");
+    }
+
+    token.setUsed(true);
+    loginTokenRepository.save(token);
+
+    enforceSingleSession(user);
+    String access = jwtService.generateAccessToken(user, user.getEmail());
+    String refresh = jwtService.generateRefreshToken(user, user.getEmail());
+    refreshTokenRepository.save(
+        RefreshToken.builder()
+            .token(refresh)
+            .user(user)
+            .expiresAt(now.plusDays(7))
+            .revoked(false)
+            .build());
+    recordLoginLocation(
+        user,
+        request.loginLocation(),
+        request.ipAddress(),
+        request.latitude(),
+        request.longitude(),
+        httpRequest);
+    return buildAuthResponse(user, access, refresh);
   }
 }

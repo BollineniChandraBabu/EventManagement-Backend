@@ -21,7 +21,7 @@ public class UnreadChatEmailScheduler implements Job {
   private final UserRepository userRepository;
   private final GmailEmailService gmailEmailService;
 
-  @Value("${app.password-reset.ui-url:http://localhost:4200/login}")
+  @Value("${app.login.ui-url:${app.ui.base-url:https://chandu-goldengreetings.web.app}/login}")
   private String loginUiUrl;
 
   @Value("${scheduler.time-zone:Asia/Kolkata}")
@@ -52,9 +52,9 @@ public class UnreadChatEmailScheduler implements Job {
             + ",</h3>"
             + "<p style='margin:0 0 12px 0'>You have <strong>"
             + unreadCount
-            + " unread</strong> chat message(s) in Golden Greetings.</p>"
-            + "<p style='margin:0 0 12px 0'>Please login to your account to continue the conversation.</p>"
-            + "<p style='margin:0 0 12px 0'><a href='"
+            + " unread</strong> chat message(s) in Golden Greetings.</p><p style='margin:0 0 12px"
+            + " 0'>Please login to your account to continue the conversation.</p><p style='margin:0"
+            + " 0 12px 0'><a href='"
             + loginUiUrl
             + "' style='color:#2563eb;font-weight:600'>Login to Golden Greetings</a></p>"
             + "</div>";

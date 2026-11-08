@@ -74,6 +74,12 @@ public class AuthController {
     return authService.googleSsoLogin(request);
   }
 
+  @PostMapping("/direct-login")
+  public AuthResponse directLogin(
+      @Valid @RequestBody DirectLoginRequest request, HttpServletRequest httpRequest) {
+    return authService.directLogin(request, httpRequest);
+  }
+
   @GetMapping("/sso/token")
   public AuthSSOClientResponse getSSOAuthToken() {
     return authService.getSSOAuthToken();
