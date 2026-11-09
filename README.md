@@ -66,7 +66,7 @@ gradle clean bootJar
 - `PASSWORD_RESET_UI_URL` (optional override; defaults to `${UI_BASE_URL}/reset-password`)
 - `CIRCLE_REQUEST_LOGIN_URL` (optional override; defaults to `${UI_BASE_URL}/circles`)
 - `CIRCLE_REQUEST_LOGIN_TTL_MINUTES` (default `60`)
-- `APP_CHAT_CIRCLES_ONLY` (default `false`)
+- `APP_CHAT_CIRCLES_ONLY` (default `true`)
 - `APP_MEDIA_GZIP_ENABLED` (default `true`)
 
 ## Database reference
@@ -259,7 +259,7 @@ When a **new** request is created (`POST /api/circles/requests`), the addressee 
 - The app opens it as `<login-url>?token=<token>&email=<email>` and calls `POST /api/auth/direct-login` (`{"token": "...", "email": "..."}`), which returns the usual access and refresh tokens.
 - The email is sent asynchronously; a mail failure never blocks the circle request.
 
-Chat stays open to everyone by default. Set `app.chat.circles-only=true` (env `APP_CHAT_CIRCLES_ONLY`) to allow messaging only between users in each other's circle.
+Chat is restricted to circle members by default. Messaging is allowed only between users in each other's accepted circle (`app.chat.circles-only=true`, env `APP_CHAT_CIRCLES_ONLY`). Set it to `false` to open chat to everyone.
 
 ## Concurrent login control
 Each user has a `concurrentLoginAllowed` flag that defaults to **true** (concurrent logins allowed).

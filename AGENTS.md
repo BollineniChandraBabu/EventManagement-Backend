@@ -49,7 +49,8 @@ Notes:
 
 - Circles live in `circles` (entity `Circle`, `CircleRepository`,
   `CircleServiceImpl`, `CircleController` under `/api/circles`). Chat allows only
-  accepted circles when `app.chat.circles-only=true`.
+  accepted circles. Chat is restricted to circle members by default
+  (`app.chat.circles-only`, default `true`); set `APP_CHAT_CIRCLES_ONLY=false` to open chat to everyone.
 - A new circle request emails the addressee a one-click direct-login link (`EmailType.CIRCLE_REQUEST`,
   entity `LoginToken`). `CircleRequestNotifier` composes and sends the mail (initial note and the
   daily reminder) and issues the token; `AuthServiceImpl.directLogin` (endpoint

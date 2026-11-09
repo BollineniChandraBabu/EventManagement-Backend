@@ -37,8 +37,8 @@ public class ChatServiceImpl implements ChatService {
   @Value("${scheduler.time-zone:Asia/Kolkata}")
   private String schedulerTimeZone;
 
-  /** When true, users may only message people in their circle. Off by default. */
-  @Value("${app.chat.circles-only:false}")
+  /** When true, users may only message people in their circle. On by default. */
+  @Value("${app.chat.circles-only:true}")
   private boolean circlesOnlyChat;
 
   @Override
