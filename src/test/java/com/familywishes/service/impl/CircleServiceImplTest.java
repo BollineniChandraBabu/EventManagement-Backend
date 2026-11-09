@@ -3,7 +3,6 @@ package com.familywishes.service.impl;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.*;
 
 import com.familywishes.dto.CircleDtos.*;
@@ -16,8 +15,8 @@ import com.familywishes.exception.BadRequestException;
 import com.familywishes.exception.NotFoundException;
 import com.familywishes.repository.CircleRepository;
 import com.familywishes.repository.UserRepository;
-import com.familywishes.service.AuthService;
-import com.familywishes.service.GmailEmailService;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.AfterEach;
@@ -37,16 +36,13 @@ class CircleServiceImplTest {
   @Mock private CircleRepository circleRepository;
   @Mock private UserRepository userRepository;
   @Mock private SupabaseStorageService storageService;
-  @Mock private AuthService authService;
-  @Mock private GmailEmailService emailService;
+  @Mock private CircleRequestNotifier circleRequestNotifier;
 
   @InjectMocks private CircleServiceImpl circleService;
 
   @BeforeEach
   void setUp() {
     ReflectionTestUtils.setField(circleService, "schedulerTimeZone", "UTC");
-    ReflectionTestUtils.setField(
-        circleService, "circleLoginUrl", "https://chandu-goldengreetings.web.app/circles");
     SecurityContextHolder.getContext()
         .setAuthentication(
             new UsernamePasswordAuthenticationToken("me@example.com", "pwd", List.of()));
@@ -74,7 +70,7 @@ class CircleServiceImplTest {
   }
 
   @Test
-  void sendRequestCreatesPendingCircle() {
+  void sendRequestCreatesPendingCircleAndNotifiesAddressee() {
     User me = user(1L, "me@example.com");
     User target = user(2L, "circle@example.com");
     givenCurrentUser(me);
@@ -82,25 +78,17 @@ class CircleServiceImplTest {
     when(circleRepository.findBetween(1L, 2L)).thenReturn(Optional.empty());
     when(circleRepository.save(any(Circle.class)))
         .thenAnswer(invocation -> invocation.getArgument(0));
-    when(authService.issueDirectLoginToken(2L)).thenReturn("tok-123");
 
     CircleRequestResponse response = circleService.sendRequest(new SendCircleRequest(2L));
 
     assertEquals(2L, response.userId());
     assertFalse(response.incoming());
     assertEquals(CircleStatus.PENDING, response.status());
-    verify(emailService)
-        .sendEmailWithAttachments(
-            eq("circle@example.com"),
-            any(String.class),
-            org.mockito.ArgumentMatchers.contains("tok-123"),
-            isNull(),
-            isNull(),
-            eq(com.familywishes.entity.enums.EmailType.CIRCLE_REQUEST));
+    verify(circleRequestNotifier).notifyNewRequest(any(Circle.class), eq(me));
   }
 
   @Test
-  void sendRequestStillSucceedsWhenNotificationEmailFails() {
+  void sendRequestStillSucceedsWhenNotificationFails() {
     User me = user(1L, "me@example.com");
     User target = user(2L, "circle@example.com");
     givenCurrentUser(me);
@@ -108,7 +96,9 @@ class CircleServiceImplTest {
     when(circleRepository.findBetween(1L, 2L)).thenReturn(Optional.empty());
     when(circleRepository.save(any(Circle.class)))
         .thenAnswer(invocation -> invocation.getArgument(0));
-    when(authService.issueDirectLoginToken(2L)).thenThrow(new RuntimeException("mail down"));
+    doThrow(new RuntimeException("mail down"))
+        .when(circleRequestNotifier)
+        .notifyNewRequest(any(Circle.class), eq(me));
 
     CircleRequestResponse response = circleService.sendRequest(new SendCircleRequest(2L));
 
@@ -333,6 +323,39 @@ class CircleServiceImplTest {
     assertFalse(response.inCircle());
     assertNull(response.status());
     assertNull(response.circleId());
+  }
+
+  @Test
+  void sendPendingRemindersEmailsDueRequestsOnceAndStampsTheDay() {
+    User requester = user(1L, "me@example.com");
+    User addressee = user(2L, "circle@example.com");
+    Circle pending =
+        Circle.builder()
+            .id(7L)
+            .requester(requester)
+            .addressee(addressee)
+            .status(CircleStatus.PENDING)
+            .build();
+    when(circleRepository.findPendingDueForReminder(any(LocalDateTime.class), any(LocalDate.class)))
+        .thenReturn(List.of(pending));
+
+    int sent = circleService.sendPendingReminders(7);
+
+    assertEquals(1, sent);
+    assertNotNull(pending.getLastReminderSentOn());
+    verify(circleRequestNotifier).notifyPendingReminder(pending);
+    verify(circleRepository).saveAll(List.of(pending));
+  }
+
+  @Test
+  void sendPendingRemindersDoesNothingWhenNoneAreDue() {
+    when(circleRepository.findPendingDueForReminder(any(LocalDateTime.class), any(LocalDate.class)))
+        .thenReturn(List.of());
+
+    assertEquals(0, circleService.sendPendingReminders(7));
+
+    verifyNoInteractions(circleRequestNotifier);
+    verify(circleRepository, never()).saveAll(any());
   }
 
   @Test

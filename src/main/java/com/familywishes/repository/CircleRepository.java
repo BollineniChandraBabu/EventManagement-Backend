@@ -2,6 +2,8 @@ package com.familywishes.repository;
 
 import com.familywishes.entity.Circle;
 import com.familywishes.entity.enums.CircleStatus;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -52,4 +54,15 @@ public interface CircleRepository extends JpaRepository<Circle, Long> {
            OR (c.requester.id = :b AND c.addressee.id = :a))
       """)
   boolean areInCircle(@Param("a") Long userA, @Param("b") Long userB);
+
+  /** Pending requests that have not yet been reminded today (or at all). */
+  @Query(
+      """
+      SELECT c FROM Circle c
+       WHERE c.status = com.familywishes.entity.enums.CircleStatus.PENDING
+         AND c.createdAt <= :cutoff
+         AND (c.lastReminderSentOn IS NULL OR c.lastReminderSentOn < :today)
+      """)
+  List<Circle> findPendingDueForReminder(
+      @Param("cutoff") LocalDateTime cutoff, @Param("today") LocalDate today);
 }

@@ -12,13 +12,31 @@ import org.springframework.data.repository.query.Param;
 
 public interface SpecialEventRepository extends JpaRepository<SpecialEvent, Long> {
 
-  @Query("""
+  @Query(
+      """
     SELECT s
     FROM SpecialEvent s
     WHERE (:month IS NULL OR MONTH(s.eventDate) = :month)
     ORDER BY s.eventDate, s.eventName
     """)
   List<SpecialEvent> findByMonth(@Param("month") Integer month);
+
+  /** Festivals for one month of one year, so a year other than the synced one does not repeat. */
+  @Query(
+      """
+      SELECT s FROM SpecialEvent s
+      WHERE (:month IS NULL OR MONTH(s.eventDate) = :month)
+        AND YEAR(s.eventDate) = :year
+      ORDER BY s.eventDate, s.eventName
+      """)
+  List<SpecialEvent> findByMonthAndYear(@Param("month") Integer month, @Param("year") int year);
+
+  /** True when any festival is stored for the given year, used to decide on an on-demand sync. */
+  boolean existsByEventDateBetween(LocalDate start, LocalDate end);
+
+  /** The stored row for a festival in a specific year, so each year keeps its own dates. */
+  Optional<SpecialEvent> findByEventNameIgnoreCaseAndEventDateBetween(
+      String eventName, LocalDate start, LocalDate end);
 
   @Query(
       """
@@ -30,6 +48,21 @@ public interface SpecialEventRepository extends JpaRepository<SpecialEvent, Long
       """)
   Page<SpecialEvent> findByMonthAndSearchKey(
       @Param("month") Integer month, @Param("searchKey") String searchKey, Pageable pageable);
+
+  @Query(
+      """
+      SELECT s FROM SpecialEvent s
+      WHERE (:month IS NULL OR FUNCTION('DATE_PART', 'month', s.eventDate) = :month)
+        AND YEAR(s.eventDate) = :year
+        AND (:searchKey = ''
+             OR LOWER(s.eventName) LIKE LOWER(CONCAT('%', :searchKey, '%'))
+             OR LOWER(COALESCE(s.message, '')) LIKE LOWER(CONCAT('%', :searchKey, '%')))
+      """)
+  Page<SpecialEvent> findByMonthAndYearAndSearchKey(
+      @Param("month") Integer month,
+      @Param("year") int year,
+      @Param("searchKey") String searchKey,
+      Pageable pageable);
 
   Optional<SpecialEvent> findByEventNameIgnoreCase(String eventName);
 

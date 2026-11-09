@@ -2,6 +2,7 @@ package com.familywishes.entity;
 
 import com.familywishes.entity.enums.CircleStatus;
 import jakarta.persistence.*;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
@@ -45,4 +46,7 @@ public class Circle extends AuditableEntity {
   private CircleStatus status = CircleStatus.PENDING;
 
   @Column private LocalDateTime respondedAt;
+
+  /** Last day a "still waiting" reminder was emailed for this request; null until one is sent. */
+  @Column private LocalDate lastReminderSentOn;
 }

@@ -12,6 +12,9 @@ public class WishesSchedulerConfig {
   @Value("${app.chat.unread-mail.cron:0 0 2 * * ?}")
   private String unreadChatMailCron;
 
+  @Value("${app.circle.request.reminder-cron:0 0 9 * * ?}")
+  private String circleRequestReminderCron;
+
   @Value("${scheduler.time-zone:Asia/Kolkata}")
   private String schedulerTimeZone;
 
@@ -174,6 +177,26 @@ public class WishesSchedulerConfig {
         .withIdentity("unreadChatEmailTrigger")
         .withSchedule(
             CronScheduleBuilder.cronSchedule(cronExpression)
+                .inTimeZone(TimeZone.getTimeZone(schedulerTimeZone))
+                .withMisfireHandlingInstructionDoNothing())
+        .build();
+  }
+
+  @Bean
+  public JobDetail circleRequestReminderJobDetail() {
+    return JobBuilder.newJob(CircleRequestReminderScheduler.class)
+        .withIdentity("circleRequestReminderJob")
+        .storeDurably()
+        .build();
+  }
+
+  @Bean
+  public Trigger circleRequestReminderTrigger() {
+    return TriggerBuilder.newTrigger()
+        .forJob(circleRequestReminderJobDetail())
+        .withIdentity("circleRequestReminderTrigger")
+        .withSchedule(
+            CronScheduleBuilder.cronSchedule(circleRequestReminderCron)
                 .inTimeZone(TimeZone.getTimeZone(schedulerTimeZone))
                 .withMisfireHandlingInstructionDoNothing())
         .build();

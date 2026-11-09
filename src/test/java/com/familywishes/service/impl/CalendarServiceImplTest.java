@@ -62,11 +62,27 @@ class CalendarServiceImplTest {
     when(eventService.listByMonth(NOVEMBER)).thenReturn(List.of());
     when(userService.listByMonth(NOVEMBER)).thenReturn(List.of());
 
-    CalendarResponse festival = calendarService.listByMonth(NOVEMBER, true, "admin@x.com").get(0);
+    CalendarResponse festival =
+        calendarService.listByMonth(NOVEMBER, null, true, "admin@x.com").get(0);
 
     assertEquals("Festival", festival.eventType());
     assertTrue(festival.recurring());
     assertNull(festival.ownerName());
+  }
+
+  @Test
+  void aRequestedYearUsesThatYearsFestivalDate() {
+    when(festivalService.listByMonthForYear(NOVEMBER, 2027))
+        .thenReturn(List.of(new FestivalResponse(5L, "Diwali", LocalDate.of(2027, 11, 1), true)));
+    when(eventService.listByMonth(NOVEMBER)).thenReturn(List.of());
+    when(userService.listByMonth(NOVEMBER)).thenReturn(List.of());
+
+    CalendarResponse festival =
+        calendarService.listByMonth(NOVEMBER, 2027, true, "admin@x.com").get(0);
+
+    assertEquals(LocalDate.of(2027, 11, 1), festival.eventDate());
+    assertFalse(festival.recurring());
+    verify(festivalService).listByMonthForYear(NOVEMBER, 2027);
   }
 
   @Test
@@ -89,7 +105,8 @@ class CalendarServiceImplTest {
                     null)));
     when(userService.listByMonth(NOVEMBER)).thenReturn(List.of());
 
-    List<CalendarResponse> calendar = calendarService.listByMonth(NOVEMBER, true, "admin@x.com");
+    List<CalendarResponse> calendar =
+        calendarService.listByMonth(NOVEMBER, null, true, "admin@x.com");
 
     assertEquals("Anniversary", calendar.get(0).eventType());
     assertEquals("Wedding", calendar.get(0).eventName());
@@ -106,7 +123,8 @@ class CalendarServiceImplTest {
     when(userService.listByMonth(NOVEMBER))
         .thenReturn(List.of(birthdayOf("Asha", LocalDate.of(1990, 11, 15))));
 
-    CalendarResponse birthday = calendarService.listByMonth(NOVEMBER, true, "admin@x.com").get(0);
+    CalendarResponse birthday =
+        calendarService.listByMonth(NOVEMBER, null, true, "admin@x.com").get(0);
 
     assertEquals("Birthday", birthday.eventType());
     assertEquals("Asha", birthday.eventName());
@@ -121,7 +139,7 @@ class CalendarServiceImplTest {
     when(eventService.listByMonthAndUserEmail(NOVEMBER, "me@x.com")).thenReturn(List.of());
     when(userService.listByMonthAndUserEmail(NOVEMBER, "me@x.com")).thenReturn(List.of());
 
-    calendarService.listByMonth(NOVEMBER, false, "me@x.com");
+    calendarService.listByMonth(NOVEMBER, null, false, "me@x.com");
 
     verify(eventService).listByMonthAndUserEmail(NOVEMBER, "me@x.com");
     verify(userService).listByMonthAndUserEmail(NOVEMBER, "me@x.com");
