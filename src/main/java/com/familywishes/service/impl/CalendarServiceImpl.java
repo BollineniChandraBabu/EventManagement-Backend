@@ -8,12 +8,12 @@ import com.familywishes.service.CalendarService;
 import com.familywishes.service.EventService;
 import com.familywishes.service.FestivalService;
 import com.familywishes.service.UserService;
+import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.List;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
-
-import java.util.ArrayList;
-import java.util.List;
 
 @Service
 @RequiredArgsConstructor
@@ -24,10 +24,13 @@ public class CalendarServiceImpl implements CalendarService {
   private final EventService eventService;
   private final UserService userService;
 
-
   @Override
-  public List<CalendarResponse> listByMonth(Integer month, boolean isAdmin, String userEmail) {
-    List<FestivalResponse> festivals = festivalService.listByMonth(month);
+  public List<CalendarResponse> listByMonth(
+      Integer month, Integer year, boolean isAdmin, String userEmail) {
+    List<FestivalResponse> festivals =
+        year == null || year <= 0
+            ? festivalService.listByMonth(month)
+            : festivalService.listByMonthForYear(month, year);
     List<EventDtos.EventResponse> events =
         isAdmin
             ? eventService.listByMonth(month)
@@ -38,25 +41,32 @@ public class CalendarServiceImpl implements CalendarService {
             : userService.listByMonthAndUserEmail(month, userEmail);
 
     List<CalendarResponse> calendar = new ArrayList<>();
-    festivals.forEach(festival -> calendar.add(toCalendar(festival)));
+    festivals.forEach(festival -> calendar.add(toCalendar(festival, year)));
     events.forEach(event -> calendar.add(toCalendar(event)));
     users.forEach(user -> calendar.add(toCalendar(user)));
     return calendar;
   }
 
   /**
-   * Festivals are stored for the year the sync last ran, but a festival like Diwali is shown on its
-   * month/day in every year, so the calendar keeps showing it (and its wishes) when the user
-   * navigates to a later year. The sync refreshes the stored date each year.
+   * Festivals are stored per year. When the calendar is asked for a specific year the entry keeps
+   * that year's date and is marked as not recurring, so navigating to another year shows that
+   * year's own festivals (fetched on demand by the festival service) instead of repeating one
+   * year's dates forever. Without a year the older month-only behaviour is kept: the festival
+   * repeats yearly on its month/day.
    */
-  private CalendarResponse toCalendar(FestivalResponse festival) {
+  private CalendarResponse toCalendar(FestivalResponse festival, Integer year) {
+    boolean yearScoped = year != null && year > 0;
+    LocalDate eventDate = festival.eventDate();
+    if (eventDate != null && yearScoped) {
+      eventDate = eventDate.withYear(year);
+    }
     return new CalendarResponse(
         festival.id(),
         "Festival",
         festival.eventName(),
-        festival.eventDate(),
+        eventDate,
         festival.active(),
-        true,
+        !yearScoped,
         null);
   }
 

@@ -19,11 +19,15 @@ public class FestivalController {
   @GetMapping
   public PagedResponse<FestivalResponse> listByMonth(
       @RequestParam(required = true) Integer month,
+      @RequestParam(required = false) Integer year,
       @RequestParam(defaultValue = "0") int page,
       @RequestParam(defaultValue = "10") int size,
       @RequestParam(defaultValue = "") String searchKey,
       @RequestParam(defaultValue = "eventDate") String sortBy,
       @RequestParam(defaultValue = "asc") String sortDir) {
-    return festivalService.listByMonth(month, page, size, searchKey, sortBy, sortDir);
+    if (year == null) {
+      return festivalService.listByMonth(month, page, size, searchKey, sortBy, sortDir);
+    }
+    return festivalService.listByMonthForYear(month, year, page, size, searchKey, sortBy, sortDir);
   }
 }

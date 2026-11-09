@@ -16,4 +16,10 @@ public interface CircleService {
   CircleStatusResponse statusWith(Long userId);
 
   boolean areInCircle(Long userA, Long userB);
+
+  /**
+   * Emails a reminder to the addressee of every request that has been pending for at least {@code
+   * days} and has not been reminded today. Returns how many reminders were sent.
+   */
+  int sendPendingReminders(int days);
 }

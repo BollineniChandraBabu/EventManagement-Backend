@@ -4,16 +4,12 @@ import com.familywishes.dto.CircleDtos.*;
 import com.familywishes.entity.Circle;
 import com.familywishes.entity.User;
 import com.familywishes.entity.enums.CircleStatus;
-import com.familywishes.entity.enums.EmailType;
 import com.familywishes.exception.BadRequestException;
 import com.familywishes.exception.NotFoundException;
 import com.familywishes.repository.CircleRepository;
 import com.familywishes.repository.UserRepository;
-import com.familywishes.service.AuthService;
 import com.familywishes.service.CircleService;
-import com.familywishes.service.GmailEmailService;
-import java.net.URLEncoder;
-import java.nio.charset.StandardCharsets;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.ArrayList;
@@ -34,15 +30,10 @@ public class CircleServiceImpl implements CircleService {
   private final CircleRepository circleRepository;
   private final UserRepository userRepository;
   private final SupabaseStorageService storageService;
-  private final AuthService authService;
-  private final GmailEmailService emailService;
+  private final CircleRequestNotifier circleRequestNotifier;
 
   @Value("${scheduler.time-zone:Asia/Kolkata}")
   private String schedulerTimeZone;
-
-  @Value(
-      "${app.circle.request.login-url:${app.ui.base-url:https://chandu-goldengreetings.web.app}/circles}")
-  private String circleLoginUrl;
 
   @Override
   @Transactional(readOnly = true)
@@ -98,14 +89,14 @@ public class CircleServiceImpl implements CircleService {
       existing.setStatus(CircleStatus.PENDING);
       existing.setRespondedAt(null);
       Circle saved = circleRepository.save(existing);
-      notifyAddressee(saved, me);
+      notifyNewRequest(saved, me);
       return toRequestResponse(saved, target, false);
     }
 
     Circle circle =
         Circle.builder().requester(me).addressee(target).status(CircleStatus.PENDING).build();
     Circle saved = circleRepository.save(circle);
-    notifyAddressee(saved, me);
+    notifyNewRequest(saved, me);
     return toRequestResponse(saved, target, false);
   }
 
@@ -165,6 +156,23 @@ public class CircleServiceImpl implements CircleService {
     return circleRepository.areInCircle(userA, userB);
   }
 
+  @Override
+  @Transactional
+  public int sendPendingReminders(int days) {
+    LocalDateTime cutoff = now().minusDays(days);
+    LocalDate today = LocalDate.now(ZoneId.of(schedulerTimeZone));
+    List<Circle> due = circleRepository.findPendingDueForReminder(cutoff, today);
+    for (Circle circle : due) {
+      circleRequestNotifier.notifyPendingReminder(circle);
+      circle.setLastReminderSentOn(today);
+    }
+    if (!due.isEmpty()) {
+      circleRepository.saveAll(due);
+      log.info("Sent {} pending circle-request reminders (older than {} days)", due.size(), days);
+    }
+    return due.size();
+  }
+
   private CircleRequestResponse acceptExisting(Circle circle, User me) {
     circle.setStatus(CircleStatus.ACCEPTED);
     circle.setRespondedAt(now());
@@ -173,49 +181,13 @@ public class CircleServiceImpl implements CircleService {
     return toRequestResponse(saved, other, false);
   }
 
-  /**
-   * Emails the addressee a one-click sign-in link pointing at the circles page. Sending failures
-   * are swallowed so a mail outage never blocks the circle request itself.
-   */
-  private void notifyAddressee(Circle circle, User requester) {
-    User addressee = circle.getAddressee();
-    if (addressee == null || addressee.getEmail() == null || addressee.getEmail().isBlank()) {
-      return;
-    }
+  /** Never lets a notification problem break the request itself. */
+  private void notifyNewRequest(Circle circle, User requester) {
     try {
-      String token = authService.issueDirectLoginToken(addressee.getId());
-      String link =
-          token == null
-              ? circleLoginUrl
-              : circleLoginUrl
-                  + "?token="
-                  + URLEncoder.encode(token, StandardCharsets.UTF_8)
-                  + "&email="
-                  + URLEncoder.encode(addressee.getEmail(), StandardCharsets.UTF_8);
-      emailService.sendEmailWithAttachments(
-          addressee.getEmail(),
-          "You have a new circle request",
-          buildCircleRequestEmailBody(addressee, requester, link),
-          null,
-          null,
-          EmailType.CIRCLE_REQUEST);
+      circleRequestNotifier.notifyNewRequest(circle, requester);
     } catch (Exception e) {
-      log.error("Circle request notification email failed for {}", addressee.getEmail(), e);
+      log.error("Circle request notification failed for circle {}", circle.getId(), e);
     }
-  }
-
-  private String buildCircleRequestEmailBody(User addressee, User requester, String link) {
-    return """
-<div style='font-family:Arial,sans-serif;line-height:1.5;color:#111827'>
-  <h3 style='margin-bottom:8px'>New circle request</h3>
-  <p>Hi %s,</p>
-  <p><b>%s</b> would like to add you to their circle.</p>
-  <p><a href='%s'>Open Golden Greetings</a></p>
-  <p>You will be signed in directly, so you can accept &mdash; no password needed.</p>
-  <p style='color:#6b7280'>If you did not expect this, you can safely ignore this email.</p>
-</div>
-"""
-        .formatted(addressee.getName(), requester.getName(), link);
   }
 
   private Circle requirePendingForAddressee(Long circleId, Long addresseeId) {

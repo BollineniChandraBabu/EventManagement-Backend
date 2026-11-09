@@ -19,6 +19,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.core.ParameterizedTypeReference;
+import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpMethod;
@@ -55,17 +56,47 @@ public class FestivalServiceImpl implements FestivalService {
   }
 
   @Override
+  public List<FestivalResponse> listByMonthForYear(Integer month, int year) {
+    if (year <= 0) {
+      return listByMonth(month);
+    }
+    ensureFestivalsForYear(year);
+    return specialEventRepository.findByMonthAndYear(month, year).stream()
+        .map(this::toFestivalResponse)
+        .toList();
+  }
+
+  @Override
   public PagedResponse<FestivalResponse> listByMonth(
       Integer month, int page, int size, String searchKey, String sortBy, String sortDir) {
-    String normalizedSortBy = resolveSortBy(sortBy);
-    Sort sort =
-        "desc".equalsIgnoreCase(sortDir)
-            ? Sort.by(normalizedSortBy).descending()
-            : Sort.by(normalizedSortBy).ascending();
-    var pageResult =
+    return toPagedResponse(
         specialEventRepository.findByMonthAndSearchKey(
-            month, searchKey == null ? "" : searchKey.trim(), PageRequest.of(page, size, sort));
+            month,
+            searchKey == null ? "" : searchKey.trim(),
+            PageRequest.of(page, size, festivalSort(sortBy, sortDir))));
+  }
 
+  @Override
+  public PagedResponse<FestivalResponse> listByMonthForYear(
+      Integer month,
+      int year,
+      int page,
+      int size,
+      String searchKey,
+      String sortBy,
+      String sortDir) {
+    if (year > 0) {
+      ensureFestivalsForYear(year);
+    }
+    return toPagedResponse(
+        specialEventRepository.findByMonthAndYearAndSearchKey(
+            month,
+            year,
+            searchKey == null ? "" : searchKey.trim(),
+            PageRequest.of(page, size, festivalSort(sortBy, sortDir))));
+  }
+
+  private PagedResponse<FestivalResponse> toPagedResponse(Page<SpecialEvent> pageResult) {
     return new PagedResponse<>(
         pageResult.getContent().stream().map(this::toFestivalResponse).toList(),
         pageResult.getNumber(),
@@ -74,6 +105,13 @@ public class FestivalServiceImpl implements FestivalService {
         pageResult.getTotalPages(),
         pageResult.hasNext(),
         pageResult.hasPrevious());
+  }
+
+  private Sort festivalSort(String sortBy, String sortDir) {
+    String normalizedSortBy = resolveSortBy(sortBy);
+    return "desc".equalsIgnoreCase(sortDir)
+        ? Sort.by(normalizedSortBy).descending()
+        : Sort.by(normalizedSortBy).ascending();
   }
 
   @Override
@@ -103,6 +141,30 @@ public class FestivalServiceImpl implements FestivalService {
       }
     }
     specialEventRepository.saveAll(allEvents);
+  }
+
+  /**
+   * The monthly sync only covers the current year, so a calendar request for any other year is
+   * filled on demand: the festivals are fetched from Calendarific once, stored, and reused from the
+   * database on later visits. Any failure just leaves that year empty rather than breaking the
+   * calendar.
+   */
+  private void ensureFestivalsForYear(int year) {
+    if (specialEventRepository.existsByEventDateBetween(
+        LocalDate.of(year, 1, 1), LocalDate.of(year, 12, 31))) {
+      return;
+    }
+    if (!StringUtils.hasText(calendarificApiKey)) {
+      log.warn("Cannot load {} festivals on demand because calendarific.api.key is missing", year);
+      return;
+    }
+    try {
+      List<Map<String, Object>> holidays = fetchHolidays(year);
+      upsertFestivals(holidays, new HashSet<>());
+      log.info("Fetched {} on-demand festival entries for {}", holidays.size(), year);
+    } catch (Exception ex) {
+      log.error("On-demand festival sync failed for {}", year, ex);
+    }
   }
 
   private List<Map<String, Object>> fetchHolidays(int year) {
@@ -158,7 +220,12 @@ public class FestivalServiceImpl implements FestivalService {
       }
 
       SpecialEvent specialEvent =
-          specialEventRepository.findByEventNameIgnoreCase(name).orElseGet(SpecialEvent::new);
+          specialEventRepository
+              .findByEventNameIgnoreCaseAndEventDateBetween(
+                  name,
+                  eventDate.withDayOfYear(1),
+                  eventDate.withDayOfYear(eventDate.lengthOfYear()))
+              .orElseGet(SpecialEvent::new);
       specialEvent.setEventName(name);
       specialEvent.setEventDate(eventDate);
       if (!StringUtils.hasText(specialEvent.getMessage())) {

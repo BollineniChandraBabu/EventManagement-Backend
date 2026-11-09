@@ -33,11 +33,15 @@ Notes:
 ## Festivals and the calendar
 
 - `FestivalServiceImpl.syncCalendarificFestivals` (run monthly by `FestivalSyncScheduler`) fetches
-  Calendarific holidays for `Year.now()` and upserts them by name. So the stored festival rows carry
-  the year the sync last ran, and January's run rolls them forward.
-- Festivals repeat every year on their month/day, so `CalendarServiceImpl.toCalendar(FestivalResponse)`
-  reports `recurring=true`. The UI then shows a festival (and its wishes) in any year the user
-  navigates to, instead of only the stored year.
+  Calendarific holidays for `Year.now()` and upserts them, keyed by name and year, so each year
+  keeps its own dates.
+- The monthly sync only covers the current year. A calendar request for any other year is filled on
+  demand: `FestivalServiceImpl.listByMonthForYear` calls `ensureFestivalsForYear`, which fetches that
+  year from Calendarific once, stores it, and is served from the database on later visits.
+- `CalendarController` takes an optional `year`; `CalendarServiceImpl.listByMonth(month, year, ...)`
+  asks the festival service for that year and marks a year-scoped festival `recurring=false`, so a
+  later year shows its own festivals instead of repeating one year's dates. Without a year the older
+  month-only behaviour is kept (festival repeats yearly on its month/day).
 - Only a one-time anniversary is date-exact: `toCalendar(EventResponse)` passes through
   `event.recurring()`.
 
@@ -47,10 +51,15 @@ Notes:
   `CircleServiceImpl`, `CircleController` under `/api/circles`). Chat allows only
   accepted circles when `app.chat.circles-only=true`.
 - A new circle request emails the addressee a one-click direct-login link (`EmailType.CIRCLE_REQUEST`,
-  entity `LoginToken`). `CircleServiceImpl.notifyAddressee` issues the token and mails the link;
-  `AuthServiceImpl.directLogin` (endpoint `POST /api/auth/direct-login`) consumes it and returns JWT
-  tokens. Link base is `app.circle.request.login-url` (default `${app.ui.base-url}/direct-login`); TTL is
+  entity `LoginToken`). `CircleRequestNotifier` composes and sends the mail (initial note and the
+  daily reminder) and issues the token; `AuthServiceImpl.directLogin` (endpoint
+  `POST /api/auth/direct-login`) consumes it and returns JWT tokens. Link base is
+  `app.circle.request.login-url` (default `${app.ui.base-url}/direct-login`); TTL is
   `app.circle.request.login-ttl-minutes`.
+- A pending request is reminded daily once it is older than `app.circle.request.reminder-after-days`
+  (default 7). `CircleRequestReminderScheduler` (Quartz, cron `app.circle.request.reminder-cron`,
+  default `0 0 9 * * ?`) calls `CircleService.sendPendingReminders`, which emails each request that
+  has not been reminded today and stamps `Circle.lastReminderSentOn`. Accept/reject stops it.
 - Emailed deep links all derive from one property, `app.ui.base-url` (env `UI_BASE_URL`):
   `app.login.ui-url`, `app.password-reset.ui-url`, `app.circle.request.login-url`. Each can be
   overridden individually (e.g. `PASSWORD_RESET_UI_URL`).
