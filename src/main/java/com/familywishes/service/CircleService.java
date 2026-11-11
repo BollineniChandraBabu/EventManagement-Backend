@@ -1,6 +1,7 @@
 package com.familywishes.service;
 
 import com.familywishes.dto.CircleDtos.*;
+import java.util.List;
 
 public interface CircleService {
   CircleListResponse listCircles();
@@ -16,6 +17,12 @@ public interface CircleService {
   CircleStatusResponse statusWith(Long userId);
 
   boolean areInCircle(Long userA, Long userB);
+
+  /**
+   * Ids of the users who are in an accepted circle with the given user (both directions). Used to
+   * include a circle member's birthdays and events on the user's calendar.
+   */
+  List<Long> acceptedCircleMemberIds(Long userId);
 
   /**
    * Emails a reminder to the addressee of every request that has been pending for at least {@code

@@ -5,12 +5,16 @@ import com.familywishes.dto.EventDtos;
 import com.familywishes.dto.FestivalDtos.FestivalResponse;
 import com.familywishes.dto.UserDtos;
 import com.familywishes.service.CalendarService;
+import com.familywishes.service.CircleService;
 import com.familywishes.service.EventService;
 import com.familywishes.service.FestivalService;
 import com.familywishes.service.UserService;
 import java.time.LocalDate;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Set;
+import java.util.function.Function;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -23,6 +27,7 @@ public class CalendarServiceImpl implements CalendarService {
   private final FestivalService festivalService;
   private final EventService eventService;
   private final UserService userService;
+  private final CircleService circleService;
 
   @Override
   public List<CalendarResponse> listByMonth(
@@ -31,19 +36,40 @@ public class CalendarServiceImpl implements CalendarService {
         year == null || year <= 0
             ? festivalService.listByMonth(month)
             : festivalService.listByMonthForYear(month, year);
-    List<EventDtos.EventResponse> events =
-        isAdmin
-            ? eventService.listByMonth(month)
-            : eventService.listByMonthAndUserEmail(month, userEmail);
-    List<UserDtos.UserResponse> users =
-        isAdmin
-            ? userService.listByMonth(month)
-            : userService.listByMonthAndUserEmail(month, userEmail);
+
+    Long meId = userService.getCurrentUser().id();
+    Set<Long> circleMemberIds = Set.copyOf(circleService.acceptedCircleMemberIds(meId));
+
+    List<EventDtos.EventResponse> events;
+    List<UserDtos.UserResponse> users;
+    if (isAdmin) {
+      // Admins already see everyone; circle entries are simply flagged as such.
+      events = eventService.listByMonth(month);
+      users = userService.listByMonth(month);
+    } else {
+      List<Long> memberIds = new ArrayList<>(circleMemberIds);
+      if (memberIds.isEmpty()) {
+        events = eventService.listByMonthAndUserEmail(month, userEmail);
+        users = userService.listByMonthAndUserEmail(month, userEmail);
+      } else {
+        // A user sees their own events and birthdays, plus those of their circle members.
+        events =
+            mergeById(
+                eventService.listByMonthAndUserEmail(month, userEmail),
+                eventService.listByMonthForUsers(month, memberIds),
+                EventDtos.EventResponse::id);
+        users =
+            mergeById(
+                userService.listByMonthAndUserEmail(month, userEmail),
+                userService.listByMonthForUsers(month, memberIds),
+                UserDtos.UserResponse::id);
+      }
+    }
 
     List<CalendarResponse> calendar = new ArrayList<>();
     festivals.forEach(festival -> calendar.add(toCalendar(festival, year)));
-    events.forEach(event -> calendar.add(toCalendar(event)));
-    users.forEach(user -> calendar.add(toCalendar(user)));
+    events.forEach(event -> calendar.add(toCalendar(event, circleMemberIds)));
+    users.forEach(user -> calendar.add(toCalendar(user, circleMemberIds)));
     return calendar;
   }
 
@@ -67,10 +93,12 @@ public class CalendarServiceImpl implements CalendarService {
         eventDate,
         festival.active(),
         !yearScoped,
-        null);
+        null,
+        null,
+        false);
   }
 
-  private CalendarResponse toCalendar(EventDtos.EventResponse event) {
+  private CalendarResponse toCalendar(EventDtos.EventResponse event, Set<Long> circleMemberIds) {
     return new CalendarResponse(
         event.id(),
         "Anniversary",
@@ -78,12 +106,34 @@ public class CalendarServiceImpl implements CalendarService {
         event.eventDate(),
         event.active(),
         event.recurring(),
-        event.userName());
+        event.userName(),
+        event.userId(),
+        isFromCircle(event.userId(), circleMemberIds));
   }
 
   /** Birthdays repeat every year. */
-  private CalendarResponse toCalendar(UserDtos.UserResponse user) {
+  private CalendarResponse toCalendar(UserDtos.UserResponse user, Set<Long> circleMemberIds) {
     return new CalendarResponse(
-        user.id(), "Birthday", user.name(), user.dateOfBirth(), user.active(), true, user.name());
+        user.id(),
+        "Birthday",
+        user.name(),
+        user.dateOfBirth(),
+        user.active(),
+        true,
+        user.name(),
+        user.id(),
+        isFromCircle(user.id(), circleMemberIds));
+  }
+
+  private boolean isFromCircle(Long ownerUserId, Set<Long> circleMemberIds) {
+    return ownerUserId != null && circleMemberIds.contains(ownerUserId);
+  }
+
+  /** Keeps the first entry for each id, so own entries win over a duplicate circle entry. */
+  private static <T> List<T> mergeById(List<T> own, List<T> fromCircle, Function<T, Long> idOf) {
+    LinkedHashMap<Long, T> byId = new LinkedHashMap<>();
+    own.forEach(entry -> byId.putIfAbsent(idOf.apply(entry), entry));
+    fromCircle.forEach(entry -> byId.putIfAbsent(idOf.apply(entry), entry));
+    return new ArrayList<>(byId.values());
   }
 }

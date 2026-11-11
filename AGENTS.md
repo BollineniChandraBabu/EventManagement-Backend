@@ -44,6 +44,13 @@ Notes:
   month-only behaviour is kept (festival repeats yearly on its month/day).
 - Only a one-time anniversary is date-exact: `toCalendar(EventResponse)` passes through
   `event.recurring()`.
+- A regular user's calendar also shows the birthdays and events of their accepted circle members:
+  `CalendarServiceImpl.listByMonth` resolves the signed-in user, asks
+  `CircleService.acceptedCircleMemberIds` for their circle, and merges those members' month entries
+  (`EventService.listByMonthForUsers` / `UserService.listByMonthForUsers`, backed by
+  `findByMonthAndUserIdIn` / `findByMonthAndIdIn`). Circle entries carry `ownerUserId` and
+  `fromCircle=true`, and duplicates are collapsed by id so a member's entry never appears twice. An
+  admin already sees everyone, so circles only flag entries for them.
 
 ## Circles and concurrent login
 

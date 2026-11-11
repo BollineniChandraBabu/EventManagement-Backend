@@ -160,40 +160,37 @@ public class EventServiceImpl implements EventService {
 
   @Override
   public List<EventResponse> listByMonth(Integer month) {
-    return eventRepository.findByMonth(month).stream()
-        .map(
-            event -> {
-              return new EventResponse(
-                  event.getId(),
-                  event.getEventType().getDisplayName(),
-                  event.getEventDate(),
-                  event.isRecurring(),
-                  event.getUser().getName(),
-                  event.isActive(),
-                  event.getUser().getId(),
-                  event.getWishesUrl(),
-                  imageUrl(event));
-            })
-        .toList();
+    return eventRepository.findByMonth(month).stream().map(this::toMonthResponse).toList();
   }
 
   @Override
   public List<EventResponse> listByMonthAndUserEmail(Integer month, String userEmail) {
     return eventRepository.findByMonthAndUserEmail(month, userEmail).stream()
-        .map(
-            event -> {
-              return new EventResponse(
-                  event.getId(),
-                  event.getEventType().getDisplayName(),
-                  event.getEventDate(),
-                  event.isRecurring(),
-                  event.getUser().getName(),
-                  event.isActive(),
-                  event.getUser().getId(),
-                  event.getWishesUrl(),
-                  imageUrl(event));
-            })
+        .map(this::toMonthResponse)
         .toList();
+  }
+
+  @Override
+  public List<EventResponse> listByMonthForUsers(Integer month, List<Long> userIds) {
+    if (userIds == null || userIds.isEmpty()) {
+      return List.of();
+    }
+    return eventRepository.findByMonthAndUserIdIn(month, userIds).stream()
+        .map(this::toMonthResponse)
+        .toList();
+  }
+
+  private EventResponse toMonthResponse(Event event) {
+    return new EventResponse(
+        event.getId(),
+        event.getEventType().getDisplayName(),
+        event.getEventDate(),
+        event.isRecurring(),
+        event.getUser().getName(),
+        event.isActive(),
+        event.getUser().getId(),
+        event.getWishesUrl(),
+        imageUrl(event));
   }
 
   private EventTypeSeed resolveEventType(String eventType) {

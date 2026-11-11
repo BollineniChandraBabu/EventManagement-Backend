@@ -157,6 +157,18 @@ public class CircleServiceImpl implements CircleService {
   }
 
   @Override
+  @Transactional(readOnly = true)
+  public List<Long> acceptedCircleMemberIds(Long userId) {
+    if (userId == null) {
+      return List.of();
+    }
+    return circleRepository.findAllForUser(userId, CircleStatus.ACCEPTED).stream()
+        .map(circle -> otherUser(circle, userId).getId())
+        .distinct()
+        .toList();
+  }
+
+  @Override
   @Transactional
   public int sendPendingReminders(int days) {
     LocalDateTime cutoff = now().minusDays(days);

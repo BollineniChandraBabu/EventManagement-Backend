@@ -392,4 +392,35 @@ class CircleServiceImplTest {
     assertFalse(circleService.areInCircle(1L, 1L));
     assertFalse(circleService.areInCircle(null, 2L));
   }
+
+  @Test
+  void acceptedCircleMemberIdsReturnsTheOtherSideOfEachAcceptedCircle() {
+    User me = user(1L, "me@example.com");
+    User addressee = user(2L, "friend@example.com");
+    User requester = user(3L, "other@example.com");
+    when(circleRepository.findAllForUser(1L, CircleStatus.ACCEPTED))
+        .thenReturn(
+            List.of(
+                Circle.builder()
+                    .id(10L)
+                    .requester(me)
+                    .addressee(addressee)
+                    .status(CircleStatus.ACCEPTED)
+                    .build(),
+                Circle.builder()
+                    .id(11L)
+                    .requester(requester)
+                    .addressee(me)
+                    .status(CircleStatus.ACCEPTED)
+                    .build()));
+
+    assertEquals(List.of(2L, 3L), circleService.acceptedCircleMemberIds(1L));
+  }
+
+  @Test
+  void acceptedCircleMemberIdsIsEmptyWithoutAUserOrCircles() {
+    assertTrue(circleService.acceptedCircleMemberIds(null).isEmpty());
+    when(circleRepository.findAllForUser(1L, CircleStatus.ACCEPTED)).thenReturn(List.of());
+    assertTrue(circleService.acceptedCircleMemberIds(1L).isEmpty());
+  }
 }
