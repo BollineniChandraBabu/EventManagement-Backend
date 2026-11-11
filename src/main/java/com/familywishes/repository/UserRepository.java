@@ -1,7 +1,7 @@
 package com.familywishes.repository;
 
-import com.familywishes.entity.Event;
 import com.familywishes.entity.User;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -92,8 +92,8 @@ public interface UserRepository extends JpaRepository<User, Long> {
       """)
   int markStaleUsersOffline(@Param("staleBefore") java.time.LocalDateTime staleBefore);
 
-
-  @Query("""
+  @Query(
+      """
     SELECT u
     FROM User u
     WHERE MONTH(u.birthday) = :month
@@ -101,12 +101,26 @@ public interface UserRepository extends JpaRepository<User, Long> {
     """)
   List<User> findByMonth(@Param("month") Integer month);
 
-  @Query("""
+  @Query(
+      """
     SELECT u
     FROM User u
     WHERE MONTH(u.birthday) = :month
       AND u.email = :userEmail
     ORDER BY u.birthday
     """)
-  List<User> findByMonthAndUserEmail(@Param("month") Integer month, @Param("userEmail") String userEmail);
+  List<User> findByMonthAndUserEmail(
+      @Param("month") Integer month, @Param("userEmail") String userEmail);
+
+  /** Birthdays of a set of users (used for the circle members shown on a user's calendar). */
+  @Query(
+      """
+    SELECT u
+    FROM User u
+    WHERE MONTH(u.birthday) = :month
+      AND u.id IN :userIds
+    ORDER BY u.birthday
+    """)
+  List<User> findByMonthAndIdIn(
+      @Param("month") Integer month, @Param("userIds") Collection<Long> userIds);
 }

@@ -157,6 +157,18 @@ public class CircleServiceImpl implements CircleService {
   }
 
   @Override
+  @Transactional(readOnly = true)
+  public List<Long> acceptedCircleMemberIds(Long userId) {
+    if (userId == null) {
+      return List.of();
+    }
+    return circleRepository.findAllForUser(userId, CircleStatus.ACCEPTED).stream()
+        .map(circle -> otherUser(circle, userId).getId())
+        .distinct()
+        .toList();
+  }
+
+  @Override
   @Transactional
   public int sendPendingReminders(int days) {
     LocalDateTime cutoff = now().minusDays(days);
@@ -177,6 +189,7 @@ public class CircleServiceImpl implements CircleService {
     circle.setStatus(CircleStatus.ACCEPTED);
     circle.setRespondedAt(now());
     Circle saved = circleRepository.save(circle);
+    notifyAccepted(saved);
     User other = otherUser(saved, me.getId());
     return toRequestResponse(saved, other, false);
   }
@@ -187,6 +200,17 @@ public class CircleServiceImpl implements CircleService {
       circleRequestNotifier.notifyNewRequest(circle, requester);
     } catch (Exception e) {
       log.error("Circle request notification failed for circle {}", circle.getId(), e);
+    }
+  }
+
+  /**
+   * Tells the requester their request was accepted; a mail problem must not undo the acceptance.
+   */
+  private void notifyAccepted(Circle circle) {
+    try {
+      circleRequestNotifier.notifyRequestAccepted(circle);
+    } catch (Exception e) {
+      log.error("Circle accepted notification failed for circle {}", circle.getId(), e);
     }
   }
 

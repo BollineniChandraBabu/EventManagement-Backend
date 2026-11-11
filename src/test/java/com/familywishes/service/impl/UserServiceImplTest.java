@@ -338,4 +338,35 @@ class UserServiceImplTest {
 
     assertFalse(response.concurrentLoginAllowed());
   }
+
+  @Test
+  void listByMonthForUsersMapsEachOwnersBirthday() {
+    User ravi =
+        User.builder()
+            .id(2L)
+            .name("Ravi")
+            .email("ravi@example.com")
+            .role(Role.ROLE_USER)
+            .gender(Gender.MALE)
+            .birthday(LocalDate.of(1988, 11, 25))
+            .relationShip(RelationshipSeed.builder().code("FRIEND").active(true).build())
+            .active(true)
+            .deleted(false)
+            .build();
+    when(userRepository.findByMonthAndIdIn(11, List.of(2L))).thenReturn(List.of(ravi));
+    when(supabaseStorageService.getDefaultProfilePictureUrl(Gender.MALE)).thenReturn("default.png");
+
+    List<UserResponse> birthdays = userService.listByMonthForUsers(11, List.of(2L));
+
+    assertEquals(1, birthdays.size());
+    assertEquals("Ravi", birthdays.get(0).name());
+    assertEquals(LocalDate.of(1988, 11, 25), birthdays.get(0).dateOfBirth());
+  }
+
+  @Test
+  void listByMonthForUsersReturnsEmptyWithoutAskingTheDatabaseWhenNoUsersAreGiven() {
+    assertTrue(userService.listByMonthForUsers(11, List.of()).isEmpty());
+    assertTrue(userService.listByMonthForUsers(11, null).isEmpty());
+    verify(userRepository, never()).findByMonthAndIdIn(any(), any());
+  }
 }

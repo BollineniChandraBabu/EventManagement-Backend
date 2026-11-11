@@ -54,4 +54,10 @@ public interface UserService {
   List<UserResponse> listByMonth(Integer month);
 
   List<UserResponse> listByMonthAndUserEmail(Integer month, String userEmail);
+
+  /**
+   * Birthdays of the given users for a month. Used to show a user the birthdays of the people in
+   * their circle, and returns an empty list when no users are given.
+   */
+  List<UserResponse> listByMonthForUsers(Integer month, List<Long> userIds);
 }

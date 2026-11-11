@@ -216,6 +216,16 @@ public class UserServiceImpl implements UserService {
   }
 
   @Override
+  public List<UserResponse> listByMonthForUsers(Integer month, List<Long> userIds) {
+    if (userIds == null || userIds.isEmpty()) {
+      return List.of();
+    }
+    return userRepository.findByMonthAndIdIn(month, userIds).stream()
+        .map(this::toUserResponse)
+        .toList();
+  }
+
+  @Override
   public UserResponse getById(Long id) {
     User user =
         userRepository.findById(id).orElseThrow(() -> new NotFoundException("User not found"));

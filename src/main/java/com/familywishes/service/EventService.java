@@ -38,4 +38,10 @@ public interface EventService {
   List<EventResponse> listByMonth(Integer month);
 
   List<EventResponse> listByMonthAndUserEmail(Integer month, String userEmail);
+
+  /**
+   * Events of the given users for a month. Used to show a user the birthdays and events of the
+   * people in their circle, and returns an empty list when no users are given.
+   */
+  List<EventResponse> listByMonthForUsers(Integer month, List<Long> userIds);
 }

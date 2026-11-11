@@ -3,6 +3,7 @@ package com.familywishes.service.impl;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -195,5 +196,25 @@ class EventServiceImplTest {
   void deleteByIdsRejectsAnEmptyList() {
     assertThrows(BadRequestException.class, () -> eventService.deleteByIds(List.of()));
     verify(eventRepository, never()).deleteById(any());
+  }
+
+  @Test
+  void listByMonthForUsersMapsEachOwnersEvent() {
+    Event ravi = event(user(1L, "ravi@x.com"), null);
+    when(eventRepository.findByMonthAndUserIdIn(6, List.of(1L, 2L))).thenReturn(List.of(ravi));
+
+    List<EventResponse> events = eventService.listByMonthForUsers(6, List.of(1L, 2L));
+
+    assertEquals(1, events.size());
+    assertEquals("Anniversary", events.get(0).eventType());
+    assertEquals(1L, events.get(0).userId());
+    assertEquals("Ravi", events.get(0).userName());
+  }
+
+  @Test
+  void listByMonthForUsersReturnsEmptyWithoutAskingTheDatabaseWhenNoUsersAreGiven() {
+    assertTrue(eventService.listByMonthForUsers(6, List.of()).isEmpty());
+    assertTrue(eventService.listByMonthForUsers(6, null).isEmpty());
+    verify(eventRepository, never()).findByMonthAndUserIdIn(any(), any());
   }
 }

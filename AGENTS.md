@@ -44,6 +44,13 @@ Notes:
   month-only behaviour is kept (festival repeats yearly on its month/day).
 - Only a one-time anniversary is date-exact: `toCalendar(EventResponse)` passes through
   `event.recurring()`.
+- A regular user's calendar also shows the birthdays and events of their accepted circle members:
+  `CalendarServiceImpl.listByMonth` resolves the signed-in user, asks
+  `CircleService.acceptedCircleMemberIds` for their circle, and merges those members' month entries
+  (`EventService.listByMonthForUsers` / `UserService.listByMonthForUsers`, backed by
+  `findByMonthAndUserIdIn` / `findByMonthAndIdIn`). Circle entries carry `ownerUserId` and
+  `fromCircle=true`, and duplicates are collapsed by id so a member's entry never appears twice. An
+  admin already sees everyone, so circles only flag entries for them.
 
 ## Circles and concurrent login
 
@@ -53,8 +60,9 @@ Notes:
   (`app.chat.circles-only`, default `true`); set `APP_CHAT_CIRCLES_ONLY=false` to open chat to everyone.
 - A new circle request emails the addressee a one-click direct-login link (`EmailType.CIRCLE_REQUEST`,
   entity `LoginToken`). `CircleRequestNotifier` composes and sends the mail (initial note and the
-  daily reminder) and issues the token; `AuthServiceImpl.directLogin` (endpoint
-  `POST /api/auth/direct-login`) consumes it and returns JWT tokens. Link base is
+  daily reminder) and issues the token; accepting a request also emails the requester a confirmation
+  (`notifyRequestAccepted`), sent from `CircleServiceImpl.acceptExisting`. `AuthServiceImpl.directLogin`
+  (endpoint `POST /api/auth/direct-login`) consumes it and returns JWT tokens. Link base is
   `app.circle.request.login-url` (default `${app.ui.base-url}/direct-login`); TTL is
   `app.circle.request.login-ttl-minutes`.
 - A pending request is reminded daily once it is older than `app.circle.request.reminder-after-days`

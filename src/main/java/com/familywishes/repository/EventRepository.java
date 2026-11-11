@@ -2,9 +2,8 @@ package com.familywishes.repository;
 
 import com.familywishes.entity.Event;
 import java.time.LocalDate;
+import java.util.Collection;
 import java.util.List;
-
-import com.familywishes.entity.EventTypeSeed;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -80,8 +79,8 @@ public interface EventRepository extends JpaRepository<Event, Long> {
       @Param("searchKey") String searchKey,
       Pageable pageable);
 
-
-  @Query("""
+  @Query(
+      """
     SELECT e
     FROM Event e
     WHERE MONTH(e.eventDate) = :month
@@ -89,7 +88,8 @@ public interface EventRepository extends JpaRepository<Event, Long> {
     """)
   List<Event> findByMonth(@Param("month") Integer month);
 
-  @Query("""
+  @Query(
+      """
     SELECT e
     FROM Event e
     JOIN e.user u
@@ -97,5 +97,19 @@ public interface EventRepository extends JpaRepository<Event, Long> {
       AND u.email = :userEmail
     ORDER BY e.eventDate
     """)
-  List<Event> findByMonthAndUserEmail(@Param("month") Integer month, @Param("userEmail") String userEmail);
+  List<Event> findByMonthAndUserEmail(
+      @Param("month") Integer month, @Param("userEmail") String userEmail);
+
+  /** Events of a set of users (used for the circle members shown on a user's calendar). */
+  @Query(
+      """
+    SELECT e
+    FROM Event e
+    JOIN e.user u
+    WHERE MONTH(e.eventDate) = :month
+      AND u.id IN :userIds
+    ORDER BY e.eventDate
+    """)
+  List<Event> findByMonthAndUserIdIn(
+      @Param("month") Integer month, @Param("userIds") Collection<Long> userIds);
 }

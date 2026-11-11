@@ -261,6 +261,8 @@ When a **new** request is created (`POST /api/circles/requests`), the addressee 
 
 Chat is restricted to circle members by default. Messaging is allowed only between users in each other's accepted circle (`app.chat.circles-only=true`, env `APP_CHAT_CIRCLES_ONLY`). Set it to `false` to open chat to everyone.
 
+Once a circle request is accepted, the two users can see each other's birthdays and events on the calendar. `GET /api/calendar?month=11` returns the signed-in user's own entries plus the birthdays and anniversaries of their accepted circle members. Circle entries carry `ownerUserId` (the person the entry belongs to) and `fromCircle=true`; the user's own entries have `fromCircle=false`. Admins already see everyone, so `fromCircle` only flags entries that are not the admin's own.
+
 ## Concurrent login control
 Each user has a `concurrentLoginAllowed` flag that defaults to **true** (concurrent logins allowed).
 

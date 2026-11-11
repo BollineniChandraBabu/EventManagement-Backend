@@ -134,29 +134,6 @@ class CircleServiceImplTest {
   }
 
   @Test
-  void sendRequestAcceptsWhenTargetAlreadyAskedUs() {
-    User me = user(1L, "me@example.com");
-    User target = user(2L, "circle@example.com");
-    givenCurrentUser(me);
-    when(userRepository.findById(2L)).thenReturn(Optional.of(target));
-    Circle pending =
-        Circle.builder()
-            .id(7L)
-            .requester(target)
-            .addressee(me)
-            .status(CircleStatus.PENDING)
-            .build();
-    when(circleRepository.findBetween(1L, 2L)).thenReturn(Optional.of(pending));
-    when(circleRepository.save(any(Circle.class)))
-        .thenAnswer(invocation -> invocation.getArgument(0));
-
-    CircleRequestResponse response = circleService.sendRequest(new SendCircleRequest(2L));
-
-    assertEquals(CircleStatus.ACCEPTED, response.status());
-    assertNotNull(pending.getRespondedAt());
-  }
-
-  @Test
   void acceptRequiresTheAddressee() {
     User me = user(1L, "me@example.com");
     User requester = user(2L, "requester@example.com");
@@ -193,6 +170,55 @@ class CircleServiceImplTest {
     CircleRequestResponse response = circleService.accept(new CircleRequestAction(9L));
 
     assertEquals(CircleStatus.ACCEPTED, response.status());
+    verify(circleRequestNotifier).notifyRequestAccepted(pending);
+  }
+
+  @Test
+  void acceptStillSucceedsWhenAcceptanceNotificationFails() {
+    User me = user(1L, "me@example.com");
+    User requester = user(2L, "requester@example.com");
+    givenCurrentUser(me);
+    Circle pending =
+        Circle.builder()
+            .id(9L)
+            .requester(requester)
+            .addressee(me)
+            .status(CircleStatus.PENDING)
+            .build();
+    when(circleRepository.findById(9L)).thenReturn(Optional.of(pending));
+    when(circleRepository.save(any(Circle.class)))
+        .thenAnswer(invocation -> invocation.getArgument(0));
+    doThrow(new RuntimeException("mail down"))
+        .when(circleRequestNotifier)
+        .notifyRequestAccepted(any(Circle.class));
+
+    CircleRequestResponse response = circleService.accept(new CircleRequestAction(9L));
+
+    assertEquals(CircleStatus.ACCEPTED, response.status());
+  }
+
+  @Test
+  void sendRequestAcceptsWhenTargetAlreadyAskedUs() {
+    User me = user(1L, "me@example.com");
+    User target = user(2L, "circle@example.com");
+    givenCurrentUser(me);
+    when(userRepository.findById(2L)).thenReturn(Optional.of(target));
+    Circle pending =
+        Circle.builder()
+            .id(7L)
+            .requester(target)
+            .addressee(me)
+            .status(CircleStatus.PENDING)
+            .build();
+    when(circleRepository.findBetween(1L, 2L)).thenReturn(Optional.of(pending));
+    when(circleRepository.save(any(Circle.class)))
+        .thenAnswer(invocation -> invocation.getArgument(0));
+
+    CircleRequestResponse response = circleService.sendRequest(new SendCircleRequest(2L));
+
+    assertEquals(CircleStatus.ACCEPTED, response.status());
+    assertNotNull(pending.getRespondedAt());
+    verify(circleRequestNotifier).notifyRequestAccepted(pending);
   }
 
   @Test
@@ -365,5 +391,36 @@ class CircleServiceImplTest {
     assertTrue(circleService.areInCircle(1L, 2L));
     assertFalse(circleService.areInCircle(1L, 1L));
     assertFalse(circleService.areInCircle(null, 2L));
+  }
+
+  @Test
+  void acceptedCircleMemberIdsReturnsTheOtherSideOfEachAcceptedCircle() {
+    User me = user(1L, "me@example.com");
+    User addressee = user(2L, "friend@example.com");
+    User requester = user(3L, "other@example.com");
+    when(circleRepository.findAllForUser(1L, CircleStatus.ACCEPTED))
+        .thenReturn(
+            List.of(
+                Circle.builder()
+                    .id(10L)
+                    .requester(me)
+                    .addressee(addressee)
+                    .status(CircleStatus.ACCEPTED)
+                    .build(),
+                Circle.builder()
+                    .id(11L)
+                    .requester(requester)
+                    .addressee(me)
+                    .status(CircleStatus.ACCEPTED)
+                    .build()));
+
+    assertEquals(List.of(2L, 3L), circleService.acceptedCircleMemberIds(1L));
+  }
+
+  @Test
+  void acceptedCircleMemberIdsIsEmptyWithoutAUserOrCircles() {
+    assertTrue(circleService.acceptedCircleMemberIds(null).isEmpty());
+    when(circleRepository.findAllForUser(1L, CircleStatus.ACCEPTED)).thenReturn(List.of());
+    assertTrue(circleService.acceptedCircleMemberIds(1L).isEmpty());
   }
 }
