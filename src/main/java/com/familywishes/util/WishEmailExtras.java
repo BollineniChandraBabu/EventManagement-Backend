@@ -13,7 +13,9 @@ public final class WishEmailExtras {
 
   private WishEmailExtras() {}
 
-  /** Adds a button linking to the wishes page. Returns the email unchanged when there is no link. */
+  /**
+   * Adds a button linking to the wishes page. Returns the email unchanged when there is no link.
+   */
   public static String appendWishesLink(String html, String url, String label) {
     if (url == null || url.isBlank()) {
       return html;
@@ -70,7 +72,8 @@ public final class WishEmailExtras {
     return source.substring(0, bodyEnd) + block + source.substring(bodyEnd);
   }
 
-  static String escape(String value) {
+  /** Escapes the five HTML special characters so a value can never inject markup. */
+  public static String escape(String value) {
     if (value == null) {
       return "";
     }

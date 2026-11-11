@@ -54,7 +54,7 @@ class CircleRequestNotifierTest {
     verify(emailService)
         .sendEmailWithAttachments(
             eq("asha@x.com"),
-            eq("You have a new circle request"),
+            contains("wants to add you"),
             contains("tok-123"),
             eq(null),
             eq(null),
@@ -108,6 +108,56 @@ class CircleRequestNotifierTest {
 
     verify(emailService, never())
         .sendEmailWithAttachments(any(), any(), any(), any(), any(), any());
+  }
+
+  @Test
+  void acceptedRequestEmailsTheRequesterWithAOneClickLink() {
+    ReflectionTestUtils.setField(notifier, "circleLoginUrl", "https://app.test/circles");
+    User requester = user(1L, "Ravi", "ravi@x.com");
+    User addressee = user(2L, "Asha", "asha@x.com");
+    when(authService.issueDirectLoginToken(1L)).thenReturn("tok-req");
+
+    notifier.notifyRequestAccepted(circle(requester, addressee));
+
+    verify(emailService)
+        .sendEmailWithAttachments(
+            eq("ravi@x.com"),
+            contains("accepted your circle request"),
+            contains("tok-req"),
+            eq(null),
+            eq(null),
+            eq(EmailType.CIRCLE_REQUEST));
+  }
+
+  @Test
+  void acceptedRequestWithoutRequesterEmailIsSkipped() {
+    User requester = user(1L, "Ravi", "  ");
+    User addressee = user(2L, "Asha", "asha@x.com");
+
+    notifier.notifyRequestAccepted(circle(requester, addressee));
+
+    verify(emailService, never())
+        .sendEmailWithAttachments(any(), any(), any(), any(), any(), any());
+  }
+
+  @Test
+  void namesAreEscapedSoTheyCannotInjectMarkup() {
+    ReflectionTestUtils.setField(notifier, "circleLoginUrl", "https://app.test/circles");
+    User requester = user(1L, "<script>alert(1)</script>", "ravi@x.com");
+    User addressee = user(2L, "Asha", "asha@x.com");
+    when(authService.issueDirectLoginToken(2L)).thenReturn("tok-123");
+
+    notifier.notifyNewRequest(circle(requester, addressee), requester);
+
+    verify(emailService)
+        .sendEmailWithAttachments(
+            eq("asha@x.com"),
+            any(String.class),
+            org.mockito.ArgumentMatchers.argThat(
+                body -> body.contains("&lt;script&gt;") && !body.contains("<script>")),
+            eq(null),
+            eq(null),
+            eq(EmailType.CIRCLE_REQUEST));
   }
 
   @Test
